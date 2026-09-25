@@ -1,0 +1,12 @@
+.email-notice{margin-top:18px;padding:12px 15px;border:1px solid #a8d9c7;background:#ebf8f3;color:#17664e;border-radius:8px;font-size:12px}
+.integration span.connected{background:#e4f5ef;color:var(--green)}
+.email-composer{margin-top:15px}
+.form-grid input{border:1px solid #d5e3e7;border-radius:7px;padding:11px;background:#fbfdfd;font:inherit}
+.email-composer .form-actions button:disabled{opacity:.6;cursor:wait}
+.email-composer-global{margin-top:16px}.attachment-list{display:grid;gap:7px;padding:12px;border:1px solid var(--border);border-radius:9px;background:#f8fafc}.attachment-list>div{display:flex;align-items:center;justify-content:space-between;gap:12px}.attachment-list button{border:0;background:transparent;color:#a32626;cursor:pointer}.attachment-list strong{padding-top:8px;border-top:1px solid var(--border)}.attachment-list .over-limit{color:#b42318}.signature-preview{margin-top:14px;padding:14px;border-left:3px solid #2f8fc5;background:#f5fafc}.signature-preview>strong{display:block;margin-bottom:8px}.signature-preview p{margin:0;color:var(--muted)}
+.email-history{display:grid}
+.email-history article{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line)}
+.email-history article>div{display:flex;flex:1;flex-direction:column}
+.email-history strong{font-size:11px}
+.email-history span,.email-history time{font-size:9px;color:var(--muted)}
+.email-history em{font-style:normal;background:#e1f5ed;color:var(--green);padding:4px 8px;border-radius:10px;font-size:9px}

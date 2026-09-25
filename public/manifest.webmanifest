@@ -1,0 +1,20 @@
+{
+  "name": "Representações Freixo CRM",
+  "short_name": "Freixo CRM",
+  "description": "CRM comercial da Representações Freixo",
+  "lang": "pt-PT",
+  "id": "/dashboard",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#15314c",
+  "theme_color": "#15314c",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/pwa-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/pwa-icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/pwa-icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
