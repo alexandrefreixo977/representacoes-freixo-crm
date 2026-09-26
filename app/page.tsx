@@ -294,7 +294,7 @@ export default function Home() {
           <button
             type="button"
             className={section === "Utilizadores" ? "active" : ""}
-            onClick={() => setSection("Utilizadores")}
+            onClick={() => { setSection("Utilizadores"); setMobileOpen(false); }}
           >
             <span>⚙</span> Administração
           </button>
@@ -364,7 +364,7 @@ export default function Home() {
         )} 
         {section === "Agenda" && <Agenda clients={clients} users={users} currentUser={currentUser} session={session} />}
         {section === "Fabricantes" && <Manufacturers clients={clients} currentUser={currentUser} session={session} providerToken={providerToken} selectedId={routeManufacturerId} onOpen={openManufacturer} onClose={() => window.history.back()} />}
-        {section === "Visitas" && <Visits clients={filteredClients} onCreate={(visit) => setVisits(prev => [...prev, visit])} currentUser={currentUser} session={session} />}
+        {section === "Visitas" && <Visits clients={filteredClients} visits={filteredVisits} onCreate={(visit) => setVisits(prev => [...prev, visit])} currentUser={currentUser} session={session} />}
         {section === "Tarefas" && <Tasks tasks={filteredTasks} completed={completed} setCompleted={setCompleted} clients={filteredClients} currentUser={currentUser} session={session} onCreate={(task) => setTasks(prev => [...prev, task])} onOpenClient={openClient} />}
         {section === "Oportunidades" && <Pipeline opportunities={filteredOpportunities} clients={filteredClients} currentUser={currentUser} onCreate={(opportunity) => setOpportunities(prev => [...prev, opportunity])} />}
         {section === "Emails" && <Emails clients={filteredClients} session={session} providerToken={providerToken} />}
@@ -723,7 +723,7 @@ function Agenda({ clients, users, currentUser, session }: { clients: ClientRecor
 }
 
 // COMPONENTE: VISITAS
-function Visits({ clients, currentUser, session, onCreate }: { clients: typeof initialClients; currentUser: User; session:Session|null; onCreate: (visit: typeof initialVisits[number]) => void }) {
+function Visits({ clients, visits, currentUser, session, onCreate }: { clients: typeof initialClients; visits: typeof initialVisits; currentUser: User; session:Session|null; onCreate: (visit: typeof initialVisits[number]) => void }) {
   const [clientCode, setClientCode] = useState("");
   const [visitType, setVisitType] = useState("Visita comercial");
   const [objective, setObjective] = useState("");
@@ -742,7 +742,7 @@ function Visits({ clients, currentUser, session, onCreate }: { clients: typeof i
   return <>
     <PageTitle eyebrow="ATIVIDADE COMERCIAL" title="Visitas" action={<button className="primary" onClick={() => document.getElementById(formId)?.scrollIntoView({ behavior: "smooth" })}>＋ Planear visita</button>}/>
     <div className="feature-grid">
-      {[{t:"Em curso",n:"0",d:"Nenhuma visita em curso"},{t:"Planeadas",n:String(clients.length ? 0 : 0),d:"Para hoje"},{t:"Concluídas",n:"0",d:"Relatórios registados"}].map(x=><div className="stat blue" key={x.t}>
+      {[{t:"Em curso",n:String(visits.filter(v=>v.tag==="Em curso").length),d:"A decorrer agora"},{t:"Planeadas",n:String(visits.filter(v=>v.tag==="Planeada").length),d:"Agendadas"},{t:"Concluídas",n:String(visits.filter(v=>v.tag==="Concluída").length),d:"Relatórios registados"}].map(x=><div className="stat blue" key={x.t}>
         <span>{x.t}</span>
         <strong>{x.n}</strong>
         <small>{x.d}</small>
@@ -1278,3 +1278,4 @@ function UsersAdmin({
     </div>
   </>;
 }
+
