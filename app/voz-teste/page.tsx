@@ -82,15 +82,21 @@ export default function VozTeste() {
     setAviso("");
     try {
       const i = resposta.input;
-      const { error } = await supabase.from("visits").insert({
+      const quando = new Date(`${i.data}T09:00:00`).toISOString();
+      const descricao = i.objetivo + (i.notas ? ` — ${i.notas}` : "");
+      const { error } = await supabase.from("activities").insert({
         client_id: i.cliente_id,
-        seller_id: userId,
-        created_by: userId,
-        scheduled_at: new Date(`${i.data}T09:00:00`).toISOString(),
-        visit_type: "presencial",
-        status: "planned",
-        objective: i.objetivo,
-        summary: i.notas || null,
+        kind: "visit",
+        interaction_type: "Visita",
+        title: "Visita comercial",
+        summary: "Visita comercial",
+        description: descricao,
+        actor_id: userId,
+        assigned_to: userId,
+        start_at: quando,
+        occurred_at: quando,
+        status: "scheduled",
+        source_module: "visits",
       });
       if (error) throw new Error(error.message);
       setSucesso(`Visita registada: ${i.cliente_nome}, ${i.data}.`);
