@@ -31,6 +31,7 @@ export default function VozTeste() {
   const [aGravar, setAGravar] = useState(false);
   const [aviso, setAviso] = useState("");
   const [sucesso, setSucesso] = useState("");
+  const [aOuvir, setAOuvir] = useState(false);
 
   // Carrega o utilizador e a carteira de clientes.
   useEffect(() => {
@@ -44,12 +45,13 @@ export default function VozTeste() {
       });
   }, []);
 
-  async function interpretar() {
+  async function interpretar(textoOverride?: string) {
+    const texto = (textoOverride ?? comando).trim();
     setAviso("");
     setSucesso("");
     setResposta(null);
-    if (!comando.trim()) {
-      setAviso("Escreva um comando primeiro.");
+    if (!texto) {
+      setAviso("Escreva ou dite um comando primeiro.");
       return;
     }
     setAInterpretar(true);
@@ -61,7 +63,7 @@ export default function VozTeste() {
         method: "POST",
         headers: { Authorization: `Bearer ${jwt}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          comando,
+          comando: texto,
           clientes,
           hoje: new Date().toISOString().slice(0, 10),
         }),
@@ -74,6 +76,31 @@ export default function VozTeste() {
     } finally {
       setAInterpretar(false);
     }
+  }
+
+  function ditar() {
+    const SR = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    if (!SR) {
+      setAviso("Este navegador nao suporta ditado por voz. Use o Chrome, ou escreva o comando.");
+      return;
+    }
+    setAviso("");
+    setSucesso("");
+    setResposta(null);
+    const rec = new SR();
+    rec.lang = "pt-PT";
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
+    let transcricao = "";
+    rec.onresult = (event: any) => {
+      transcricao = Array.from(event.results).map((r: any) => r[0].transcript).join(" ").trim();
+      setComando(transcricao);
+    };
+    rec.onerror = () => { setAOuvir(false); setAviso("Nao consegui ouvir ou o microfone nao foi autorizado. Tente de novo."); };
+    rec.onend = () => { setAOuvir(false); if (transcricao.trim()) interpretar(transcricao); };
+    setAOuvir(true);
+    rec.start();
   }
 
   async function confirmar() {
@@ -126,13 +153,14 @@ export default function VozTeste() {
         style={{ width: "100%", padding: ".6rem", fontSize: "1rem", boxSizing: "border-box" }}
       />
 
-      <button
-        onClick={interpretar}
-        disabled={aInterpretar}
-        style={{ marginTop: ".75rem", padding: ".6rem 1.2rem", fontSize: "1rem", cursor: "pointer" }}
-      >
-        {aInterpretar ? "A interpretar…" : "Interpretar"}
-      </button>
+      <div style={{ marginTop: ".75rem", display: "flex", gap: ".5rem", alignItems: "center" }}>
+        <button onClick={ditar} disabled={aOuvir || aInterpretar} style={{ padding: ".6rem 1.2rem", fontSize: "1rem", cursor: "pointer", background: aOuvir ? "#c62828" : "#1b5e20", color: "#fff", border: 0, borderRadius: 6 }}>
+          {aOuvir ? "🔴 A ouvir… fale agora" : "🎤 Falar"}
+        </button>
+        <button onClick={() => interpretar()} disabled={aInterpretar || aOuvir} style={{ padding: ".6rem 1.2rem", fontSize: "1rem", cursor: "pointer" }}>
+          {aInterpretar ? "A interpretar…" : "Interpretar"}
+        </button>
+      </div>
 
       <p style={{ color: "#888", fontSize: ".85rem" }}>{clientes.length} clientes carregados.</p>
 
