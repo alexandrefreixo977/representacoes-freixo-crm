@@ -7,7 +7,19 @@ import { supabase } from "./supabase";
 type Cliente = { id: string; nome: string; codigo?: string };
 type Acao = { tipo: "acao"; acao: string; input: Record<string, string>; resumo: string };
 type Pergunta = { tipo: "pergunta"; texto: string };
-type Resposta = Acao | Pergunta;
+type RespostaTexto = { tipo: "resposta"; texto: string };
+type Resposta = Acao | Pergunta | RespostaTexto;
+
+function falar(texto: string) {
+  try {
+    const synth = window.speechSynthesis;
+    if (!synth) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(texto);
+    u.lang = "pt-PT";
+    synth.speak(u);
+  } catch { /* sem voz, sem problema */ }
+}
 
 export default function VoiceAssistant({ session, onSaved }: { session: Session | null; onSaved?: () => void }) {
   const [aberto, setAberto] = useState(false);
@@ -48,6 +60,7 @@ export default function VoiceAssistant({ session, onSaved }: { session: Session 
       const data = await res.json().catch(() => null);
       if (!res.ok) throw new Error(data?.error || "Nao foi possivel interpretar o comando.");
       setResposta(data as Resposta);
+      if (data?.tipo === "resposta" && data.texto) falar(data.texto);
     } catch (error) {
       setAviso(error instanceof Error ? error.message : "Nao foi possivel interpretar o comando.");
     } finally {
@@ -115,7 +128,7 @@ export default function VoiceAssistant({ session, onSaved }: { session: Session 
               <strong style={{ fontSize: "1.1rem" }}>Assistente de voz</strong>
               <button onClick={() => setAberto(false)} aria-label="Fechar" style={{ border: 0, background: "transparent", fontSize: 24, cursor: "pointer", lineHeight: 1 }}>×</button>
             </div>
-            <p style={{ color: "#555", fontSize: ".9rem", margin: ".4rem 0 .8rem" }}>Diga: <strong>registar visita</strong>, <strong>criar tarefa</strong> ou <strong>registar chamada</strong>. Nada e gravado sem confirmar.</p>
+            <p style={{ color: "#555", fontSize: ".9rem", margin: ".4rem 0 .8rem" }}>Pergunte (ex.: "que visitas tenho amanha?") ou peca uma acao: <strong>registar visita</strong>, <strong>criar tarefa</strong>, <strong>registar chamada</strong>. As acoes pedem confirmacao antes de gravar.</p>
             <textarea rows={3} value={comando} onChange={(e) => setComando(e.target.value)} placeholder="ex.: cria tarefa de enviar proposta ao cliente ... na sexta" style={{ width: "100%", padding: ".6rem", fontSize: "1rem", boxSizing: "border-box", borderRadius: 6, border: "1px solid #ccc" }} />
             <div style={{ marginTop: ".6rem", display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
               <button onClick={ditar} disabled={aOuvir || aInterpretar} style={{ padding: ".55rem 1rem", fontSize: "1rem", cursor: "pointer", background: aOuvir ? "#c62828" : "#1b5e20", color: "#fff", border: 0, borderRadius: 6 }}>{aOuvir ? "🔴 A ouvir…" : "🎤 Falar"}</button>
@@ -124,6 +137,11 @@ export default function VoiceAssistant({ session, onSaved }: { session: Session 
             </div>
             {aviso && <div role="alert" style={{ marginTop: ".8rem", padding: ".7rem", background: "#fdecea", color: "#8a1c14", borderRadius: 6 }}>{aviso}</div>}
             {sucesso && <div style={{ marginTop: ".8rem", padding: ".7rem", background: "#e7f6ec", color: "#1b5e20", borderRadius: 6 }}>{sucesso} <span style={{ color: "#4b6b50" }}>Atualize a página para o ver na lista.</span></div>}
+            {resposta?.tipo === "resposta" && (
+              <div style={{ marginTop: ".8rem", padding: ".8rem", background: "#eef7f1", borderRadius: 6 }}>
+                <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{resposta.texto}</p>
+              </div>
+            )}
             {resposta?.tipo === "pergunta" && <div style={{ marginTop: ".8rem", padding: ".8rem", background: "#fff8e1", borderRadius: 6 }}><strong>Preciso de esclarecer:</strong><p style={{ margin: ".4rem 0 0" }}>{resposta.texto}</p></div>}
             {resposta?.tipo === "acao" && <div style={{ marginTop: ".8rem", padding: ".8rem", background: "#eef3fb", borderRadius: 6 }}><strong>Vou fazer isto:</strong><p style={{ margin: ".4rem 0 .8rem" }}>{resposta.resumo}</p><button onClick={confirmar} disabled={aGravar} style={{ padding: ".55rem 1.1rem", fontSize: "1rem", cursor: "pointer", background: "#1b5e20", color: "#fff", border: 0, borderRadius: 6 }}>{aGravar ? "A gravar…" : "Confirmar e gravar"}</button><button onClick={() => setResposta(null)} disabled={aGravar} style={{ marginLeft: ".5rem", padding: ".55rem 1.1rem", fontSize: "1rem", cursor: "pointer", borderRadius: 6, border: "1px solid #ccc", background: "#fff" }}>Cancelar</button></div>}
             <p style={{ color: "#999", fontSize: ".78rem", marginTop: ".9rem", marginBottom: 0 }}>{clientes.length} clientes · o ditado por voz requer o Chrome e microfone autorizado.</p>
