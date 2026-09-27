@@ -75,7 +75,8 @@ export default function VoiceAssistant({ session, onSaved }: { session: Session 
     try {
       const i = resposta.input;
       const dataBase = i.data || new Date().toISOString().slice(0, 10);
-      const quando = new Date(`${dataBase}T09:00:00`).toISOString();
+      const horaBase = /^\d{1,2}:\d{2}$/.test(i.hora || "") ? i.hora.padStart(5, "0") : "09:00";
+      const quando = new Date(`${dataBase}T${horaBase}:00`).toISOString();
       let payload: Record<string, unknown>;
       let mensagem: string;
 
