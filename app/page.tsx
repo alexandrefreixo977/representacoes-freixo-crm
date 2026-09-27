@@ -224,6 +224,7 @@ export default function Home() {
       ? tasks 
       : tasks.filter(t => t.assignedUserId === currentUser.id);
   }, [tasks, currentUser]);
+  const pendingTasks = useMemo(() => filteredTasks.filter(task => !completed.includes(task.id)), [filteredTasks, completed]);
 
   const filteredOpportunities = useMemo(() => {
     return currentUser.role === "admin" 
@@ -277,7 +278,7 @@ export default function Home() {
           >
             <span>{item.icon}</span>
             {item.label}
-            {item.label === "Tarefas" && filteredTasks.length > 0 && <b>{filteredTasks.length}</b>}
+            {item.label === "Tarefas" && pendingTasks.length > 0 && <b>{pendingTasks.length}</b>}
           </button>
         ))}
       </nav>
@@ -328,7 +329,7 @@ export default function Home() {
           <kbd>⌘ K</kbd>
           <GlobalSearch query={query} clients={clients} onClient={(client)=>{setQuery("");openClient(client as ClientRecord)}} onManufacturer={(id)=>{setQuery("");openManufacturer(id)}} onNavigate={(target,params)=>{setQuery("");navigate(target,params)}}/>
         </div>
-        <button className="icon-button" aria-label="Ver tarefas pendentes" onClick={() => setSection("Tarefas")}>◌<em>{filteredTasks.length}</em></button>
+        <button className="icon-button" aria-label="Ver tarefas pendentes" onClick={() => setSection("Tarefas")}>◌{pendingTasks.length>0&&<em>{pendingTasks.length}</em>}</button>
         <button className="primary" onClick={() => setShowQuick(!showQuick)}>＋ Novo registo</button>
       </header>
 
@@ -432,7 +433,7 @@ function Dashboard({
   visits: typeof initialVisits;
 }) {
   const [period, setPeriod] = useState<"week" | "month">("week");
-  const pendingTasksCount = tasks.filter(t => !completed.includes(t.title)).length;
+  const pendingTasksCount = tasks.filter(t => !completed.includes(t.id)).length;
   
   const pipelineTotal = useMemo(() => {
     const sum = opportunities.reduce((acc, curr) => {
@@ -476,8 +477,8 @@ function Dashboard({
       <section className="card wide">
         <CardHead title="Tarefas prioritárias" link="Ver todas" onClick={() => setSection("Tarefas")}/>
         {tasks.slice(0, 3).map(t => (
-          <div className={`task-row ${completed.includes(t.title)?"done":""}`} key={t.id}>
-            <button aria-label="Concluir tarefa" onClick={() => setCompleted(completed.includes(t.title)?completed.filter(x=>x!==t.title):[...completed,t.title])}>✓</button>
+          <div className={`task-row ${completed.includes(t.id)?"done":""}`} key={t.id}>
+            <button aria-label="Concluir tarefa" onClick={() => setCompleted(completed.includes(t.id)?completed.filter(x=>x!==t.id):[...completed,t.id])}>✓</button>
             <div><strong>{t.title}</strong><span>{t.client}</span></div>
             <time>{t.time}</time>
             <em className={t.priority.toLowerCase()}>{t.priority}</em>
