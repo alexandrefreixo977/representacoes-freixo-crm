@@ -23,7 +23,7 @@ const clienteProps = {
   cliente_id: { type: "string", description: "O id EXATO do cliente, escolhido da lista fornecida." },
   cliente_nome: { type: "string", description: "O nome do cliente tal como aparece na lista." },
 };
-const horaProp = { hora: { type: "string", description: "Hora em formato HH:MM (24h), se o utilizador a indicar (ex.: 'às 8' -> 08:00). Se nao indicar, omite." } };
+const horaProp = { hora: { type: "string", description: "Hora HH:MM em 24h. PREENCHE SEMPRE que o utilizador indicar uma hora, por ex.: 'às 8'->08:00, 'às 8 da manha'->08:00, 'às 2 da tarde'->14:00, 'às 14h30'->14:30, 'ao meio-dia'->12:00, 'ao fim do dia'->17:00. Omite so se nenhuma hora for mencionada." } };
 
 const tools = [
   {
@@ -79,7 +79,8 @@ export async function POST(request: Request): Promise<Response> {
       `AGE COM DECISAO — o utilizador confirma sempre no ecra antes de gravar, por isso NAO precisas de pedir confirmacao de detalhes:\n` +
       `- Se houver UM cliente da lista que corresponda ao mencionado (mesmo com nome incompleto, abreviado ou com pequenas diferencas), USA-O diretamente. Nao perguntes 'e este?'.\n` +
       `- Regista o objetivo/assunto/titulo TAL COMO foi dito, mesmo que seja uma so palavra ou algo que nao conhecas (ex.: 'apresentar a cofra'). NUNCA perguntes o que e um produto ou servico.\n` +
-      `- Resolve datas e horas relativas (amanha, sexta, 'as 8' -> 08:00).\n` +
+      `- Resolve datas relativas (amanha, sexta) para AAAA-MM-DD.\n` +
+      `- HORAS: sempre que o utilizador disser uma hora (ex.: 'as 8', 'as 8 da manha', 'as 2 da tarde', 'as 14h30', 'ao meio-dia'), PREENCHE SEMPRE o campo 'hora' com HH:MM em 24h. So omites 'hora' se ele nao disser hora nenhuma.\n` +
       `- Distingue: visita/tarefa e algo futuro; 'registar chamada' e algo que ja aconteceu.\n\n` +
       `So deves responder com uma pergunta (sem usar ferramenta) em DOIS casos: (a) nenhum cliente da lista corresponde ao mencionado, ou (b) ha dois ou mais clientes IGUALMENTE provaveis e e impossivel decidir. Em qualquer outro caso, usa sempre a ferramenta.`;
 
