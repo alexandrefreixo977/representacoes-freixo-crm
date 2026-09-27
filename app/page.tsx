@@ -9,6 +9,7 @@ import OperationalDashboard from "./operational-dashboard";
 import GlobalSearch from "./global-search";
 import EmailComposer, { type ComposedEmail, sanitizeSignature } from "./email-composer";
 import { generateEmailSignature } from "./email-signature";
+import VoiceAssistant from "./voice-assistant";
 
 type Section = 
   | "Dashboard" 
@@ -376,6 +377,7 @@ export default function Home() {
       </div>
     </section>
     {showLogout && <div className="confirm-backdrop" role="presentation"><section className="card confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="logout-title"><h2 id="logout-title">Terminar sessão</h2><p>Pretende terminar a sessão?</p><div className="form-actions"><button onClick={() => setShowLogout(false)}>Cancelar</button><button className="logout-button" onClick={logout}>Terminar sessão</button></div></section></div>}
+    {session && <VoiceAssistant session={session} />}
   </main>;
 }
 
