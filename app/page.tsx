@@ -281,6 +281,10 @@ export default function Home() {
             {item.label === "Tarefas" && pendingTasks.length > 0 && <b>{pendingTasks.length}</b>}
           </button>
         ))}
+        <button type="button" onClick={() => { window.location.href = "/catalogo-beta"; setMobileOpen(false); }}>
+          <span>▧</span>
+          Catálogo
+        </button>
       </nav>
       
             <div className="sidebar-bottom">
