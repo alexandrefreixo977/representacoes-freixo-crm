@@ -1,0 +1,43 @@
+/* Vistas da agenda: seletor + grelha de vários dias */
+.agenda-view-switch{display:inline-flex;gap:2px;padding:3px;border:1px solid var(--line,#dde8ed);border-radius:9px;background:rgba(0,0,0,.025)}
+.agenda-view-switch button{border:0;background:transparent;padding:7px 14px;border-radius:7px;font:inherit;font-size:13px;color:var(--muted,#66798a);cursor:pointer;white-space:nowrap}
+.agenda-view-switch button:hover{color:var(--ink,#18324a)}
+.agenda-view-switch button.active{background:#fff;color:var(--ink,#18324a);font-weight:600;box-shadow:0 1px 3px rgba(16,24,40,.12)}
+.calendar-head.has-views{flex-wrap:wrap}
+.calendar-head.has-views h2{text-transform:none}
+
+.agenda-grid{margin-top:12px}
+.agenda-grid-weekdays,.agenda-grid-days{display:grid;grid-template-columns:repeat(7,minmax(0,1fr))}
+.agenda-grid-weekdays span{padding:6px 8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#66798a)}
+.agenda-grid-days{border-top:1px solid var(--line,#dde8ed);border-left:1px solid var(--line,#dde8ed)}
+.agenda-day{min-width:0;min-height:110px;padding:6px;border-right:1px solid var(--line,#dde8ed);border-bottom:1px solid var(--line,#dde8ed);display:flex;flex-direction:column;gap:4px}
+.view-week .agenda-day{min-height:320px}
+.view-fortnight .agenda-day{min-height:150px}
+.agenda-day.is-outside{background:rgba(0,0,0,.025)}
+.agenda-day.is-outside .agenda-day-head strong{opacity:.45}
+.agenda-day-head{display:flex;align-items:center;gap:6px;border:0;background:transparent;padding:2px 4px;border-radius:6px;font:inherit;color:var(--ink,#18324a);cursor:pointer;text-align:left}
+.agenda-day-head:hover{background:rgba(0,0,0,.05)}
+.agenda-day-head strong{font-size:14px;line-height:24px;min-width:24px;text-align:center;border-radius:50%}
+.agenda-day-head em{font-style:normal;font-size:11px;color:var(--muted,#66798a)}
+.agenda-day-head b{margin-left:auto;font-size:10px;font-weight:600;color:var(--muted,#66798a)}
+.agenda-day-weekday{display:none;font-size:11px;font-weight:700;text-transform:uppercase;color:var(--muted,#66798a)}
+.agenda-day.is-today .agenda-day-head strong{background:var(--amber,#b7862b);color:#fff}
+.agenda-chip{display:flex;gap:6px;align-items:baseline;width:100%;min-width:0;padding:4px 6px;border:0;border-left:3px solid var(--blue,#347eb5);border-radius:4px;background:rgba(52,126,181,.09);font:inherit;font-size:11px;color:var(--ink,#18324a);text-align:left;cursor:pointer}
+.agenda-chip:hover{filter:brightness(.96)}
+.agenda-chip time{flex:none;font-variant-numeric:tabular-nums;color:var(--muted,#66798a)}
+.agenda-chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.agenda-chip.type-reuni-o,.agenda-chip.type-chamada{border-left-color:#28a47c;background:rgba(40,164,124,.09)}
+.agenda-chip.type-follow-up,.agenda-chip.type-tarefa{border-left-color:#ef9b45;background:rgba(239,155,69,.12)}
+.agenda-more{border:0;background:transparent;padding:2px 6px;font:inherit;font-size:11px;font-weight:600;color:var(--muted,#66798a);text-align:left;cursor:pointer}
+.agenda-more:hover{text-decoration:underline}
+
+/* Telemóvel: lista de dias em vez de grelha */
+@media(max-width:760px){
+  .agenda-view-switch{width:100%;order:5}
+  .agenda-view-switch button{flex:1;padding:8px 6px}
+  .agenda-grid-weekdays{display:none}
+  .agenda-grid-days{grid-template-columns:1fr;border-left:0}
+  .agenda-day,.view-week .agenda-day,.view-fortnight .agenda-day{min-height:0;border-right:0;padding:8px 2px}
+  .agenda-day.is-outside,.agenda-day.is-empty{display:none}
+  .agenda-day-weekday{display:inline}
+}
