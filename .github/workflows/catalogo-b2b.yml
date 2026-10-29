@@ -108,3 +108,11 @@ jobs:
         run: |
           npx --yes wrangler@4 pages project create freixo-b2b --production-branch main || true
           npx --yes wrangler@4 pages deploy dist --project-name freixo-b2b --branch main --commit-dirty=true
+      - name: Ligar o domínio próprio
+        # Fica "pendente" no Cloudflare até existir o registo CNAME encomendas -> freixo-b2b.pages.dev no fornecedor do domínio.
+        run: |
+          curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/freixo-b2b/domains" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
+            -d '{"name":"encomendas.representacoesfreixo.com"}' | jq -r 'if .success then "Domínio ligado ao projeto." else (.errors | map(.message) | join("; ")) end'
+          curl -s "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/freixo-b2b/domains" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq -r '.result[]? | "\(.name): \(.status)"'

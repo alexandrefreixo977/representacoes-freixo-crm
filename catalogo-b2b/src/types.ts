@@ -5,6 +5,7 @@ export type Manufacturer = {
   logoUrl?: string | null;
   ordersEmail?: string | null;
   sort: number;
+  active?: boolean;
 };
 
 export type Family = { id: string; manufacturerId: string; name: string };

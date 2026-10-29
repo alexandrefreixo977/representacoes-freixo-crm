@@ -4,11 +4,12 @@ import { api } from "../data";
 import { detectColumns, mapRows, readSpreadsheet, type ColumnMap } from "../importer";
 import { formatDiscounts, formatEur, normRef, parseDiscounts } from "../pricing";
 import { go, useApp } from "../state";
-import type { AccessRequest, Client, DiscountRule, Order, OrderStatus, PriceImportRow } from "../types";
+import type { AccessRequest, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow } from "../types";
 import { OrderLinesTable } from "./Orders";
 
 const TABS = [
   ["encomendas", "Encomendas"],
+  ["fabricantes", "Fabricantes"],
   ["precos", "Importar preços"],
   ["clientes", "Clientes e descontos"],
   ["pedidos", "Pedidos de acesso"],
@@ -35,6 +36,7 @@ export function AdminPage() {
         ))}
       </nav>
       {tab === "encomendas" && <OrdersAdmin />}
+      {tab === "fabricantes" && <ManufacturersAdmin />}
       {tab === "precos" && <ImportAdmin />}
       {tab === "clientes" && <ClientsAdmin />}
       {tab === "pedidos" && <RequestsAdmin />}
@@ -520,6 +522,89 @@ function RequestsAdmin() {
         </article>
       ))}
       <p className="hint">Para dar acesso: crie o cliente em "Clientes e descontos" e envie o convite para o email.</p>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ fabricantes
+
+type MfrDraft = { id?: string; name: string; ordersEmail: string; logoUrl: string; sort: number; active: boolean };
+
+function ManufacturersAdmin() {
+  const { refreshCatalog } = useApp();
+  const [list, setList] = useState<Manufacturer[] | null>(null);
+  const [draft, setDraft] = useState<MfrDraft | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const load = useCallback(() => {
+    api.listManufacturers().then(setList).catch((e) => setError((e as Error).message));
+  }, []);
+  useEffect(load, [load]);
+  if (!list) return <div className="empty">A carregar…</div>;
+
+  const edit = (m?: Manufacturer) =>
+    setDraft(
+      m
+        ? { id: m.id, name: m.name, ordersEmail: m.ordersEmail ?? "", logoUrl: m.logoUrl ?? "", sort: m.sort, active: m.active !== false }
+        : { name: "", ordersEmail: "", logoUrl: "", sort: (list.at(-1)?.sort ?? 0) + 1, active: true }
+    );
+
+  return (
+    <div className="panel wide">
+      <div className="row between">
+        <h2>Fabricantes</h2>
+        {!draft && <button className="btn primary" onClick={() => edit()}>+ Novo fabricante</button>}
+      </div>
+      <p className="hint">Cada fabricante aparece como separador no catálogo. O email de encomendas é usado em "Preparar email ao fabricante".</p>
+      {error && <p className="error">{error}</p>}
+
+      {draft && (
+        <form
+          className="form-grid"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setError(null);
+            try {
+              await api.saveManufacturer({ ...draft, name: draft.name.trim() });
+              setDraft(null);
+              load();
+              refreshCatalog();
+            } catch (err) {
+              setError((err as Error).message);
+            }
+          }}
+        >
+          <label>Nome<input required value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
+          <label>Email de encomendas<input type="email" value={draft.ordersEmail} onChange={(e) => setDraft({ ...draft, ordersEmail: e.target.value })} /></label>
+          <label>Logótipo (endereço da imagem, opcional)<input type="url" value={draft.logoUrl} onChange={(e) => setDraft({ ...draft, logoUrl: e.target.value })} placeholder="https://…" /></label>
+          <label>Ordem no catálogo<input type="number" value={draft.sort} onChange={(e) => setDraft({ ...draft, sort: Number(e.target.value) })} /></label>
+          <label className="check full" style={{ flexDirection: "row", alignItems: "center" }}>
+            <input type="checkbox" style={{ width: "auto" }} checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
+            Visível no catálogo
+          </label>
+          <div className="row full">
+            <button className="btn primary">Guardar</button>
+            <button type="button" className="btn ghost" onClick={() => setDraft(null)}>Cancelar</button>
+          </div>
+        </form>
+      )}
+
+      <div className="table-wrap">
+        <table className="table">
+          <thead><tr><th className="num">Ordem</th><th>Fabricante</th><th>Email de encomendas</th><th>Estado</th><th /></tr></thead>
+          <tbody>
+            {list.length === 0 && <tr><td colSpan={5} className="muted">Ainda não há fabricantes. Crie o primeiro com "+ Novo fabricante".</td></tr>}
+            {list.map((m) => (
+              <tr key={m.id}>
+                <td className="num">{m.sort}</td>
+                <td><strong>{m.name}</strong></td>
+                <td>{m.ordersEmail || <span className="muted">—</span>}</td>
+                <td>{m.active === false ? <span className="status s-cancelled">Oculto</span> : <span className="status s-delivered">Visível</span>}</td>
+                <td><button className="link" onClick={() => edit(m)}>Editar</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
