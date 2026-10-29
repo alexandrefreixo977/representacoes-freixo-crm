@@ -58,6 +58,18 @@ const mapOrder = (o: Row): Order => ({
   ),
 });
 
+/** O Supabase devolve no máximo 1000 linhas por pedido; isto pede página a página até acabar. */
+async function fetchAll(page: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>) {
+  const size = 1000;
+  const all: Row[] = [];
+  for (let from = 0; ; from += size) {
+    const { data, error } = await page(from, from + size - 1);
+    fail(error);
+    all.push(...(data ?? []));
+    if (!data || data.length < size) return all;
+  }
+}
+
 export function createSupabaseApi(url: string, anonKey: string): Api {
   const sb: SupabaseClient = createClient(url, anonKey, { auth: { persistSession: true } });
 
@@ -102,17 +114,17 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
 
     async getCatalog(): Promise<Catalog> {
-      const [m, f, p, c] = await Promise.all([
+      const [m, f, products, c] = await Promise.all([
         sb.from("b2b_manufacturers").select("*").eq("active", true).order("sort"),
         sb.from("b2b_families").select("*").order("name"),
-        sb.from("b2b_products").select("*").eq("active", true).order("designation").range(0, 9999),
+        fetchAll((from, to) => sb.from("b2b_products").select("*").eq("active", true).order("designation").order("id").range(from, to)),
         sb.from("b2b_campaigns").select("*").eq("active", true).order("sort"),
       ]);
-      fail(m.error); fail(f.error); fail(p.error); fail(c.error);
+      fail(m.error); fail(f.error); fail(c.error);
       return {
         manufacturers: (m.data ?? []).map((r: Row) => ({ id: r.id, name: r.name, slug: r.slug, logoUrl: r.logo_url, ordersEmail: r.orders_email, sort: r.sort })),
         families: (f.data ?? []).map((r: Row) => ({ id: r.id, manufacturerId: r.manufacturer_id, name: r.name })),
-        products: (p.data ?? []).map((r: Row) => ({
+        products: products.map((r: Row) => ({
           id: r.id,
           manufacturerId: r.manufacturer_id,
           familyId: r.family_id,
@@ -138,14 +150,14 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
 
     async getPricing() {
-      const [p, r] = await Promise.all([
-        sb.from("b2b_prices").select("product_id, list_price").range(0, 9999),
+      const [prices, r] = await Promise.all([
+        fetchAll((from, to) => sb.from("b2b_prices").select("product_id, list_price").order("product_id").range(from, to)),
         sb.from("b2b_discount_rules").select("*").eq("active", true),
       ]);
-      fail(p.error); fail(r.error);
+      fail(r.error);
       const today = new Date().toISOString().slice(0, 10);
       return {
-        listPrices: Object.fromEntries((p.data ?? []).map((x: Row) => [x.product_id, num(x.list_price)])),
+        listPrices: Object.fromEntries(prices.map((x: Row) => [x.product_id, num(x.list_price)])),
         rules: (r.data ?? []).filter((x: Row) => !x.valid_until || x.valid_until >= today).map(mapRule),
       };
     },
