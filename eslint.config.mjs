@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // App separada, com configuração própria.
+    "catalogo-b2b/**",
   ]),
   eslint.configs.recommended,
   ...tseslint.configs.recommended,
