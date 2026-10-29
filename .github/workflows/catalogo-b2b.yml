@@ -71,6 +71,30 @@ jobs:
       - name: Descobrir e verificar configuração
         run: ./scripts/resolve-config.sh
 
+      # 0) Domínio próprio: liga encomendas.representacoesfreixo.com ao site e escolhe o endereço da loja.
+      #    Enquanto o domínio não estiver ativo no Cloudflare, a loja continua em freixo-b2b.pages.dev.
+      - name: Ligar o domínio próprio
+        env:
+          APP_URL_VAR: ${{ vars.APP_URL }}
+          DOMAIN: encomendas.representacoesfreixo.com
+        run: |
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/freixo-b2b/domains"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          curl -s -X POST "$api" "${auth[@]}" -H "Content-Type: application/json" -d "{\"name\":\"$DOMAIN\"}" > /dev/null || true
+          status=unknown
+          for i in $(seq 1 20); do
+            status=$(curl -s "$api/$DOMAIN" "${auth[@]}" | jq -r '.result.status // "unknown"')
+            [ "$status" = active ] && break
+            [ "$i" = 1 ] && curl -s -X PATCH "$api/$DOMAIN" "${auth[@]}" > /dev/null || true
+            sleep 15
+          done
+          echo "Estado do domínio $DOMAIN: $status"
+          if [ -n "$APP_URL_VAR" ]; then url="$APP_URL_VAR"
+          elif [ "$status" = active ]; then url="https://$DOMAIN"
+          else url="https://freixo-b2b.pages.dev"; fi
+          echo "APP_URL=$url" >> "$GITHUB_ENV"
+          echo "Endereço da loja: $url" | tee -a "$GITHUB_STEP_SUMMARY"
+
       # 1) Base de dados e funções (Supabase)
       - name: Atualizar base de dados
         run: supabase db push --password "$SUPABASE_DB_PASSWORD"
@@ -85,7 +109,6 @@ jobs:
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           MAIL_FROM: ${{ vars.MAIL_FROM }}
           NOTIFY_TO: ${{ vars.NOTIFY_TO }}
-          APP_URL: ${{ vars.APP_URL || 'https://freixo-b2b.pages.dev' }}
         run: |
           args=(B2B_SERVICE_KEY="$B2B_SERVICE_KEY" APP_URL="$APP_URL")
           if [ -n "$MS_CLIENT_SECRET" ]; then
@@ -96,7 +119,6 @@ jobs:
 
       - name: Configurar logins e convidar a gestão
         env:
-          APP_URL: ${{ vars.APP_URL || 'https://freixo-b2b.pages.dev' }}
           ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS || 'afreixo@representacoesfreixo.com' }}
         run: ./scripts/setup-auth.sh
 
@@ -108,11 +130,3 @@ jobs:
         run: |
           npx --yes wrangler@4 pages project create freixo-b2b --production-branch main || true
           npx --yes wrangler@4 pages deploy dist --project-name freixo-b2b --branch main --commit-dirty=true
-      - name: Ligar o domínio próprio
-        # Fica "pendente" no Cloudflare até existir o registo CNAME encomendas -> freixo-b2b.pages.dev no fornecedor do domínio.
-        run: |
-          curl -s -X POST "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/freixo-b2b/domains" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" -H "Content-Type: application/json" \
-            -d '{"name":"encomendas.representacoesfreixo.com"}' | jq -r 'if .success then "Domínio ligado ao projeto." else (.errors | map(.message) | join("; ")) end'
-          curl -s "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/freixo-b2b/domains" \
-            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | jq -r '.result[]? | "\(.name): \(.status)"'
