@@ -53,11 +53,12 @@ Endereço previsto: **https://encomendas.representacoesfreixo.com** (subdomínio
 ### Configuração inicial (uma vez)
 1. **Supabase** (base de dados e logins): criar conta e um projeto novo, região Europa (ex.: Frankfurt).
 2. **Cloudflare** (alojamento do site): criar conta gratuita e um token de API com permissão *Cloudflare Pages: Edit*.
-3. **GitHub → Settings → Secrets and variables → Actions**:
-   - Secrets: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `VITE_SUPABASE_URL`,
-     `VITE_SUPABASE_ANON_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`;
-     para o email: `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET` (aplicação Microsoft 365 com permissão `Mail.Send`).
-   - Variables: `MAIL_FROM` (caixa que envia), `NOTIFY_TO` (quem recebe as encomendas), `APP_URL` (endereço da loja).
+3. **GitHub → Settings → Secrets and variables → Actions**, só 3 segredos:
+   `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD` e `CLOUDFLARE_API_TOKEN`.
+   O projeto, o endereço, as chaves públicas e a conta Cloudflare são descobertos por `scripts/resolve-config.sh`,
+   que também verifica as chaves em cada PR (resultado no resumo da execução "Catálogo B2B").
+   Para o email (passo posterior): segredos `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET` (aplicação Microsoft 365
+   com permissão `Mail.Send`) e variáveis `MAIL_FROM`, `NOTIFY_TO`.
 4. **Domínio**: no Cloudflare Pages → projeto `freixo-b2b` → Custom domains, juntar `encomendas.representacoesfreixo.com`
    e criar o registo CNAME indicado no fornecedor do domínio.
 5. **Supabase → Authentication → URL Configuration**: Site URL = endereço da loja.

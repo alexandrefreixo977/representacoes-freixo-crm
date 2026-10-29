@@ -6,6 +6,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
 
 const env = (k: string) => Deno.env.get(k) ?? "";
+// Chaves: as que o GitHub Actions configura (B2B_SERVICE_KEY) ou as que o Supabase injeta por omissão.
+const serviceKey = () => env("B2B_SERVICE_KEY") || env("SUPABASE_SERVICE_ROLE_KEY");
+const anonKey = (req: Request) => env("SUPABASE_ANON_KEY") || req.headers.get("apikey") || "";
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type" };
 const eur = (n: number) => new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR" }).format(Number(n));
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
@@ -41,13 +44,13 @@ Deno.serve(async (req) => {
   try {
     const { groupId } = await req.json();
     // Cliente autenticado: só pode notificar uma encomenda que seja sua.
-    const userClient = createClient(env("SUPABASE_URL"), env("SUPABASE_ANON_KEY"), {
+    const userClient = createClient(env("SUPABASE_URL"), anonKey(req), {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
     });
     const { data: group } = await userClient.from("b2b_order_groups").select("id").eq("id", groupId).maybeSingle();
     if (!group) return new Response("not found", { status: 404, headers: cors });
 
-    const admin = createClient(env("SUPABASE_URL"), env("SUPABASE_SERVICE_ROLE_KEY"));
+    const admin = createClient(env("SUPABASE_URL"), serviceKey());
     const { data: g, error } = await admin
       .from("b2b_order_groups")
       .select("number, customer_ref, notes, created_at, user_id, b2b_clients(name, nif, email, address), b2b_orders(number, subtotal, b2b_manufacturers(name), b2b_order_lines(reference, designation, qty, sales_unit, net_price, line_total))")
