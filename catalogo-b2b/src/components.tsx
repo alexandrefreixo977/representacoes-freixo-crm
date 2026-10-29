@@ -109,7 +109,7 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
               className="btn primary"
               disabled={qty <= 0}
               onClick={() => {
-                addToCart(product.id, qty);
+                addToCart(product, qty);
                 toast(`${product.reference} adicionado ao carrinho`);
               }}
             >
@@ -178,7 +178,7 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
                   className="btn primary"
                   disabled={qty <= 0}
                   onClick={() => {
-                    addToCart(product.id, qty);
+                    addToCart(product, qty);
                     toast(`${product.reference} adicionado ao carrinho`);
                     onClose();
                   }}

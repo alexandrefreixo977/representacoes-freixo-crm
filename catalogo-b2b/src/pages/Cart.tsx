@@ -6,7 +6,7 @@ import { formatEur, splitByManufacturer } from "../pricing";
 import { go, useApp } from "../state";
 
 export function CartPage() {
-  const { cart, catalog, pricing, session, setQty, clearCart, refreshSession } = useApp();
+  const { cart, catalog, pricing, session, setQty, clearCart, refreshSession, productsById } = useApp();
   const [customerRef, setCustomerRef] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +41,8 @@ export function CartPage() {
     );
   }
 
-  const groups = splitByManufacturer(cart, catalog.products, pricing, session?.client?.id);
+  if (cart.some((i) => !productsById.has(i.productId)) && cart.length) return <div className="empty">A carregar o carrinho…</div>;
+  const groups = splitByManufacturer(cart, [...productsById.values()], pricing, session?.client?.id);
   const total = groups.reduce((s, g) => s + g.subtotal, 0);
   const missingPrice = groups.some((g) => g.items.some((i) => !i.price));
 

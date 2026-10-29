@@ -41,9 +41,21 @@ export type Campaign = {
 export type Catalog = {
   manufacturers: Manufacturer[];
   families: Family[];
+  /** Só os artigos das campanhas. Os restantes pedem-se ao servidor com searchProducts(). */
   products: Product[];
   campaigns: Campaign[];
 };
+
+export type ProductQuery = {
+  manufacturerId?: string;
+  familyId?: string;
+  q?: string;
+  onlyNew?: boolean;
+  offset: number;
+  limit: number;
+};
+
+export type ProductPage = { products: Product[]; total: number };
 
 /** Regra comercial. client_id vazio = regra geral para todos os clientes. */
 export type DiscountRule = {
@@ -59,6 +71,7 @@ export type DiscountRule = {
 };
 
 export type Pricing = {
+  /** Preços de tabela dos artigos já carregados (vão sendo pedidos à medida que aparecem). */
   listPrices: Record<string, number>;
   rules: DiscountRule[];
 };

@@ -6,7 +6,7 @@ import { go, useApp } from "../state";
 import type { Order } from "../types";
 
 export function OrdersPage() {
-  const { session, catalog, addToCart, toast, productsById } = useApp();
+  const { session, catalog, addToCart, toast, ensureProducts } = useApp();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [open, setOpen] = useState<string | null>(null);
 
@@ -25,11 +25,14 @@ export function OrdersPage() {
   if (!orders) return <div className="empty">A carregar…</div>;
   const mfrName = (id: string) => catalog?.manufacturers.find((m) => m.id === id)?.name ?? "";
 
-  function repeat(o: Order) {
+  async function repeat(o: Order) {
+    const list = await ensureProducts(o.lines.map((l) => l.productId)).catch(() => []);
+    const products = new Map(list.map((p) => [p.id, p]));
     let n = 0;
     o.lines.forEach((l) => {
-      if (productsById.has(l.productId)) {
-        addToCart(l.productId, l.qty);
+      const product = products.get(l.productId);
+      if (product) {
+        addToCart(product, l.qty);
         n++;
       }
     });

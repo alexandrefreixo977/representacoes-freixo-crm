@@ -97,6 +97,9 @@ export function parseQuickOrder(text: string) {
     });
 }
 
+/** Texto para pesquisa: minúsculas e sem acentos (igual à coluna search_text no SQL). */
+export const normSearch = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export const normRef = (ref: string) => ref.toUpperCase().replace(/[\s.\-_/]/g, "");
 
 const eur = new Intl.NumberFormat("pt-PT", { style: "currency", currency: "EUR", minimumFractionDigits: 2, maximumFractionDigits: 2 });

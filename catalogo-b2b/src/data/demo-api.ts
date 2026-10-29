@@ -1,4 +1,4 @@
-import { normRef, splitByManufacturer } from "../pricing";
+import { normRef, normSearch, splitByManufacturer } from "../pricing";
 import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, Product, Session } from "../types";
 import { slugify } from "../slug";
 import type { Api } from "./api";
@@ -113,7 +113,36 @@ export const demoApi: Api = {
 
   async getCatalog(): Promise<Catalog> {
     const db = load();
-    return { manufacturers: (db.manufacturers ?? seedManufacturers).filter((m) => m.active !== false).sort((a, b) => a.sort - b.sort), families: db.families, products: db.products, campaigns: seedCampaigns };
+    const campaignProducts = new Set(seedCampaigns.map((c) => c.productId));
+    return {
+      manufacturers: (db.manufacturers ?? seedManufacturers).filter((m) => m.active !== false).sort((a, b) => a.sort - b.sort),
+      families: db.families,
+      products: db.products.filter((p) => campaignProducts.has(p.id)),
+      campaigns: seedCampaigns,
+    };
+  },
+  async searchProducts({ manufacturerId, familyId, q, onlyNew, offset, limit }) {
+    const terms = normSearch(q ?? "").split(/\s+/).filter(Boolean);
+    const found = load()
+      .products.filter((p) => {
+        if (manufacturerId && p.manufacturerId !== manufacturerId) return false;
+        if (familyId && p.familyId !== familyId) return false;
+        if (onlyNew && !p.isNew) return false;
+        const hay = normSearch(`${p.reference} ${p.designation} ${p.ean ?? ""}`);
+        return terms.every((t) => hay.includes(t));
+      })
+      .sort((a, b) => a.designation.localeCompare(b.designation));
+    return { products: found.slice(offset, offset + limit), total: found.length };
+  },
+  async getProducts(ids) {
+    const wanted = new Set(ids);
+    return load().products.filter((p) => wanted.has(p.id));
+  },
+  async findProducts(refs, manufacturerId) {
+    const keys = new Set(refs.map(normRef));
+    return load().products.filter(
+      (p) => (!manufacturerId || p.manufacturerId === manufacturerId) && (keys.has(normRef(p.reference)) || (!!p.ean && keys.has(normRef(p.ean))))
+    );
   },
   async requestAccess(req) {
     const db = load();
@@ -127,6 +156,11 @@ export const demoApi: Api = {
       listPrices: db.prices,
       rules: db.rules.filter((r) => s.role === "admin" || !r.clientId || r.clientId === s.client?.id),
     };
+  },
+  async getPrices(productIds) {
+    const db = load();
+    requireSession(db);
+    return Object.fromEntries(productIds.filter((id) => db.prices[id] != null).map((id) => [id, db.prices[id]]));
   },
   async submitOrder(items, customerRef, notes) {
     const db = load();

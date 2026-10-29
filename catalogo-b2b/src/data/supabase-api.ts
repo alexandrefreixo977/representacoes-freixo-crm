@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Session } from "../types";
+import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Session } from "../types";
+import { normRef, normSearch } from "../pricing";
 import { slugify } from "../slug";
 import type { Api } from "./api";
 
@@ -58,20 +59,28 @@ const mapOrder = (o: Row): Order => ({
   ),
 });
 
-type Page = PromiseLike<{ data: Row[] | null; error: { message: string } | null; count?: number | null }>;
+const PRODUCT_COLS =
+  "id, manufacturer_id, family_id, reference, ean, designation, description, image_url, tech_sheet_url, sales_unit, pack_qty, moq, is_new";
 
-/** O Supabase devolve no máximo 1000 linhas por pedido: pede a primeira página com o total e o resto em paralelo. */
-async function fetchAll(page: (from: number, to: number, withCount: boolean) => Page) {
-  const size = 1000;
-  const first = await page(0, size - 1, true);
-  fail(first.error);
-  const total = first.count ?? 0;
-  const rest = [];
-  for (let from = size; from < total; from += size) rest.push(page(from, from + size - 1, false));
-  const pages = await Promise.all(rest);
-  pages.forEach((p) => fail(p.error));
-  return [first, ...pages].flatMap((p) => p.data ?? []);
-}
+const mapProduct = (r: Row): Product => ({
+  id: r.id,
+  manufacturerId: r.manufacturer_id,
+  familyId: r.family_id,
+  reference: r.reference,
+  ean: r.ean,
+  designation: r.designation,
+  description: r.description,
+  imageUrl: r.image_url,
+  techSheetUrl: r.tech_sheet_url,
+  salesUnit: r.sales_unit,
+  packQty: num(r.pack_qty),
+  moq: num(r.moq),
+  isNew: r.is_new,
+});
+
+/** Divide uma lista em blocos (para não fazer URLs gigantes). */
+const chunks = <T,>(list: T[], size = 150) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
+const quoted = (values: string[]) => values.map((v) => `"${v.replace(/["\\]/g, "")}"`).join(",");
 
 export function createSupabaseApi(url: string, anonKey: string): Api {
   const sb: SupabaseClient = createClient(url, anonKey, { auth: { persistSession: true } });
@@ -90,7 +99,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     };
   }
 
-  return {
+  const self: Api = {
     mode: "supabase",
     getSession: session,
     async signIn(email, password) {
@@ -117,35 +126,51 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
 
     async getCatalog(): Promise<Catalog> {
-      const [m, f, products, c] = await Promise.all([
+      const [m, f, c] = await Promise.all([
         sb.from("b2b_manufacturers").select("*").eq("active", true).order("sort"),
         sb.from("b2b_families").select("*").order("name"),
-        fetchAll((from, to, c) => sb.from("b2b_products").select("*", c ? { count: "exact" } : {}).eq("active", true).order("designation").order("id").range(from, to)),
         sb.from("b2b_campaigns").select("*").eq("active", true).order("sort"),
       ]);
       fail(m.error); fail(f.error); fail(c.error);
+      const campaignProducts = (c.data ?? []).map((r: Row) => r.product_id).filter(Boolean);
       return {
         manufacturers: (m.data ?? []).map((r: Row) => ({ id: r.id, name: r.name, slug: r.slug, logoUrl: r.logo_url, ordersEmail: r.orders_email, sort: r.sort })),
         families: (f.data ?? []).map((r: Row) => ({ id: r.id, manufacturerId: r.manufacturer_id, name: r.name })),
-        products: products.map((r: Row) => ({
-          id: r.id,
-          manufacturerId: r.manufacturer_id,
-          familyId: r.family_id,
-          reference: r.reference,
-          ean: r.ean,
-          designation: r.designation,
-          description: r.description,
-          imageUrl: r.image_url,
-          techSheetUrl: r.tech_sheet_url,
-          salesUnit: r.sales_unit,
-          packQty: num(r.pack_qty),
-          moq: num(r.moq),
-          isNew: r.is_new,
-        })),
+        products: campaignProducts.length ? await self.getProducts(campaignProducts) : [],
         campaigns: (c.data ?? []).map((r: Row) => ({
           id: r.id, title: r.title, subtitle: r.subtitle, badge: r.badge, imageUrl: r.image_url, manufacturerId: r.manufacturer_id, productId: r.product_id,
         })),
       };
+    },
+    async searchProducts({ manufacturerId, familyId, q, onlyNew, offset, limit }) {
+      let query = sb.from("b2b_products").select(PRODUCT_COLS, { count: "exact" }).eq("active", true);
+      if (manufacturerId) query = query.eq("manufacturer_id", manufacturerId);
+      if (familyId) query = query.eq("family_id", familyId);
+      if (onlyNew) query = query.eq("is_new", true);
+      for (const term of normSearch(q ?? "").split(/\s+/).filter(Boolean)) {
+        query = query.like("search_text", `%${term.replace(/[%_\\]/g, (ch) => `\\${ch}`)}%`);
+      }
+      const { data, error, count } = await query.order("designation").order("id").range(offset, offset + limit - 1);
+      fail(error);
+      return { products: (data ?? []).map(mapProduct), total: count ?? 0 };
+    },
+    async getProducts(ids) {
+      const unique = [...new Set(ids)];
+      const pages = await Promise.all(chunks(unique).map((part) => sb.from("b2b_products").select(PRODUCT_COLS).in("id", part)));
+      pages.forEach((p) => fail(p.error));
+      return pages.flatMap((p) => (p.data ?? []).map(mapProduct));
+    },
+    async findProducts(refs, manufacturerId) {
+      const keys = [...new Set(refs.map(normRef).filter(Boolean))];
+      const pages = await Promise.all(
+        chunks(keys, 100).map((part) => {
+          let query = sb.from("b2b_products").select(PRODUCT_COLS).eq("active", true).or(`ref_norm.in.(${quoted(part)}),ean.in.(${quoted(part)})`);
+          if (manufacturerId) query = query.eq("manufacturer_id", manufacturerId);
+          return query.limit(1000);
+        })
+      );
+      pages.forEach((p) => fail(p.error));
+      return pages.flatMap((p) => (p.data ?? []).map(mapProduct));
     },
     async requestAccess(req) {
       const { error } = await sb.from("b2b_access_requests").insert(req);
@@ -153,16 +178,15 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
 
     async getPricing() {
-      const [prices, r] = await Promise.all([
-        fetchAll((from, to, c) => sb.from("b2b_prices").select("product_id, list_price", c ? { count: "exact" } : {}).order("product_id").range(from, to)),
-        sb.from("b2b_discount_rules").select("*").eq("active", true),
-      ]);
-      fail(r.error);
+      const { data, error } = await sb.from("b2b_discount_rules").select("*").eq("active", true);
+      fail(error);
       const today = new Date().toISOString().slice(0, 10);
-      return {
-        listPrices: Object.fromEntries(prices.map((x: Row) => [x.product_id, num(x.list_price)])),
-        rules: (r.data ?? []).filter((x: Row) => !x.valid_until || x.valid_until >= today).map(mapRule),
-      };
+      return { listPrices: {}, rules: (data ?? []).filter((x: Row) => !x.valid_until || x.valid_until >= today).map(mapRule) };
+    },
+    async getPrices(productIds) {
+      const pages = await Promise.all(chunks([...new Set(productIds)]).map((part) => sb.from("b2b_prices").select("product_id, list_price").in("product_id", part)));
+      pages.forEach((p) => fail(p.error));
+      return Object.fromEntries(pages.flatMap((p) => (p.data ?? []).map((x: Row) => [x.product_id, num(x.list_price)])));
     },
     async submitOrder(items, customerRef, notes) {
       const { data, error } = await sb.rpc("b2b_submit_order", { p_items: items, p_customer_ref: customerRef, p_notes: notes });
@@ -254,4 +278,5 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       return (data ?? []).map((r: Row): AccessRequest => ({ ...r, createdAt: r.created_at }) as AccessRequest);
     },
   };
+  return self;
 }
