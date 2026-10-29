@@ -139,7 +139,7 @@ code { background: #e9eff3; padding: 1px 6px; border-radius: 4px; }
 @media (min-width: 1000px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
 @media (min-width: 1200px) { .grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
 .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); display: flex; flex-direction: column; overflow: hidden; }
-.card-media { position: relative; border: 0; background: #fff; padding: 10px; cursor: pointer; aspect-ratio: 1 / 0.85; display: block; width: 100%; }
+.card-media { position: relative; border: 0; background: #fff; padding: 10px; cursor: pointer; aspect-ratio: 1; display: block; width: 100%; border-bottom: 1px solid var(--line); }
 .product-img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .product-img.placeholder {
   display: grid; place-items: center; align-content: center; gap: 4px; border-radius: 8px;

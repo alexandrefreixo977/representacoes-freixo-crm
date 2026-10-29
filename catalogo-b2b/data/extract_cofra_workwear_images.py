@@ -3,6 +3,7 @@
 Uso: python3 data/extract_cofra_workwear_images.py "WORKWEAR-ES 2026-1.pdf" "Tarifas COFRA PORTUGAL 2°Sem.2026.xls" \
        public/img/cofra-vestuario supabase/migrations/<data>_cofra_vestuario_imagens.sql
 Precisa de: pymupdf, pillow, xlrd.
+Depois de extrair, correr data/normalize_images.py na pasta das fotos (quadrado branco 500x500).
 
 No catálogo cada modelo tem um título "NOME V264" e uma foto por cor com o código da cor ao lado ("02").
 A referência da tarifa V264-0-02 = modelo V264, cor 02. Cada código de cor fica com a foto mais próxima;
