@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import logoUrl from "./assets/logo.svg";
 import { Icon } from "./components";
 import { api } from "./data";
 import { AccessRequestPage, LoginPage } from "./pages/Account";
@@ -58,7 +59,7 @@ function Header() {
     <header className="header">
       <div className="header-inner">
         <a className="logo" href="#/" aria-label="Representações Freixo, início">
-          <img src="/icon.svg" alt="" width={36} height={36} />
+          <img src={logoUrl} alt="" width={36} height={36} />
           <span>
             <strong>Representações Freixo</strong>
             <small>Catálogo profissional</small>

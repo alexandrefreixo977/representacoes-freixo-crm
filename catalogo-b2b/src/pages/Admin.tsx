@@ -112,9 +112,7 @@ function OrdersAdmin() {
                         <button className="btn ghost" onClick={() => printOrder(o, m?.name ?? "", client)}>Imprimir / PDF</button>
                       </>
                     )}
-                    {o.status !== "cancelled" && o.status !== "delivered" && (
-                      <button className="btn ghost danger" onClick={() => confirm(`Cancelar a encomenda ${o.number}?`) && move(o, "cancelled")}>Cancelar</button>
-                    )}
+                    {o.status !== "cancelled" && o.status !== "delivered" && <CancelButton onConfirm={() => move(o, "cancelled")} />}
                   </div>
                 </div>
               )}
@@ -123,6 +121,17 @@ function OrdersAdmin() {
         })}
       </div>
     </>
+  );
+}
+
+function CancelButton({ onConfirm }: { onConfirm: () => void }) {
+  const [asking, setAsking] = useState(false);
+  if (!asking) return <button className="btn ghost danger" onClick={() => setAsking(true)}>Cancelar</button>;
+  return (
+    <span className="row" style={{ marginTop: 0 }}>
+      <button className="btn primary" onClick={onConfirm}>Sim, cancelar encomenda</button>
+      <button className="btn ghost" onClick={() => setAsking(false)}>Não</button>
+    </span>
   );
 }
 
