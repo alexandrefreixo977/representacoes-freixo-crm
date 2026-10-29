@@ -24,6 +24,8 @@ env:
   SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
   CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
   CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+  # ID da conta Cloudflare da Representações Freixo (não é secreto; um segredo com o mesmo nome tem prioridade).
+  CLOUDFLARE_ACCOUNT_ID_DEFAULT: 28b6ca9edbc3e5a4864f111ae12f2130
 
 jobs:
   test:

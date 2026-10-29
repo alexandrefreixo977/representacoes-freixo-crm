@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Descobre sozinho os dados do Supabase e do Cloudflare a partir de 3 chaves e verifica se estão certas.
 # Chaves necessárias (segredos do GitHub): SUPABASE_ACCESS_TOKEN, SUPABASE_DB_PASSWORD, CLOUDFLARE_API_TOKEN.
-# Opcional: CLOUDFLARE_ACCOUNT_ID (se faltar ou estiver errado, é descoberto pelo token).
+# A conta Cloudflare vem de CLOUDFLARE_ACCOUNT_ID_DEFAULT no workflow (o ID da conta não é secreto).
 # Exporta para os passos seguintes: SUPABASE_PROJECT_REF, VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY,
 # B2B_SERVICE_KEY, CLOUDFLARE_ACCOUNT_ID. Nunca escreve chaves no registo.
 set -uo pipefail
@@ -65,15 +65,17 @@ else
   if [ "$verify" != "active" ]; then
     fail "O CLOUDFLARE_API_TOKEN não é aceite pelo Cloudflare. Crie um novo (Cloudflare Pages: Edit) e substitua o segredo."
   else
-    accounts=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts) || accounts='{"result":[]}'
-    ids=$(echo "$accounts" | jq -r '[.result[].id] | join(" ")')
-    acct="${CLOUDFLARE_ACCOUNT_ID:-}"
-    if [ -z "$acct" ] || ! grep -qw -- "$acct" <<< "$ids"; then acct=$(echo "$accounts" | jq -r '.result[0].id // empty'); fi
+    # A conta: o segredo CLOUDFLARE_ACCOUNT_ID, senão o valor por omissão do workflow, senão a primeira conta visível.
+    acct="${CLOUDFLARE_ACCOUNT_ID:-${CLOUDFLARE_ACCOUNT_ID_DEFAULT:-}}"
     if [ -z "$acct" ]; then
-      fail "O token do Cloudflare é válido, mas não tem acesso a nenhuma conta. Confirme a permissão Account → Cloudflare Pages → Edit."
+      acct=$(curl -sf -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" https://api.cloudflare.com/client/v4/accounts | jq -r '.result[0].id // empty') || acct=""
+    fi
+    pages=$( [ -n "$acct" ] && curl -s -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" "https://api.cloudflare.com/client/v4/accounts/$acct/pages/projects" | jq -r '.success // false')
+    if [ "$pages" != "true" ]; then
+      fail "O token do Cloudflare é válido, mas não consegue gerir o Cloudflare Pages da conta. Confirme a permissão Account → Cloudflare Pages → Edit."
     else
       echo "CLOUDFLARE_ACCOUNT_ID=$acct" >> "$out"; export CLOUDFLARE_ACCOUNT_ID="$acct"
-      say "✅ Cloudflare: token válido e conta encontrada."
+      say "✅ Cloudflare: token válido com acesso ao Cloudflare Pages."
     fi
   fi
 fi
