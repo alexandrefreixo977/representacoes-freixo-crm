@@ -29,7 +29,7 @@ const mapRule = (r: Row): DiscountRule => ({
 const ORDER_SELECT =
   "id, number, client_id, manufacturer_id, status, subtotal, internal_note, created_at, " +
   "b2b_order_groups(number, customer_ref, notes), b2b_clients(name), " +
-  "b2b_order_lines(product_id, reference, designation, sales_unit, qty, list_price, discounts, net_price, line_total)";
+  "b2b_order_lines(product_id, variant, reference, designation, sales_unit, qty, list_price, discounts, net_price, line_total)";
 
 const mapOrder = (o: Row): Order => ({
   id: o.id,
@@ -47,6 +47,7 @@ const mapOrder = (o: Row): Order => ({
   lines: (o.b2b_order_lines ?? []).map(
     (l: Row): OrderLine => ({
       productId: l.product_id,
+      variant: l.variant,
       reference: l.reference,
       designation: l.designation,
       salesUnit: l.sales_unit,
@@ -60,7 +61,7 @@ const mapOrder = (o: Row): Order => ({
 });
 
 const PRODUCT_COLS =
-  "id, manufacturer_id, family_id, reference, ean, designation, description, image_url, tech_sheet_url, sales_unit, pack_qty, moq, is_new";
+  "id, manufacturer_id, family_id, reference, ean, designation, description, image_url, tech_sheet_url, sales_unit, pack_qty, moq, is_new, size_type";
 
 const mapProduct = (r: Row): Product => ({
   id: r.id,
@@ -76,6 +77,7 @@ const mapProduct = (r: Row): Product => ({
   packQty: num(r.pack_qty),
   moq: num(r.moq),
   isNew: r.is_new,
+  sizeType: r.size_type,
 });
 
 /** Divide uma lista em blocos (para não fazer URLs gigantes). */

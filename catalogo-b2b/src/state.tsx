@@ -31,8 +31,8 @@ type Ctx = {
   /** Garante que estes artigos estão carregados e devolve-os. */
   ensureProducts: (ids: string[]) => Promise<Product[]>;
   price: (p: Product) => PriceInfo | null;
-  setQty: (productId: string, qty: number) => void;
-  addToCart: (product: Product, qty: number) => void;
+  setQty: (productId: string, qty: number, variant?: string) => void;
+  addToCart: (product: Product, qty: number, variant?: string) => void;
   clearCart: () => void;
   cartCount: number;
   toast: (msg: string) => void;
@@ -156,20 +156,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const price = useCallback((p: Product) => priceFor(p, pricing, session?.client?.id), [pricing, session]);
 
+  const same = (i: CartItem, productId: string, variant?: string) => i.productId === productId && (i.variant ?? "") === (variant ?? "");
   const setQty = useCallback(
-    (productId: string, qty: number) =>
-      setCart((c) => (qty <= 0 ? c.filter((i) => i.productId !== productId) : c.map((i) => (i.productId === productId ? { ...i, qty } : i)))),
+    (productId: string, qty: number, variant?: string) =>
+      setCart((c) => (qty <= 0 ? c.filter((i) => !same(i, productId, variant)) : c.map((i) => (same(i, productId, variant) ? { ...i, qty } : i)))),
     []
   );
 
   const addToCart = useCallback(
-    (product: Product, qty: number) => {
+    (product: Product, qty: number, variant?: string) => {
       remember([product]);
       const productId = product.id;
+      const v = variant?.trim() || undefined;
       setCart((c) => {
-        const existing = c.find((i) => i.productId === productId);
+        const existing = c.find((i) => same(i, productId, v));
         const total = normalizeQty(product, (existing?.qty ?? 0) + qty);
-        return existing ? c.map((i) => (i.productId === productId ? { ...i, qty: total } : i)) : [...c, { productId, qty: total }];
+        return existing ? c.map((i) => (same(i, productId, v) ? { ...i, qty: total } : i)) : [...c, { productId, qty: total, variant: v }];
       });
     },
     [remember]

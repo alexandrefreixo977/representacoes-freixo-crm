@@ -48,6 +48,7 @@ const rows: Seed[] = [
   ["f-fix", "FL-PAR-4540", "Parafuso aglomerado 4,5×40 (cx 200)", "Zincado, cabeça de embeber, Pozi.", 6.2, "cx", 10],
   ["f-quim", "FL-DESC-400", "Desengordurante multiusos 400 ml", "Spray, secagem rápida.", 5.4, "un", 12],
   ["f-quim", "FL-SIL-280", "Silicone neutro transparente 280 ml", "Uso interior e exterior.", 4.9, "un", 24, true],
+  ["f-calcado", "PP-BOTA-S3", "Bota segurança S3 CI SRC", "Biqueira composite, isolamento ao frio. Escolha o tamanho ao encomendar.", 62.0, "par", 1, true],
 ];
 
 export const seedProducts: Product[] = rows.map(([familyId, reference, designation, description, , salesUnit, packQty, isNew], i) => ({
@@ -61,6 +62,7 @@ export const seedProducts: Product[] = rows.map(([familyId, reference, designati
   packQty,
   moq: packQty,
   isNew: Boolean(isNew),
+  sizeType: reference === "PP-BOTA-S3" ? "calcado" : null,
 }));
 
 export const seedPrices: Record<string, number> = Object.fromEntries(rows.map((r, i) => [`p-${i + 1}`, r[4]]));

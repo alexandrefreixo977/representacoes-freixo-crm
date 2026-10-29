@@ -169,6 +169,8 @@ export const demoApi: Api = {
     const pricing = { listPrices: db.prices, rules: db.rules };
     const groups = splitByManufacturer(items, db.products, pricing, s.client.id);
     if (!groups.length) throw new Error("O carrinho está vazio.");
+    const unsized = groups.flatMap((g) => g.items).find((i) => i.product.sizeType && !i.variant);
+    if (unsized) throw new Error(`Indique o tamanho do artigo ${unsized.product.reference}`);
     const seq = db.seq + 1;
     const groupNumber = `ENC-${new Date().getFullYear()}-${String(seq).padStart(4, "0")}`;
     const createdAt = new Date().toISOString();
@@ -184,10 +186,11 @@ export const demoApi: Api = {
       notes,
       subtotal: g.subtotal,
       createdAt,
-      lines: g.items.map(({ product, qty, price, total }) => ({
+      lines: g.items.map(({ product, qty, variant, price, total }) => ({
         productId: product.id,
+        variant: variant ?? null,
         reference: product.reference,
-        designation: product.designation,
+        designation: product.designation + (variant ? ` · Tam. ${variant}` : ""),
         salesUnit: product.salesUnit,
         qty,
         listPrice: price?.listPrice ?? 0,

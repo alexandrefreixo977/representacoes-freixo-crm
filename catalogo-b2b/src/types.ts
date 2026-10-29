@@ -26,6 +26,8 @@ export type Product = {
   /** Encomenda mínima (em unidades). */
   moq: number;
   isNew: boolean;
+  /** Calçado ou vestuário: o cliente tem de escolher o tamanho. */
+  sizeType?: "calcado" | "vestuario" | null;
 };
 
 export type Campaign = {
@@ -99,12 +101,14 @@ export type Session = {
   client?: Client | null;
 };
 
-export type CartItem = { productId: string; qty: number };
+/** variant = tamanho escolhido (só para artigos com sizeType). */
+export type CartItem = { productId: string; qty: number; variant?: string };
 
 export type OrderStatus = "pending" | "validated" | "sent" | "confirmed" | "delivered" | "cancelled";
 
 export type OrderLine = {
   productId: string;
+  variant?: string | null;
   reference: string;
   designation: string;
   salesUnit: string;

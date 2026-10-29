@@ -32,7 +32,7 @@ export function OrdersPage() {
     o.lines.forEach((l) => {
       const product = products.get(l.productId);
       if (product) {
-        addToCart(product, l.qty);
+        addToCart(product, l.qty, l.variant ?? undefined);
         n++;
       }
     });

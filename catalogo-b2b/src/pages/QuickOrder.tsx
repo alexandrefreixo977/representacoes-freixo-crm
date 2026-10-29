@@ -53,7 +53,9 @@ export function QuickOrderPage() {
     () =>
       parsed.map((l) => {
         const matches = index.get(normRef(l.reference)) ?? [];
-        return { ...l, product: matches.length === 1 ? matches[0] : undefined, ambiguous: matches.length > 1 };
+        const product = matches.length === 1 ? matches[0] : undefined;
+        if (product?.sizeType) return { ...l, product: undefined, ambiguous: false, sized: true };
+        return { ...l, product, ambiguous: matches.length > 1, sized: false };
       }),
     [parsed, index]
   );
@@ -102,7 +104,9 @@ export function QuickOrderPage() {
                 <td>
                   {l.product
                     ? `${l.product.designation} · ${catalog?.manufacturers.find((m) => m.id === l.product!.manufacturerId)?.name}`
-                    : l.ambiguous
+                    : l.sized
+                      ? "Artigo com tamanhos: adicione pelo catálogo para escolher o tamanho"
+                      : l.ambiguous
                       ? "Referência existe em mais de um fabricante: adicione pelo catálogo"
                       : searching
                         ? "A procurar…"

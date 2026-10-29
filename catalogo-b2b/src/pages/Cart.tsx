@@ -89,18 +89,21 @@ export function CartPage() {
               <h2>{mfrName(g.manufacturerId)}</h2>
               {session && <strong>{formatEur(g.subtotal)}</strong>}
             </header>
-            {g.items.map(({ product, qty, total }) => (
-              <div key={product.id} className="cart-line">
+            {g.items.map(({ product, qty, variant, total }) => (
+              <div key={`${product.id}|${variant ?? ""}`} className="cart-line">
                 <ProductImage product={product} manufacturer={catalog.manufacturers.find((m) => m.id === product.manufacturerId)} />
                 <div className="cart-line-info">
                   <strong>{product.designation}</strong>
-                  <span>{product.reference} · Cx: {product.packQty} {product.salesUnit}</span>
+                  <span>
+                    {product.reference}
+                    {variant ? <> · <b>Tam. {variant}</b></> : product.sizeType ? <> · <b className="error">Falta o tamanho</b></> : null} · Cx: {product.packQty} {product.salesUnit}
+                  </span>
                   <PriceTag product={product} compact />
                 </div>
                 <div className="cart-line-qty">
-                  <QtyStepper product={product} value={qty} onChange={(q) => setQty(product.id, q)} />
+                  <QtyStepper product={product} value={qty} onChange={(q) => setQty(product.id, q, variant)} />
                   {session && <strong>{formatEur(total)}</strong>}
-                  <button className="link danger" onClick={() => setQty(product.id, 0)}>Remover</button>
+                  <button className="link danger" onClick={() => setQty(product.id, 0, variant)}>Remover</button>
                 </div>
               </div>
             ))}
