@@ -25,7 +25,7 @@ App **separada do CRM** (pasta própria, base de dados com tabelas `b2b_*`), des
 - Clientes e descontos: regras por fabricante, família ou artigo; descontos sucessivos ou preço líquido especial; convite de acesso por email.
 - Pedidos de acesso recebidos.
 
-### Como se escolhe o desconto
+### Como se escolhe o desconto (regra confirmada pelo Alexandre a 29/10/2026)
 Ganha a regra mais específica: **artigo > família > fabricante**. No mesmo nível, a regra do cliente ganha à regra geral.
 Os preços são sempre recalculados no servidor quando a encomenda é submetida (`b2b_submit_order`), nunca se confia no browser.
 
@@ -44,15 +44,35 @@ Testes: `npm test` · Build: `npm run build` (gera `dist/`).
 
 ## Pôr em produção
 
-1. **Base de dados**: num projeto Supabase (pode ser o do CRM, as tabelas têm prefixo `b2b_`), correr `supabase/schema.sql` no SQL Editor.
-2. **Primeiro administrador**: criar o utilizador em Authentication → Users e correr o `insert` que está no fim do `schema.sql`.
-3. **Funções** (Supabase CLI): `supabase functions deploy notify-order` e `supabase functions deploy invite-client`, com os segredos:
-   - `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET`: aplicação Microsoft 365 com permissão `Mail.Send` (aplicação);
-   - `MAIL_FROM` (ex.: caixa que envia), `NOTIFY_TO` (quem recebe as encomendas, separados por vírgula), `APP_URL` (endereço da loja).
-4. **Site**: copiar `.env.example` para `.env` com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`, `npm run build` e publicar a pasta `dist/`
-   (Cloudflare Pages, Netlify ou outro alojamento estático). Em Authentication → URL Configuration, pôr o endereço da loja como Site URL.
-5. **Dados**: criar fabricantes (tabela `b2b_manufacturers`, com o email de encomendas), importar as tabelas em Excel na área de gestão,
-   criar clientes, atribuir descontos e enviar convites.
+Tudo é publicado automaticamente pelo GitHub Actions (`.github/workflows/catalogo-b2b.yml`) sempre que há alterações
+no ramo `main`: testes → base de dados (migrações) → funções de email → site. As contas ficam em nome da
+Representações Freixo; o Claude gere o código e as publicações através do repositório.
+
+Endereço previsto: **https://encomendas.representacoesfreixo.com** (subdomínio; o site institucional em www fica como está).
+
+### Configuração inicial (uma vez)
+1. **Supabase** (base de dados e logins): criar conta e um projeto novo, região Europa (ex.: Frankfurt).
+2. **Cloudflare** (alojamento do site): criar conta gratuita e um token de API com permissão *Cloudflare Pages: Edit*.
+3. **GitHub → Settings → Secrets and variables → Actions**:
+   - Secrets: `SUPABASE_ACCESS_TOKEN`, `SUPABASE_PROJECT_REF`, `SUPABASE_DB_PASSWORD`, `VITE_SUPABASE_URL`,
+     `VITE_SUPABASE_ANON_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`;
+     para o email: `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET` (aplicação Microsoft 365 com permissão `Mail.Send`).
+   - Variables: `MAIL_FROM` (caixa que envia), `NOTIFY_TO` (quem recebe as encomendas), `APP_URL` (endereço da loja).
+4. **Domínio**: no Cloudflare Pages → projeto `freixo-b2b` → Custom domains, juntar `encomendas.representacoesfreixo.com`
+   e criar o registo CNAME indicado no fornecedor do domínio.
+5. **Supabase → Authentication → URL Configuration**: Site URL = endereço da loja.
+6. **Primeiro administrador**: criar o utilizador em Authentication → Users e correr no SQL Editor o `insert` que está no fim
+   de `supabase/migrations/20261029000000_b2b_schema.sql`.
+
+Depois disto, cada alteração aprovada no GitHub fica online em poucos minutos. Sem os segredos, o workflow só corre os testes.
+
+### Dados
+Criar fabricantes (tabela `b2b_manufacturers`, com o email de encomendas), importar as tabelas Excel na área de gestão,
+criar clientes, atribuir descontos e enviar convites.
+
+### Publicar à mão (alternativa)
+`supabase db push`, `supabase functions deploy notify-order invite-client`, `npm run build` com o `.env` preenchido
+(ver `.env.example`) e publicar a pasta `dist/` em qualquer alojamento estático.
 
 ## Estrutura
 
@@ -61,7 +81,7 @@ src/pricing.ts        descontos, escolha da regra, caixas, divisão por fabrican
 src/importer.ts       leitura e mapeamento de tabelas Excel/CSV
 src/data/             api.ts (contrato), demo-api.ts (browser), supabase-api.ts (produção)
 src/pages/            Catálogo, Encomenda rápida, Carrinho, Encomendas, Conta, Gestão
-supabase/schema.sql   tabelas, regras de segurança (RLS) e funções de encomenda e importação
+supabase/migrations/  tabelas, regras de segurança (RLS) e funções de encomenda e importação
 supabase/functions/   notify-order (emails) e invite-client (convites)
 ```
 

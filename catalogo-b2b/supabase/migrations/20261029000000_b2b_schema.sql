@@ -1,6 +1,6 @@
 -- Catálogo B2B Freixo — base de dados (Supabase / Postgres)
--- Correr uma vez no SQL Editor de um projeto Supabase novo (ou neste mesmo projeto do CRM: todas as
--- tabelas têm o prefixo b2b_ e não tocam nas tabelas do CRM).
+-- Aplicada automaticamente pelo GitHub Actions (supabase db push). Todas as tabelas têm o prefixo b2b_,
+-- por isso também pode viver no mesmo projeto Supabase que o CRM sem lhe tocar.
 -- A estrutura segue a do catálogo beta do CRM (catalog_*), para ser fácil juntar as duas apps mais tarde.
 
 create extension if not exists pgcrypto;
