@@ -91,6 +91,10 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: location.origin });
       fail(error);
     },
+    async setPassword(password) {
+      const { error } = await sb.auth.updateUser({ password });
+      fail(error);
+    },
     onSessionChange(cb) {
       const { data } = sb.auth.onAuthStateChange(() => cb());
       return () => data.subscription.unsubscribe();

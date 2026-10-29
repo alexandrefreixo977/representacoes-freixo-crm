@@ -1,8 +1,8 @@
 import { useEffect, useState, type FormEvent } from "react";
 import logoUrl from "./assets/logo.svg";
 import { Icon } from "./components";
-import { api } from "./data";
-import { AccessRequestPage, LoginPage } from "./pages/Account";
+import { api, authLink } from "./data";
+import { AccessRequestPage, LoginPage, SetPasswordPage } from "./pages/Account";
 import { AdminPage } from "./pages/Admin";
 import { CartPage } from "./pages/Cart";
 import { CatalogPage } from "./pages/Catalog";
@@ -20,6 +20,11 @@ export function App() {
 
 function Shell() {
   const { route, toastMsg } = useApp();
+  // Convite ou recuperação: depois de o Supabase validar a ligação, pede a nova palavra-passe.
+  useEffect(() => {
+    if (authLink.error) go("entrar", { erro: "ligacao" });
+    else if (authLink.type === "invite" || authLink.type === "recovery") api.getSession().then(() => go("definir-senha"));
+  }, []);
   const page = route.page;
   return (
     <>
@@ -33,6 +38,7 @@ function Shell() {
         {page === "entrar" && <LoginPage />}
         {page === "pedir-acesso" && <AccessRequestPage />}
         {page === "gestao" && <AdminPage />}
+        {page === "definir-senha" && <SetPasswordPage />}
       </main>
       <footer className="footer">
         <strong>Representações Freixo</strong>

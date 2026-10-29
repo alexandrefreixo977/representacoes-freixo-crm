@@ -98,6 +98,9 @@ export const demoApi: Api = {
     save({ ...load(), session: null });
     notify();
   },
+  async setPassword() {
+    /* demonstração: nada a fazer */
+  },
   async resetPassword() {
     /* demonstração: nada a fazer */
   },
