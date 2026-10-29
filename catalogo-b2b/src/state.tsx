@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "./data";
 import { normalizeQty, priceFor } from "./pricing";
 import type { CartItem, Catalog, PriceInfo, Pricing, Product, Session } from "./types";
@@ -25,10 +25,14 @@ type Ctx = {
   session: Session | null;
   pricing: Pricing | null;
   cart: CartItem[];
+  /** Artigos já carregados (pesquisas, carrinho, encomendas). */
   productsById: Map<string, Product>;
+  remember: (products: Product[]) => void;
+  /** Garante que estes artigos estão carregados e devolve-os. */
+  ensureProducts: (ids: string[]) => Promise<Product[]>;
   price: (p: Product) => PriceInfo | null;
-  setQty: (productId: string, qty: number) => void;
-  addToCart: (productId: string, qty: number) => void;
+  setQty: (productId: string, qty: number, variant?: string) => void;
+  addToCart: (product: Product, qty: number, variant?: string) => void;
   clearCart: () => void;
   cartCount: number;
   toast: (msg: string) => void;
@@ -57,6 +61,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [cart, setCart] = useState<CartItem[]>(loadCart);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [productsById, setProductsById] = useState<Map<string, Product>>(() => new Map());
+  const knownIds = useRef(new Set<string>());
+  const pricedIds = useRef(new Set<string>());
 
   useEffect(() => {
     const onHash = () => {
@@ -67,19 +74,70 @@ export function AppProvider({ children }: { children: ReactNode }) {
     return () => window.removeEventListener("hashchange", onHash);
   }, []);
 
+  const remember = useCallback((products: Product[]) => {
+    const fresh = products.filter((p) => !knownIds.current.has(p.id));
+    if (!fresh.length) return;
+    fresh.forEach((p) => knownIds.current.add(p.id));
+    setProductsById((m) => {
+      const next = new Map(m);
+      fresh.forEach((p) => next.set(p.id, p));
+      return next;
+    });
+  }, []);
+
+  const ensureProducts = useCallback(
+    async (ids: string[]) => {
+      const missing = [...new Set(ids)].filter((id) => !knownIds.current.has(id));
+      const loaded = missing.length ? await api.getProducts(missing) : [];
+      remember(loaded);
+      const all = new Map(productsById);
+      loaded.forEach((p) => all.set(p.id, p));
+      return ids.map((id) => all.get(id)).filter((p): p is Product => !!p);
+    },
+    [productsById, remember]
+  );
+
   const refreshCatalog = useCallback(async () => {
     try {
-      setCatalog(await api.getCatalog());
+      const c = await api.getCatalog();
+      remember(c.products);
+      setCatalog(c);
       setCatalogError(null);
     } catch (e) {
       setCatalogError((e as Error).message);
     }
-  }, []);
+  }, [remember]);
 
   const refreshSession = useCallback(async () => {
     const s = await api.getSession().catch(() => null);
+    pricedIds.current = new Set();
     setSession(s);
     setPricing(s ? await api.getPricing().catch(() => null) : null);
+  }, []);
+
+  // Pede os preços de tabela dos artigos que vão aparecendo (só com sessão iniciada).
+  useEffect(() => {
+    if (!session || !pricing) return;
+    const missing = [...productsById.keys()].filter((id) => !pricedIds.current.has(id));
+    if (!missing.length) return;
+    missing.forEach((id) => pricedIds.current.add(id));
+    api
+      .getPrices(missing)
+      .then((prices) => setPricing((p) => (p ? { ...p, listPrices: { ...p.listPrices, ...prices } } : p)))
+      .catch(() => missing.forEach((id) => pricedIds.current.delete(id)));
+  }, [productsById, session, pricing]);
+
+  // O carrinho fica guardado no browser: carrega os artigos dele ao abrir a app.
+  useEffect(() => {
+    if (!cart.length) return;
+    ensureProducts(cart.map((i) => i.productId))
+      .then((found) => {
+        // Artigos que deixaram de existir saem do carrinho.
+        const ok = new Set(found.map((p) => p.id));
+        setCart((c) => c.filter((i) => ok.has(i.productId)));
+      })
+      .catch(() => undefined);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -96,27 +154,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [cart]);
 
-  const productsById = useMemo(() => new Map((catalog?.products ?? []).map((p) => [p.id, p])), [catalog]);
-
   const price = useCallback((p: Product) => priceFor(p, pricing, session?.client?.id), [pricing, session]);
 
+  const same = (i: CartItem, productId: string, variant?: string) => i.productId === productId && (i.variant ?? "") === (variant ?? "");
   const setQty = useCallback(
-    (productId: string, qty: number) =>
-      setCart((c) => (qty <= 0 ? c.filter((i) => i.productId !== productId) : c.map((i) => (i.productId === productId ? { ...i, qty } : i)))),
+    (productId: string, qty: number, variant?: string) =>
+      setCart((c) => (qty <= 0 ? c.filter((i) => !same(i, productId, variant)) : c.map((i) => (same(i, productId, variant) ? { ...i, qty } : i)))),
     []
   );
 
   const addToCart = useCallback(
-    (productId: string, qty: number) => {
-      const product = productsById.get(productId);
-      if (!product) return;
+    (product: Product, qty: number, variant?: string) => {
+      remember([product]);
+      const productId = product.id;
+      const v = variant?.trim() || undefined;
       setCart((c) => {
-        const existing = c.find((i) => i.productId === productId);
+        const existing = c.find((i) => same(i, productId, v));
         const total = normalizeQty(product, (existing?.qty ?? 0) + qty);
-        return existing ? c.map((i) => (i.productId === productId ? { ...i, qty: total } : i)) : [...c, { productId, qty: total }];
+        return existing ? c.map((i) => (same(i, productId, v) ? { ...i, qty: total } : i)) : [...c, { productId, qty: total, variant: v }];
       });
     },
-    [productsById]
+    [remember]
   );
 
   const toastTimer = useRef<number | undefined>(undefined);
@@ -134,6 +192,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     pricing,
     cart,
     productsById,
+    remember,
+    ensureProducts,
     price,
     setQty,
     addToCart,

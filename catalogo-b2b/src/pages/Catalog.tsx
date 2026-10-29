@@ -1,47 +1,71 @@
 import { useEffect, useMemo, useState } from "react";
 import { Icon, ProductCard, ProductModal } from "../components";
+import { api } from "../data";
 import { go, useApp } from "../state";
 import type { Product } from "../types";
 
-const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
 const PAGE = 48;
 
 export function CatalogPage() {
-  const { catalog, catalogError, route, session } = useApp();
+  const { catalog, catalogError, route, session, remember } = useApp();
   const slug = route.params.get("m") ?? "";
   const q = route.params.get("q") ?? "";
   const familyId = route.params.get("f") ?? "";
   const onlyNew = route.params.get("novidades") === "1";
   const [open, setOpen] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
-  const [limit, setLimit] = useState(PAGE);
-
-  useEffect(() => setLimit(PAGE), [slug, q, familyId, onlyNew]);
+  const [results, setResults] = useState<Product[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [searchError, setSearchError] = useState<string | null>(null);
 
   const manufacturer = catalog?.manufacturers.find((m) => m.slug === slug);
+  const manufacturerId = manufacturer?.id;
+  const ready = !!catalog && (!slug || !!manufacturer);
+
+  async function fetchPage(offset: number) {
+    setLoading(true);
+    try {
+      const page = await api.searchProducts({ manufacturerId, familyId: familyId || undefined, q, onlyNew, offset, limit: PAGE });
+      remember(page.products);
+      setResults((r) => (offset ? [...r, ...page.products] : page.products));
+      setTotal(page.total);
+      setSearchError(null);
+    } catch (e) {
+      setSearchError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!ready) return;
+    let stale = false;
+    setLoading(true);
+    api
+      .searchProducts({ manufacturerId, familyId: familyId || undefined, q, onlyNew, offset: 0, limit: PAGE })
+      .then((page) => {
+        if (stale) return;
+        remember(page.products);
+        setResults(page.products);
+        setTotal(page.total);
+        setSearchError(null);
+      })
+      .catch((e) => !stale && setSearchError((e as Error).message))
+      .finally(() => !stale && setLoading(false));
+    return () => {
+      stale = true;
+    };
+  }, [ready, manufacturerId, familyId, q, onlyNew, remember]);
   const families = useMemo(
     () => (catalog?.families ?? []).filter((f) => !manufacturer || f.manufacturerId === manufacturer.id),
     [catalog, manufacturer]
   );
 
-  const results = useMemo(() => {
-    if (!catalog) return [];
-    const terms = norm(q).split(/\s+/).filter(Boolean);
-    const mfrNames = new Map(catalog.manufacturers.map((m) => [m.id, m.name]));
-    return catalog.products.filter((p) => {
-      if (manufacturer && p.manufacturerId !== manufacturer.id) return false;
-      if (familyId && p.familyId !== familyId) return false;
-      if (onlyNew && !p.isNew) return false;
-      if (!terms.length) return true;
-      const hay = norm(`${p.reference} ${p.designation} ${p.ean ?? ""} ${mfrNames.get(p.manufacturerId) ?? ""}`);
-      return terms.every((t) => hay.includes(t));
-    });
-  }, [catalog, manufacturer, familyId, onlyNew, q]);
-
   const setParam = (patch: Record<string, string | undefined>) =>
     go("", { m: slug || undefined, q: q || undefined, f: familyId || undefined, novidades: onlyNew ? "1" : undefined, ...patch });
 
-  if (catalogError) return <div className="empty">Não foi possível carregar o catálogo. {catalogError}</div>;
+  if (catalogError || searchError) return <div className="empty">Não foi possível carregar o catálogo. {catalogError ?? searchError}</div>;
   if (!catalog) return <div className="empty">A carregar o catálogo…</div>;
 
   const campaigns = catalog.campaigns.filter((c) => !manufacturer || !c.manufacturerId || c.manufacturerId === manufacturer.id);
@@ -72,7 +96,7 @@ export function CatalogPage() {
       <div className="results-bar">
         <h1>
           {manufacturer?.name ?? "Todos os produtos"}
-          <small>{results.length} artigos</small>
+          <small>{loading && !results.length ? "a procurar…" : `${total.toLocaleString("pt-PT")} artigos`}</small>
         </h1>
         <button className={`btn ghost ${familyId || onlyNew ? "on" : ""}`} onClick={() => setShowFilters((v) => !v)}>
           Filtros{familyId || onlyNew ? " ●" : ""}
@@ -103,21 +127,25 @@ export function CatalogPage() {
         </div>
       )}
 
-      {results.length === 0 ? (
+      {results.length === 0 && loading ? (
+        <div className="empty">A procurar…</div>
+      ) : results.length === 0 ? (
         <div className="empty">
           Nenhum artigo encontrado{q ? ` para "${q}"` : ""}.{" "}
           {q && <button className="link" onClick={() => setParam({ q: undefined })}>Limpar pesquisa</button>}
         </div>
       ) : (
         <div className="grid">
-          {results.slice(0, limit).map((p) => (
+          {results.map((p) => (
             <ProductCard key={p.id} product={p} onOpen={() => setOpen(p)} />
           ))}
         </div>
       )}
-      {results.length > limit && (
+      {total > results.length && (
         <div className="more">
-          <button className="btn ghost" onClick={() => setLimit((l) => l + PAGE)}>Ver mais artigos</button>
+          <button className="btn ghost" disabled={loading} onClick={() => fetchPage(results.length)}>
+            {loading ? "A carregar…" : `Ver mais artigos (${(total - results.length).toLocaleString("pt-PT")})`}
+          </button>
         </div>
       )}
 

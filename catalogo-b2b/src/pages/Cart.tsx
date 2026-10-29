@@ -6,7 +6,7 @@ import { formatEur, splitByManufacturer } from "../pricing";
 import { go, useApp } from "../state";
 
 export function CartPage() {
-  const { cart, catalog, pricing, session, setQty, clearCart, refreshSession } = useApp();
+  const { cart, catalog, pricing, session, setQty, clearCart, refreshSession, productsById } = useApp();
   const [customerRef, setCustomerRef] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -41,7 +41,8 @@ export function CartPage() {
     );
   }
 
-  const groups = splitByManufacturer(cart, catalog.products, pricing, session?.client?.id);
+  if (cart.some((i) => !productsById.has(i.productId)) && cart.length) return <div className="empty">A carregar o carrinho…</div>;
+  const groups = splitByManufacturer(cart, [...productsById.values()], pricing, session?.client?.id);
   const total = groups.reduce((s, g) => s + g.subtotal, 0);
   const missingPrice = groups.some((g) => g.items.some((i) => !i.price));
 
@@ -88,18 +89,21 @@ export function CartPage() {
               <h2>{mfrName(g.manufacturerId)}</h2>
               {session && <strong>{formatEur(g.subtotal)}</strong>}
             </header>
-            {g.items.map(({ product, qty, total }) => (
-              <div key={product.id} className="cart-line">
+            {g.items.map(({ product, qty, variant, total }) => (
+              <div key={`${product.id}|${variant ?? ""}`} className="cart-line">
                 <ProductImage product={product} manufacturer={catalog.manufacturers.find((m) => m.id === product.manufacturerId)} />
                 <div className="cart-line-info">
                   <strong>{product.designation}</strong>
-                  <span>{product.reference} · Cx: {product.packQty} {product.salesUnit}</span>
+                  <span>
+                    {product.reference}
+                    {variant ? <> · <b>Tam. {variant}</b></> : product.sizeType ? <> · <b className="error">Falta o tamanho</b></> : null} · Cx: {product.packQty} {product.salesUnit}
+                  </span>
                   <PriceTag product={product} compact />
                 </div>
                 <div className="cart-line-qty">
-                  <QtyStepper product={product} value={qty} onChange={(q) => setQty(product.id, q)} />
+                  <QtyStepper product={product} value={qty} onChange={(q) => setQty(product.id, q, variant)} />
                   {session && <strong>{formatEur(total)}</strong>}
-                  <button className="link danger" onClick={() => setQty(product.id, 0)}>Remover</button>
+                  <button className="link danger" onClick={() => setQty(product.id, 0, variant)}>Remover</button>
                 </div>
               </div>
             ))}

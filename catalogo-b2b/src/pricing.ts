@@ -56,7 +56,7 @@ export function lineTotal(netPrice: number, qty: number) {
 
 export type CartGroup = {
   manufacturerId: string;
-  items: { product: Product; qty: number; price: PriceInfo | null; total: number }[];
+  items: { product: Product; qty: number; variant?: string; price: PriceInfo | null; total: number }[];
   subtotal: number;
 };
 
@@ -75,7 +75,7 @@ export function splitByManufacturer(
     const price = priceFor(product, pricing, clientId);
     const total = price ? lineTotal(price.netPrice, item.qty) : 0;
     const group = groups.get(product.manufacturerId) ?? { manufacturerId: product.manufacturerId, items: [], subtotal: 0 };
-    group.items.push({ product, qty: item.qty, price, total });
+    group.items.push({ product, qty: item.qty, variant: item.variant, price, total });
     group.subtotal = round2(group.subtotal + total);
     groups.set(product.manufacturerId, group);
   }
@@ -96,6 +96,15 @@ export function parseQuickOrder(text: string) {
       return { reference: match[1].trim(), qty: Number(match[2].replace(",", ".")) };
     });
 }
+
+/** Tamanhos propostos na loja (o cliente pode escrever outro). */
+export const SIZES: Record<"calcado" | "vestuario", string[]> = {
+  calcado: Array.from({ length: 14 }, (_, i) => String(35 + i)),
+  vestuario: ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"],
+};
+
+/** Texto para pesquisa: minúsculas e sem acentos (igual à coluna search_text no SQL). */
+export const normSearch = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 
 export const normRef = (ref: string) => ref.toUpperCase().replace(/[\s.\-_/]/g, "");
 

@@ -1,32 +1,63 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PriceTag } from "../components";
+import { api } from "../data";
 import { normRef, normalizeQty, parseQuickOrder } from "../pricing";
 import { go, useApp } from "../state";
 import type { Product } from "../types";
 
 /** Encomenda rápida: o cliente cola ou escreve "referência quantidade", uma por linha. */
 export function QuickOrderPage() {
-  const { catalog, addToCart, toast, session } = useApp();
+  const { catalog, addToCart, toast, session, remember } = useApp();
   const [text, setText] = useState("");
+  const [matches, setMatches] = useState<Product[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  const parsed = useMemo(() => parseQuickOrder(text), [text]);
+  const refsKey = parsed.map((l) => normRef(l.reference)).join("|");
+
+  // Procura as referências no servidor meio segundo depois de parar de escrever.
+  useEffect(() => {
+    const refs = refsKey.split("|").filter(Boolean);
+    if (!refs.length || !session) return setMatches([]);
+    setSearching(true);
+    let stale = false;
+    const t = window.setTimeout(() => {
+      api
+        .findProducts(refs)
+        .then((found) => {
+          if (stale) return;
+          remember(found);
+          setMatches(found);
+        })
+        .catch(() => undefined)
+        .finally(() => !stale && setSearching(false));
+    }, 500);
+    return () => {
+      stale = true;
+      window.clearTimeout(t);
+    };
+  }, [refsKey, session, remember]);
 
   const index = useMemo(() => {
     const map = new Map<string, Product[]>();
-    for (const p of catalog?.products ?? []) {
+    for (const p of matches) {
       for (const key of [normRef(p.reference), p.ean ? normRef(p.ean) : ""]) {
         if (!key) continue;
         map.set(key, [...(map.get(key) ?? []), p]);
       }
     }
     return map;
-  }, [catalog]);
+  }, [matches]);
 
   const lines = useMemo(
     () =>
-      parseQuickOrder(text).map((l) => {
+      parsed.map((l) => {
         const matches = index.get(normRef(l.reference)) ?? [];
-        return { ...l, product: matches.length === 1 ? matches[0] : undefined, ambiguous: matches.length > 1 };
+        const product = matches.length === 1 ? matches[0] : undefined;
+        if (product?.sizeType) return { ...l, product: undefined, ambiguous: false, sized: true };
+        return { ...l, product, ambiguous: matches.length > 1, sized: false };
       }),
-    [text, index]
+    [parsed, index]
   );
   const found = lines.filter((l) => l.product);
 
@@ -73,9 +104,13 @@ export function QuickOrderPage() {
                 <td>
                   {l.product
                     ? `${l.product.designation} · ${catalog?.manufacturers.find((m) => m.id === l.product!.manufacturerId)?.name}`
-                    : l.ambiguous
+                    : l.sized
+                      ? "Artigo com tamanhos: adicione pelo catálogo para escolher o tamanho"
+                      : l.ambiguous
                       ? "Referência existe em mais de um fabricante: adicione pelo catálogo"
-                      : "Referência não encontrada"}
+                      : searching
+                        ? "A procurar…"
+                        : "Referência não encontrada"}
                 </td>
                 <td>
                   {l.product ? normalizeQty(l.product, l.qty) : l.qty}
@@ -90,9 +125,9 @@ export function QuickOrderPage() {
       <div className="row">
         <button
           className="btn primary"
-          disabled={!found.length}
+          disabled={!found.length || searching}
           onClick={() => {
-            found.forEach((l) => addToCart(l.product!.id, l.qty));
+            found.forEach((l) => addToCart(l.product!, l.qty));
             toast(`${found.length} artigo(s) adicionados ao carrinho`);
             go("carrinho");
           }}

@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { formatDiscounts, formatEur, normalizeQty } from "./pricing";
+import { SIZES, formatDiscounts, formatEur, normalizeQty } from "./pricing";
 import { go, useApp } from "./state";
 import type { Manufacturer, Product } from "./types";
 
@@ -37,6 +37,21 @@ export function ProductImage({ product, manufacturer }: { product: Product; manu
       <span>{initials}</span>
       <small>{product.reference}</small>
     </div>
+  );
+}
+
+/** Escolha do tamanho (calçado/vestuário). Lista com os tamanhos habituais; aceita outro escrito à mão. */
+export function SizePicker({ product, value, onChange }: { product: Product; value: string; onChange: (v: string) => void }) {
+  if (!product.sizeType) return null;
+  const listId = `sizes-${product.sizeType}`;
+  return (
+    <label className="size-picker">
+      <span>Tamanho</span>
+      <input list={listId} value={value} onChange={(e) => onChange(e.target.value.slice(0, 20))} placeholder={product.sizeType === "calcado" ? "42" : "L"} required />
+      <datalist id={listId}>
+        {SIZES[product.sizeType].map((s) => <option key={s} value={s} />)}
+      </datalist>
+    </label>
   );
 }
 
@@ -86,8 +101,10 @@ export function PriceTag({ product, compact }: { product: Product; compact?: boo
 export function ProductCard({ product, onOpen }: { product: Product; onOpen: () => void }) {
   const { catalog, addToCart, cart, toast, session } = useApp();
   const manufacturer = catalog?.manufacturers.find((m) => m.id === product.manufacturerId);
-  const inCart = cart.find((c) => c.productId === product.id)?.qty ?? 0;
+  const inCart = cart.filter((c) => c.productId === product.id).reduce((n, c) => n + c.qty, 0);
   const [qty, setQty] = useState(normalizeQty(product, 1));
+  const [size, setSize] = useState("");
+  const needsSize = !!product.sizeType && !size.trim();
   return (
     <article className="card">
       <button className="card-media" onClick={onOpen} aria-label={`Ver ${product.designation}`}>
@@ -104,13 +121,15 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
         <PriceTag product={product} compact />
         {session && (
           <div className="card-actions">
+            <SizePicker product={product} value={size} onChange={setSize} />
             <QtyStepper product={product} value={qty} onChange={setQty} />
             <button
               className="btn primary"
-              disabled={qty <= 0}
+              disabled={qty <= 0 || needsSize}
+              title={needsSize ? "Escolha o tamanho" : undefined}
               onClick={() => {
-                addToCart(product.id, qty);
-                toast(`${product.reference} adicionado ao carrinho`);
+                addToCart(product, qty, size);
+                toast(`${product.reference}${size ? ` (tam. ${size})` : ""} adicionado ao carrinho`);
               }}
             >
               <Icon name="cart" size={16} />
@@ -150,6 +169,8 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
   const manufacturer = catalog?.manufacturers.find((m) => m.id === product.manufacturerId);
   const family = catalog?.families.find((f) => f.id === product.familyId);
   const [qty, setQty] = useState(normalizeQty(product, 1));
+  const [size, setSize] = useState("");
+  const needsSize = !!product.sizeType && !size.trim();
   return (
     <Modal onClose={onClose} title={product.designation}>
       <div className="product-detail">
@@ -173,13 +194,14 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
             <PriceTag product={product} />
             {session && (
               <div className="card-actions">
+                <SizePicker product={product} value={size} onChange={setSize} />
                 <QtyStepper product={product} value={qty} onChange={setQty} />
                 <button
                   className="btn primary"
-                  disabled={qty <= 0}
+                  disabled={qty <= 0 || needsSize}
                   onClick={() => {
-                    addToCart(product.id, qty);
-                    toast(`${product.reference} adicionado ao carrinho`);
+                    addToCart(product, qty, size);
+                    toast(`${product.reference}${size ? ` (tam. ${size})` : ""} adicionado ao carrinho`);
                     onClose();
                   }}
                 >
@@ -188,6 +210,7 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
               </div>
             )}
           </div>
+          {product.sizeType && <p className="hint">Para vários tamanhos, adicione um de cada vez.</p>}
           <p className="vat-note">Preços sem IVA. Quantidades arredondadas a caixas completas.</p>
         </div>
       </div>

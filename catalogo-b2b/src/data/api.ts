@@ -10,6 +10,9 @@ import type {
   OrderStatus,
   PriceImportRow,
   Pricing,
+  Product,
+  ProductPage,
+  ProductQuery,
   Session,
 } from "../types";
 
@@ -28,10 +31,16 @@ export interface Api {
 
   /** Público: sem preços. */
   getCatalog(): Promise<Catalog>;
+  /** Pesquisa paginada no servidor. A pesquisa ignora maiúsculas e acentos. */
+  searchProducts(query: ProductQuery): Promise<ProductPage>;
+  getProducts(ids: string[]): Promise<Product[]>;
+  /** Procura por referência (ignora espaços, pontos, hífenes e barras) ou EAN. */
+  findProducts(refs: string[], manufacturerId?: string): Promise<Product[]>;
   requestAccess(req: Omit<AccessRequest, "id" | "createdAt">): Promise<void>;
 
-  /** Só com sessão iniciada. */
+  /** Só com sessão iniciada. getPricing traz as regras; os preços de tabela pedem-se com getPrices. */
   getPricing(): Promise<Pricing>;
+  getPrices(productIds: string[]): Promise<Record<string, number>>;
   submitOrder(items: CartItem[], customerRef: string, notes: string): Promise<SubmitResult>;
   listMyOrders(): Promise<Order[]>;
 

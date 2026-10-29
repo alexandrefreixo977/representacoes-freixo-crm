@@ -222,10 +222,6 @@ function ImportAdmin() {
 
   const rows = useMemo(() => (raw ? mapRows(raw, map, headerRow) : []), [raw, map, headerRow]);
   const header = raw?.[headerRow] ?? [];
-  const existing = useMemo(
-    () => new Set((catalog?.products ?? []).filter((p) => p.manufacturerId === mfrId).map((p) => normRef(p.reference))),
-    [catalog, mfrId]
-  );
 
   async function onFile(file: File) {
     setError(null);
@@ -295,10 +291,7 @@ function ImportAdmin() {
               </label>
             ))}
           </div>
-          <p>
-            {rows.length} linhas · {rows.filter((r) => existing.has(normRef(r.reference))).length} já existem (preço atualizado) ·{" "}
-            {rows.filter((r) => !existing.has(normRef(r.reference))).length} novas
-          </p>
+          <p>{rows.length} linhas. Os artigos que já existem ficam com o preço atualizado; os restantes são criados.</p>
           <div className="table-wrap">
             <table className="table">
               <thead><tr><th>Referência</th><th>Designação</th><th className="num">Preço</th><th>Un.</th><th className="num">Cx.</th><th>Família</th></tr></thead>
@@ -324,7 +317,7 @@ function ImportAdmin() {
 // ------------------------------------------------------------------ clientes e descontos
 
 function ClientsAdmin() {
-  const { catalog, refreshSession } = useApp();
+  const { catalog, refreshSession, productsById, ensureProducts } = useApp();
   const [clients, setClients] = useState<Client[]>([]);
   const [rules, setRules] = useState<DiscountRule[]>([]);
   const [selected, setSelected] = useState<string>("");
@@ -332,7 +325,12 @@ function ClientsAdmin() {
   const [msg, setMsg] = useState<string | null>(null);
   const load = useCallback(() => {
     api.listClients().then(setClients);
-    api.listRules().then(setRules);
+    api.listRules().then((list) => {
+      setRules(list);
+      const ids = list.map((r) => r.productId).filter((id): id is string => !!id);
+      if (ids.length) ensureProducts(ids).catch(() => undefined);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   useEffect(load, [load]);
   if (!catalog) return null;
@@ -342,7 +340,7 @@ function ClientsAdmin() {
   const mfrName = (id: string) => catalog.manufacturers.find((m) => m.id === id)?.name ?? "";
   const scope = (r: DiscountRule) =>
     r.productId
-      ? `Artigo ${catalog.products.find((p) => p.id === r.productId)?.reference ?? ""}`
+      ? `Artigo ${productsById.get(r.productId)?.reference ?? ""}`
       : r.familyId
         ? `Família ${catalog.families.find((f) => f.id === r.familyId)?.name ?? ""}`
         : "Todo o fabricante";
@@ -438,7 +436,7 @@ function RuleForm({ clientId, onSaved }: { clientId: string | null; onSaved: () 
     setError(null);
     let productId: string | undefined;
     if (ref.trim()) {
-      const p = catalog!.products.find((x) => x.manufacturerId === mfr && normRef(x.reference) === normRef(ref));
+      const p = (await api.findProducts([ref], mfr)).find((x) => normRef(x.reference) === normRef(ref) || normRef(x.ean ?? "") === normRef(ref));
       if (!p) return setError("Referência não encontrada neste fabricante.");
       productId = p.id;
     }

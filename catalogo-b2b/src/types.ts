@@ -26,6 +26,8 @@ export type Product = {
   /** Encomenda mínima (em unidades). */
   moq: number;
   isNew: boolean;
+  /** Calçado ou vestuário: o cliente tem de escolher o tamanho. */
+  sizeType?: "calcado" | "vestuario" | null;
 };
 
 export type Campaign = {
@@ -41,9 +43,21 @@ export type Campaign = {
 export type Catalog = {
   manufacturers: Manufacturer[];
   families: Family[];
+  /** Só os artigos das campanhas. Os restantes pedem-se ao servidor com searchProducts(). */
   products: Product[];
   campaigns: Campaign[];
 };
+
+export type ProductQuery = {
+  manufacturerId?: string;
+  familyId?: string;
+  q?: string;
+  onlyNew?: boolean;
+  offset: number;
+  limit: number;
+};
+
+export type ProductPage = { products: Product[]; total: number };
 
 /** Regra comercial. client_id vazio = regra geral para todos os clientes. */
 export type DiscountRule = {
@@ -59,6 +73,7 @@ export type DiscountRule = {
 };
 
 export type Pricing = {
+  /** Preços de tabela dos artigos já carregados (vão sendo pedidos à medida que aparecem). */
   listPrices: Record<string, number>;
   rules: DiscountRule[];
 };
@@ -86,12 +101,14 @@ export type Session = {
   client?: Client | null;
 };
 
-export type CartItem = { productId: string; qty: number };
+/** variant = tamanho escolhido (só para artigos com sizeType). */
+export type CartItem = { productId: string; qty: number; variant?: string };
 
 export type OrderStatus = "pending" | "validated" | "sent" | "confirmed" | "delivered" | "cancelled";
 
 export type OrderLine = {
   productId: string;
+  variant?: string | null;
   reference: string;
   designation: string;
   salesUnit: string;
