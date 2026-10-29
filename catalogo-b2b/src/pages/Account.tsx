@@ -10,6 +10,7 @@ export function LoginPage() {
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const back = route.params.get("voltar") ?? "";
+  const linkError = route.params.get("erro") === "ligacao";
 
   if (session) {
     return (
@@ -62,6 +63,9 @@ export function LoginPage() {
         Palavra-passe
         <input type="password" autoComplete="current-password" required value={password} onChange={(e) => setPassword(e.target.value)} />
       </label>
+      {linkError && !error && (
+        <p className="error">A ligação do email já expirou ou já foi usada. Escreva o seu email e use "Esqueci-me da palavra-passe" para receber outra.</p>
+      )}
       {error && <p className="error">{error}</p>}
       {info && <p className="ok">{info}</p>}
       <button className="btn primary block" disabled={busy}>{busy ? "A entrar…" : "Entrar"}</button>
@@ -122,6 +126,59 @@ export function AccessRequestPage() {
       <label>Mensagem<textarea value={form.message} onChange={set("message")} placeholder="Zona, tipo de loja, marcas que lhe interessam…" /></label>
       {error && <p className="error">{error}</p>}
       <button className="btn primary block">Enviar pedido</button>
+    </form>
+  );
+}
+
+export function SetPasswordPage() {
+  const { session, refreshSession } = useApp();
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  if (!session) {
+    return (
+      <div className="panel narrow">
+        <h1>Definir palavra-passe</h1>
+        <p className="muted">A validar a ligação do email…</p>
+        <p className="hint">Se esta mensagem não desaparecer, a ligação pode ter expirado. <a href="#/entrar">Peça uma nova</a>.</p>
+      </div>
+    );
+  }
+
+  return (
+    <form
+      className="panel narrow"
+      onSubmit={async (e) => {
+        e.preventDefault();
+        setError(null);
+        if (password.length < 8) return setError("A palavra-passe tem de ter pelo menos 8 caracteres.");
+        if (password !== confirm) return setError("As duas palavras-passe não são iguais.");
+        setBusy(true);
+        try {
+          await api.setPassword(password);
+          await refreshSession();
+          go(session.role === "admin" ? "gestao" : "");
+        } catch (err) {
+          setError((err as Error).message);
+        } finally {
+          setBusy(false);
+        }
+      }}
+    >
+      <h1>Definir palavra-passe</h1>
+      <p className="muted">Conta: <strong>{session.email}</strong>. Escolha a palavra-passe com que vai entrar daqui em diante.</p>
+      <label>
+        Nova palavra-passe
+        <input type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} />
+      </label>
+      <label>
+        Repetir palavra-passe
+        <input type="password" autoComplete="new-password" required minLength={8} value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+      </label>
+      {error && <p className="error">{error}</p>}
+      <button className="btn primary block" disabled={busy}>{busy ? "A guardar…" : "Guardar e entrar"}</button>
     </form>
   );
 }

@@ -21,6 +21,8 @@ export interface Api {
   signIn(email: string, password: string): Promise<Session>;
   signOut(): Promise<void>;
   resetPassword(email: string): Promise<void>;
+  /** Define a palavra-passe da conta com sessão iniciada (depois de um convite ou recuperação). */
+  setPassword(password: string): Promise<void>;
   onSessionChange(cb: () => void): () => void;
 
   /** Público: sem preços. */

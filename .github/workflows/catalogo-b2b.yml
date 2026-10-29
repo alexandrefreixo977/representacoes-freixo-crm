@@ -85,7 +85,7 @@ jobs:
           MS_CLIENT_SECRET: ${{ secrets.MS_CLIENT_SECRET }}
           MAIL_FROM: ${{ vars.MAIL_FROM }}
           NOTIFY_TO: ${{ vars.NOTIFY_TO }}
-          APP_URL: ${{ vars.APP_URL || 'https://encomendas.representacoesfreixo.com' }}
+          APP_URL: ${{ vars.APP_URL || 'https://freixo-b2b.pages.dev' }}
         run: |
           args=(B2B_SERVICE_KEY="$B2B_SERVICE_KEY" APP_URL="$APP_URL")
           if [ -n "$MS_CLIENT_SECRET" ]; then
@@ -93,6 +93,12 @@ jobs:
                    MAIL_FROM="$MAIL_FROM" NOTIFY_TO="$NOTIFY_TO")
           fi
           supabase secrets set --project-ref "$SUPABASE_PROJECT_REF" "${args[@]}" > /dev/null
+
+      - name: Configurar logins e convidar a gestão
+        env:
+          APP_URL: ${{ vars.APP_URL || 'https://freixo-b2b.pages.dev' }}
+          ADMIN_EMAILS: ${{ vars.ADMIN_EMAILS || 'afreixo@representacoesfreixo.com' }}
+        run: ./scripts/setup-auth.sh
 
       # 2) Site (Cloudflare Pages)
       - run: npm ci
