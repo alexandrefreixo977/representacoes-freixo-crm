@@ -58,16 +58,19 @@ const mapOrder = (o: Row): Order => ({
   ),
 });
 
-/** O Supabase devolve no máximo 1000 linhas por pedido; isto pede página a página até acabar. */
-async function fetchAll(page: (from: number, to: number) => PromiseLike<{ data: Row[] | null; error: { message: string } | null }>) {
+type Page = PromiseLike<{ data: Row[] | null; error: { message: string } | null; count?: number | null }>;
+
+/** O Supabase devolve no máximo 1000 linhas por pedido: pede a primeira página com o total e o resto em paralelo. */
+async function fetchAll(page: (from: number, to: number, withCount: boolean) => Page) {
   const size = 1000;
-  const all: Row[] = [];
-  for (let from = 0; ; from += size) {
-    const { data, error } = await page(from, from + size - 1);
-    fail(error);
-    all.push(...(data ?? []));
-    if (!data || data.length < size) return all;
-  }
+  const first = await page(0, size - 1, true);
+  fail(first.error);
+  const total = first.count ?? 0;
+  const rest = [];
+  for (let from = size; from < total; from += size) rest.push(page(from, from + size - 1, false));
+  const pages = await Promise.all(rest);
+  pages.forEach((p) => fail(p.error));
+  return [first, ...pages].flatMap((p) => p.data ?? []);
 }
 
 export function createSupabaseApi(url: string, anonKey: string): Api {
@@ -117,7 +120,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const [m, f, products, c] = await Promise.all([
         sb.from("b2b_manufacturers").select("*").eq("active", true).order("sort"),
         sb.from("b2b_families").select("*").order("name"),
-        fetchAll((from, to) => sb.from("b2b_products").select("*").eq("active", true).order("designation").order("id").range(from, to)),
+        fetchAll((from, to, c) => sb.from("b2b_products").select("*", c ? { count: "exact" } : {}).eq("active", true).order("designation").order("id").range(from, to)),
         sb.from("b2b_campaigns").select("*").eq("active", true).order("sort"),
       ]);
       fail(m.error); fail(f.error); fail(c.error);
@@ -151,7 +154,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
 
     async getPricing() {
       const [prices, r] = await Promise.all([
-        fetchAll((from, to) => sb.from("b2b_prices").select("product_id, list_price").order("product_id").range(from, to)),
+        fetchAll((from, to, c) => sb.from("b2b_prices").select("product_id, list_price", c ? { count: "exact" } : {}).order("product_id").range(from, to)),
         sb.from("b2b_discount_rules").select("*").eq("active", true),
       ]);
       fail(r.error);
