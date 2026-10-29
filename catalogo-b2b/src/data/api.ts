@@ -5,6 +5,7 @@ import type {
   Client,
   DiscountRule,
   ImportResult,
+  Manufacturer,
   Order,
   OrderStatus,
   PriceImportRow,
@@ -37,6 +38,8 @@ export interface Api {
   /** Só gestão (Freixo). */
   listOrders(): Promise<Order[]>;
   setOrderStatus(orderId: string, status: OrderStatus, internalNote?: string): Promise<void>;
+  listManufacturers(): Promise<Manufacturer[]>;
+  saveManufacturer(m: Omit<Manufacturer, "id" | "slug"> & { id?: string }): Promise<void>;
   listClients(): Promise<Client[]>;
   saveClient(client: Omit<Client, "id"> & { id?: string }): Promise<Client>;
   inviteClientUser(clientId: string, email: string): Promise<string>;

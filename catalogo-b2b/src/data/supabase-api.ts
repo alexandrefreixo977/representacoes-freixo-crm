@@ -1,5 +1,6 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AccessRequest, Catalog, Client, DiscountRule, Order, OrderLine, Session } from "../types";
+import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Session } from "../types";
+import { slugify } from "../slug";
 import type { Api } from "./api";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -174,6 +175,21 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const patch: Row = { status, status_changed_at: new Date().toISOString(), status_changed_by: data.user?.id };
       if (internalNote !== undefined) patch.internal_note = internalNote;
       const { error } = await sb.from("b2b_orders").update(patch).eq("id", orderId);
+      fail(error);
+    },
+    async listManufacturers() {
+      const { data, error } = await sb.from("b2b_manufacturers").select("*").order("sort");
+      fail(error);
+      return (data ?? []).map((r: Row): Manufacturer => ({
+        id: r.id, name: r.name, slug: r.slug, logoUrl: r.logo_url, ordersEmail: r.orders_email, sort: r.sort, active: r.active,
+      }));
+    },
+    async saveManufacturer(m) {
+      const row = { name: m.name.trim(), slug: slugify(m.name), logo_url: m.logoUrl || null, orders_email: m.ordersEmail || null, sort: m.sort, active: m.active !== false };
+      const { error } = m.id
+        ? await sb.from("b2b_manufacturers").update(row).eq("id", m.id)
+        : await sb.from("b2b_manufacturers").insert(row);
+      if (error?.code === "23505") throw new Error("Já existe um fabricante com este nome.");
       fail(error);
     },
     async listClients() {

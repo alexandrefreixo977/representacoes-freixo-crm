@@ -1,5 +1,6 @@
 import { normRef, splitByManufacturer } from "../pricing";
-import type { AccessRequest, Catalog, Client, DiscountRule, Order, Product, Session } from "../types";
+import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, Product, Session } from "../types";
+import { slugify } from "../slug";
 import type { Api } from "./api";
 import { seedCampaigns, seedClients, seedFamilies, seedManufacturers, seedPrices, seedProducts, seedRules } from "./demo-seed";
 
@@ -7,6 +8,7 @@ import { seedCampaigns, seedClients, seedFamilies, seedManufacturers, seedPrices
 // Contas: cliente@demo.pt / demo  e  gestao@demo.pt / demo
 
 type DemoDb = {
+  manufacturers?: Manufacturer[];
   products: Product[];
   prices: Record<string, number>;
   families: typeof seedFamilies;
@@ -111,7 +113,7 @@ export const demoApi: Api = {
 
   async getCatalog(): Promise<Catalog> {
     const db = load();
-    return { manufacturers: seedManufacturers, families: db.families, products: db.products, campaigns: seedCampaigns };
+    return { manufacturers: (db.manufacturers ?? seedManufacturers).filter((m) => m.active !== false).sort((a, b) => a.sort - b.sort), families: db.families, products: db.products, campaigns: seedCampaigns };
   },
   async requestAccess(req) {
     const db = load();
@@ -181,6 +183,19 @@ export const demoApi: Api = {
       ...db,
       orders: db.orders.map((o) => (o.id === orderId ? { ...o, status, internalNote: internalNote ?? o.internalNote } : o)),
     });
+  },
+  async listManufacturers() {
+    const db = load();
+    requireSession(db, "admin");
+    return [...(db.manufacturers ?? seedManufacturers)].sort((a, b) => a.sort - b.sort);
+  },
+  async saveManufacturer(m) {
+    const db = load();
+    requireSession(db, "admin");
+    const list = db.manufacturers ?? seedManufacturers;
+    const saved: Manufacturer = { ...m, id: m.id ?? uid(), slug: slugify(m.name), active: m.active !== false };
+    const exists = list.some((x) => x.id === saved.id);
+    save({ ...db, manufacturers: exists ? list.map((x) => (x.id === saved.id ? saved : x)) : [...list, saved] });
   },
   async listClients() {
     const db = load();
