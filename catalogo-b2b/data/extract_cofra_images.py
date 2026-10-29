@@ -3,6 +3,7 @@
 Uso: python3 data/extract_cofra_images.py "SAFETY-FOOTWEAR-ES 2026-2.pdf" "Tarifas COFRA PORTUGAL 2°Sem.2026.xls" \
        public/img/cofra supabase/migrations/<data>_cofra_imagens.sql
 Precisa de: pymupdf, pillow, xlrd.
+Depois de extrair, correr data/normalize_images.py na pasta das fotos (quadrado branco 500x500).
 
 Como liga foto e artigo: procura no PDF o título do modelo (ex. "ABU DHABI S3S CI FO SR"); se não houver título igual,
 usa o nome base do modelo (o que vem antes da classe S1/S3/O2…). A foto é a imagem maior logo abaixo desse título.

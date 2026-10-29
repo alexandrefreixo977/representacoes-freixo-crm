@@ -3,6 +3,7 @@
 Uso: python3 data/extract_bluemaster_images.py "Catalogo BM_2026.pdf" supabase/migrations/<data>_bluemaster_catalogo.sql \
        public/img/bluemaster supabase/migrations/<data>_bluemaster_imagens.sql
 Precisa de: pymupdf, pillow.
+Depois de extrair, correr data/normalize_images.py na pasta das fotos (quadrado branco 500x500).
 
 Como liga foto e artigo:
 - Cada secção do catálogo tem uma caixa "Ref. BMH" (código da série) com a foto do produto por baixo ou ao lado,

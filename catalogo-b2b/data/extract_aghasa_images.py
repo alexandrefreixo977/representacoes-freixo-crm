@@ -3,6 +3,7 @@
 Uso: python3 data/extract_aghasa_images.py "Catalogo AT_PT.pdf" supabase/migrations/<data>_aghasa_catalogo.sql \
        public/img/aghasa supabase/migrations/<data>_aghasa_imagens.sql
 Precisa de: pymupdf, pillow.
+Depois de extrair, correr data/normalize_images.py na pasta das fotos (quadrado branco 500x500).
 
 Como liga foto e artigo:
 - Cada tabela do catálogo tem a coluna "Cod. Barras" com o prefixo do EAN no cabeçalho ("8435130...") e os
