@@ -63,7 +63,7 @@ def main(src: str, out: str, email: str = "afreixo@representacoesfreixo.com") ->
 -- Preço de tabela = SRP (EUR). Mínimo = "Minimum Order Quantity", múltiplos = "Incremental Order Quantity".
 
 insert into public.b2b_manufacturers (name, slug, orders_email, sort, active)
-values ('JSP Safety', 'jsp-safety', {q(email)}, 50, true)
+values ('JSP Safety', 'jsp-safety', {q(email)}, 90, true)
 on conflict (slug) do update set orders_email = excluded.orders_email, active = true;
 
 create temp table jsp_import (reference text, designation text, description text,
