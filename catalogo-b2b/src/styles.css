@@ -95,15 +95,6 @@ code { background: #e9eff3; padding: 1px 6px; border-radius: 4px; }
 
 .main { max-width: 1280px; margin: 0 auto; padding: 16px; min-height: 60vh; }
 
-/* fabricantes */
-.brands { display: flex; gap: 8px; overflow-x: auto; padding: 2px 0 12px; scrollbar-width: thin; }
-.brands button {
-  flex: 0 0 auto; min-width: 110px; height: 46px; border-radius: 10px; border: 2px solid var(--line); background: #fff;
-  font-weight: 700; color: var(--navy); cursor: pointer; padding: 0 16px;
-}
-.brands button img { max-height: 28px; max-width: 110px; object-fit: contain; }
-.brands button.active { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(239,155,69,.25); }
-
 /* campanha */
 .hero {
   position: relative; overflow: hidden; border-radius: 16px; min-height: 190px; margin-bottom: 14px; padding: 24px;
@@ -308,6 +299,54 @@ code { background: #e9eff3; padding: 1px 6px; border-radius: 4px; }
 .size-picker { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted, #5b6b7a); flex: 1 0 100%; }
 .size-picker input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.95rem; }
 .card-actions:has(.size-picker) { flex-wrap: wrap; }
-.brand-group { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
-.brand-group + .brand-group { border-left: 1px solid var(--line); padding-left: 8px; }
-.brand-group-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); max-width: 120px; white-space: normal; line-height: 1.2; }
+
+/* barra de marcas (por baixo do cabeçalho) */
+.brandbar { background: var(--navy-2); position: relative; border-top: 1px solid rgba(255,255,255,.08); }
+.brandbar-inner { max-width: 1280px; margin: 0 auto; display: flex; align-items: center; gap: 2px; padding: 0 8px; }
+.brandbar-btn { background: none; border: 0; color: #fff; font: 600 14px system-ui, sans-serif; display: inline-flex; align-items: center; gap: 6px; padding: 11px 12px; cursor: pointer; border-bottom: 3px solid transparent; white-space: nowrap; }
+.brandbar-btn:hover, .brandbar-btn[aria-expanded="true"] { background: rgba(255,255,255,.08); }
+.brandbar-btn.on { border-bottom-color: var(--accent); }
+.brandbar-btn svg:last-child { opacity: .7; transition: transform .15s; }
+.brandbar-btn[aria-expanded="true"] svg:last-child { transform: rotate(180deg); }
+.brandbar-btn.end { margin-left: auto; }
+.brandbar-current { color: var(--sky); font-weight: 500; overflow: hidden; text-overflow: ellipsis; max-width: 45vw; }
+.only-lg { display: none; }
+@media (min-width: 900px) { .only-lg { display: inline-flex; } .only-sm { display: none; } }
+
+.megamenu { position: absolute; left: 0; right: 0; top: 100%; background: #fff; color: var(--ink); box-shadow: 0 18px 40px rgba(21,49,76,.22); border-top: 3px solid var(--accent); max-height: calc(100vh - 140px); overflow-y: auto; z-index: 30; }
+.megamenu-inner { max-width: 1280px; margin: 0 auto; padding: 18px 16px 6px; display: grid; gap: 22px; }
+@media (min-width: 700px) { .megamenu-inner.cols-2 { grid-template-columns: 1fr 1fr; } }
+.megamenu header { margin-bottom: 8px; }
+.megamenu h3 { margin: 0; font-size: 16px; color: var(--navy); }
+.megamenu header p { margin: 2px 0 0; font-size: 13px; color: var(--muted); }
+.megamenu ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+.megamenu li button { width: 100%; text-align: left; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; color: var(--navy); }
+.megamenu li button span { font-weight: 700; font-size: 15px; }
+.megamenu li button small { color: var(--muted); font-size: 12px; }
+.megamenu li button:hover { border-color: var(--accent); background: #fff; }
+.megamenu li button.on { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(239,155,69,.25); }
+.megamenu-foot { max-width: 1280px; margin: 0 auto; padding: 8px 16px 16px; }
+
+/* montra de marcas na página inicial */
+.showcase { display: grid; gap: 14px; margin: 4px 0 22px; }
+@media (min-width: 1000px) { .showcase { grid-template-columns: 1fr 1fr; } }
+.showcase-group { background: #fff; border: 1px solid var(--line); border-radius: 14px; padding: 16px; border-top: 4px solid var(--navy); }
+.showcase-group.g-epi { border-top-color: var(--accent); }
+.showcase-head h2 { margin: 2px 0 2px; font-size: 18px; color: var(--navy); }
+.showcase-head p { margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.showcase-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 560px) { .showcase-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+.brand-tile { min-height: 76px; background: var(--bg); border: 1px solid var(--line); border-radius: 10px; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; padding: 10px; color: var(--navy); transition: border-color .15s, transform .15s; }
+.brand-tile strong { font-size: 15px; text-align: center; }
+.brand-tile img { max-height: 34px; max-width: 80%; object-fit: contain; }
+.brand-tile span { font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 4px; }
+.brand-tile:hover { border-color: var(--accent); background: #fff; transform: translateY(-1px); }
+.brand-tile:hover span { color: var(--navy); }
+
+/* caminho e famílias da marca */
+.crumbs { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 13px; color: var(--muted); margin: 0 0 10px; }
+.crumbs strong { color: var(--navy); }
+.family-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 12px; }
+.family-chips button { border: 1px solid var(--line); background: #fff; border-radius: 20px; padding: 6px 12px; cursor: pointer; font-size: 13px; color: var(--navy); }
+.family-chips button.on { background: var(--navy); color: #fff; border-color: var(--navy); }
+.family-chips .more-chip { border-style: dashed; color: var(--muted); }

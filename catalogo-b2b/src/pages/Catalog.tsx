@@ -3,7 +3,8 @@ import { Icon, ProductCard, ProductModal } from "../components";
 import { api } from "../data";
 import { go, useApp } from "../state";
 import type { Product } from "../types";
-import { BRAND_GROUPS, brandGroup } from "../brands";
+import { brandGroup } from "../brands";
+import { BrandShowcase, groupLabel } from "../BrandMenu";
 
 const PAGE = 48;
 
@@ -69,29 +70,22 @@ export function CatalogPage() {
   if (catalogError || searchError) return <div className="empty">Não foi possível carregar o catálogo. {catalogError ?? searchError}</div>;
   if (!catalog) return <div className="empty">A carregar o catálogo…</div>;
 
+  const home = !manufacturer && !q && !familyId && !onlyNew;
   const campaigns = catalog.campaigns.filter((c) => !manufacturer || !c.manufacturerId || c.manufacturerId === manufacturer.id);
 
   return (
     <>
-      <nav className="brands" aria-label="Fabricantes">
-        <button className={!manufacturer ? "active" : ""} onClick={() => go("", { q: q || undefined })}>Todos</button>
-        {BRAND_GROUPS.map((g) => {
-          const list = catalog.manufacturers.filter((m) => brandGroup(m) === g.id);
-          if (!list.length) return null;
-          return (
-            <div key={g.id} className="brand-group" role="group" aria-label={g.label}>
-              <span className="brand-group-label">{g.label}</span>
-              {list.map((m) => (
-                <button key={m.id} className={manufacturer?.id === m.id ? "active" : ""} onClick={() => go("", { m: m.slug, q: q || undefined })}>
-                  {m.logoUrl ? <img src={m.logoUrl} alt={m.name} /> : m.name}
-                </button>
-              ))}
-            </div>
-          );
-        })}
-      </nav>
+      {manufacturer && (
+        <nav className="crumbs" aria-label="Caminho">
+          <button className="link" onClick={() => go("")}>Início</button>
+          <span>›</span>
+          <span>{groupLabel(brandGroup(manufacturer))}</span>
+          <span>›</span>
+          <strong>{manufacturer.name}</strong>
+        </nav>
+      )}
 
-      {!q && !familyId && campaigns.length > 0 && <Campaigns onOpen={setOpen} />}
+      {home && campaigns.length > 0 && <Campaigns onOpen={setOpen} />}
 
       {!session && (
         <div className="notice">
@@ -103,9 +97,13 @@ export function CatalogPage() {
         </div>
       )}
 
+      {home && <BrandShowcase />}
+
+      {manufacturer && families.length > 1 && <FamilyChips families={families} value={familyId} onPick={(f) => setParam({ f })} />}
+
       <div className="results-bar">
         <h1>
-          {manufacturer?.name ?? "Todos os produtos"}
+          {familyId ? families.find((f) => f.id === familyId)?.name ?? "Artigos" : manufacturer?.name ?? (onlyNew ? "Novidades" : q ? "Resultados" : "Todos os produtos")}
           <small>{loading && !results.length ? "a procurar…" : `${total.toLocaleString("pt-PT")} artigos`}</small>
         </h1>
         <button className={`btn ghost ${familyId || onlyNew ? "on" : ""}`} onClick={() => setShowFilters((v) => !v)}>
@@ -197,5 +195,24 @@ function Campaigns({ onOpen }: { onOpen: (p: Product) => void }) {
         </div>
       )}
     </section>
+  );
+}
+
+const CHIP_LIMIT = 14;
+
+/** Famílias da marca escolhida, como botões (as primeiras 14; o resto com "ver todas"). */
+function FamilyChips({ families, value, onPick }: { families: { id: string; name: string }[]; value: string; onPick: (f?: string) => void }) {
+  const [all, setAll] = useState(false);
+  const list = all ? families : families.slice(0, CHIP_LIMIT);
+  return (
+    <div className="family-chips" aria-label="Famílias">
+      <button className={!value ? "on" : ""} onClick={() => onPick(undefined)}>Todas</button>
+      {list.map((f) => (
+        <button key={f.id} className={value === f.id ? "on" : ""} onClick={() => onPick(f.id)}>{f.name}</button>
+      ))}
+      {families.length > CHIP_LIMIT && (
+        <button className="more-chip" onClick={() => setAll((v) => !v)}>{all ? "Ver menos" : `Ver todas (${families.length})`}</button>
+      )}
+    </div>
   );
 }
