@@ -1,0 +1,31 @@
+# Descarrega as fotos da ACHA do site acha.com, põe-nas no formato uniforme (quadrado branco 500x500)
+# e envia-as para o ramo claude/project-thread-1a2ogw, para depois entrarem na loja por pull request.
+name: Catálogo B2B — fotos ACHA
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: catalogo-b2b
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pillow
+      - run: python data/fetch_acha_images.py supabase/migrations/20261029030000_acha_catalogo.sql public/img/acha supabase/migrations/20261030100000_acha_imagens.sql
+      - name: Enviar para o ramo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898099+github-actions[bot]@users.noreply.github.com"
+          git checkout -B claude/project-thread-1a2ogw
+          git add public/img/acha supabase/migrations/20261030100000_acha_imagens.sql
+          git commit -m "feat(catalogo-b2b): ACHA photos served by the shop in the uniform format"
+          git push -f origin claude/project-thread-1a2ogw
