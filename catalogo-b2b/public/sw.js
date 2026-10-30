@@ -1,8 +1,8 @@
 // Service worker simples: guarda o "esqueleto" da app para abrir rápido e funcionar com rede fraca.
 // Pedidos à base de dados (Supabase) nunca são guardados em cache.
-const CACHE = "freixo-b2b-v1";
+const CACHE = "freixo-b2b-v2";
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(["/", "/manifest.webmanifest", "/icon.svg"])));
+  event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(["/", "/manifest.webmanifest", "/favicon.png"])));
   self.skipWaiting();
 });
 self.addEventListener("activate", (event) => {
