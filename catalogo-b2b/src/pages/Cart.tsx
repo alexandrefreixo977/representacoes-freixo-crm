@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Icon, PriceTag, ProductImage, QtyStepper } from "../components";
 import { api } from "../data";
 import type { SubmitResult } from "../data/api";
-import { formatEur, splitByManufacturer } from "../pricing";
+import { formatEur, splitByManufacturer, variantLabel } from "../pricing";
 import { go, useApp } from "../state";
 
 export function CartPage() {
@@ -96,7 +96,7 @@ export function CartPage() {
                   <strong>{product.designation}</strong>
                   <span>
                     {product.reference}
-                    {variant ? <> · <b>Tam. {variant}</b></> : product.sizeType ? <> · <b className="error">Falta o tamanho</b></> : null} · Cx: {product.packQty} {product.salesUnit}
+                    {variant ? <> · <b>{variantLabel(product, variant)}</b></> : product.sizeType ? <> · <b className="error">{product.sizeType === "medida" ? "Falta o comprimento" : "Falta o tamanho"}</b></> : null} · Cx: {product.packQty} {product.salesUnit}
                   </span>
                   <PriceTag product={product} compact />
                 </div>

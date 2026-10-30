@@ -123,7 +123,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     missing.forEach((id) => pricedIds.current.add(id));
     api
       .getPrices(missing)
-      .then((prices) => setPricing((p) => (p ? { ...p, listPrices: { ...p.listPrices, ...prices } } : p)))
+      .then((prices) =>
+        setPricing((p) =>
+          p ? { ...p, listPrices: { ...p.listPrices, ...prices.listPrices }, weldPrices: { ...p.weldPrices, ...prices.weldPrices } } : p
+        )
+      )
       .catch(() => missing.forEach((id) => pricedIds.current.delete(id)));
   }, [productsById, session, pricing]);
 

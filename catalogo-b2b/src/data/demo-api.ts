@@ -1,4 +1,4 @@
-import { normRef, normSearch, splitByManufacturer } from "../pricing";
+import { needsVariant, normRef, normSearch, splitByManufacturer, variantLabel } from "../pricing";
 import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, Product, Session } from "../types";
 import { slugify } from "../slug";
 import type { Api } from "./api";
@@ -160,7 +160,7 @@ export const demoApi: Api = {
   async getPrices(productIds) {
     const db = load();
     requireSession(db);
-    return Object.fromEntries(productIds.filter((id) => db.prices[id] != null).map((id) => [id, db.prices[id]]));
+    return { listPrices: Object.fromEntries(productIds.filter((id) => db.prices[id] != null).map((id) => [id, db.prices[id]])), weldPrices: {} };
   },
   async submitOrder(items, customerRef, notes) {
     const db = load();
@@ -169,7 +169,7 @@ export const demoApi: Api = {
     const pricing = { listPrices: db.prices, rules: db.rules };
     const groups = splitByManufacturer(items, db.products, pricing, s.client.id);
     if (!groups.length) throw new Error("O carrinho está vazio.");
-    const unsized = groups.flatMap((g) => g.items).find((i) => i.product.sizeType && !i.variant);
+    const unsized = groups.flatMap((g) => g.items).find((i) => needsVariant(i.product, i.variant));
     if (unsized) throw new Error(`Indique o tamanho do artigo ${unsized.product.reference}`);
     const seq = db.seq + 1;
     const groupNumber = `ENC-${new Date().getFullYear()}-${String(seq).padStart(4, "0")}`;
@@ -190,7 +190,7 @@ export const demoApi: Api = {
         productId: product.id,
         variant: variant ?? null,
         reference: product.reference,
-        designation: product.designation + (variant ? ` · Tam. ${variant}` : ""),
+        designation: product.designation + (variant ? ` · ${variantLabel(product, variant)}` : ""),
         salesUnit: product.salesUnit,
         qty,
         listPrice: price?.listPrice ?? 0,

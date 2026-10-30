@@ -26,8 +26,8 @@ export type Product = {
   /** Encomenda mínima (em unidades). */
   moq: number;
   isNew: boolean;
-  /** Calçado ou vestuário: o cliente tem de escolher o tamanho. */
-  sizeType?: "calcado" | "vestuario" | null;
+  /** Calçado ou vestuário: o cliente tem de escolher o tamanho. "medida": fita à medida, o cliente indica o comprimento em mm. */
+  sizeType?: "calcado" | "vestuario" | "medida" | null;
 };
 
 export type Campaign = {
@@ -75,6 +75,8 @@ export type DiscountRule = {
 export type Pricing = {
   /** Preços de tabela dos artigos já carregados (vão sendo pedidos à medida que aparecem). */
   listPrices: Record<string, number>;
+  /** Fitas à medida: preço da soldadura de cada fita (o preço de tabela delas é por metro). */
+  weldPrices?: Record<string, number>;
   rules: DiscountRule[];
 };
 

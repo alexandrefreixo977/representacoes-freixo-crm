@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyDiscounts, normalizeQty, parseDiscounts, parseQuickOrder, pickRule, priceFor, splitByManufacturer } from "../src/pricing";
+import { applyDiscounts, lengthMm, needsVariant, normalizeQty, parseDiscounts, parseQuickOrder, pickRule, priceFor, splitByManufacturer } from "../src/pricing";
 import type { DiscountRule, Product } from "../src/types";
 
 const prod = (id: string, manufacturerId: string, familyId = "f1", packQty = 1): Product => ({
@@ -60,5 +60,30 @@ describe("quantidades e carrinho", () => {
     expect(parseQuickOrder("AT-1 50\nPP-2;12\nTM 3 x4\n\nSOLTA")).toEqual([
       { reference: "AT-1", qty: 50 }, { reference: "PP-2", qty: 12 }, { reference: "TM 3", qty: 4 }, { reference: "SOLTA", qty: 1 },
     ]);
+  });
+});
+
+describe("fita à medida", () => {
+  const fita: Product = { ...prod("fita", "m1"), sizeType: "medida", salesUnit: "m" };
+  const pricing = { listPrices: { fita: 21.42 }, weldPrices: { fita: 8.15 }, rules: [{ id: "r", manufacturerId: "m1", discounts: [10] }] as DiscountRule[] };
+  it("preço por fita = metros x preço/m + soldadura, depois o desconto", () => {
+    // 2,45 m x 21,42 + 8,15 = 60,629 -> -10% = 54,5661
+    const p = priceFor(fita, pricing, null, "2450")!;
+    expect(p.listPrice).toBeCloseTo(60.629, 4);
+    expect(p.netPrice).toBeCloseTo(54.5661, 4);
+  });
+  it("sem comprimento mostra o preço por metro", () => {
+    expect(priceFor(fita, pricing, null)!.listPrice).toBe(21.42);
+  });
+  it("só aceita comprimentos válidos em mm", () => {
+    expect(lengthMm("2450")).toBe(2450);
+    expect(lengthMm("2,45")).toBeNull();
+    expect(lengthMm("50")).toBeNull();
+    expect(needsVariant(fita, "")).toBe(true);
+    expect(needsVariant(fita, "3160")).toBe(false);
+  });
+  it("o carrinho calcula cada comprimento à parte", () => {
+    const groups = splitByManufacturer([{ productId: "fita", qty: 2, variant: "2450" }, { productId: "fita", qty: 1, variant: "3160" }], [fita], pricing, null);
+    expect(groups[0].items.map((i) => i.total)).toEqual([109.13, 68.25]);
   });
 });
