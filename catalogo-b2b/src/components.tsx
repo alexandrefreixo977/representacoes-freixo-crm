@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { SIZES, formatDiscounts, formatEur, needsVariant, normalizeQty, variantLabel } from "./pricing";
+import { formatDiscounts, formatEur, needsVariant, normalizeQty, sizesFor, variantLabel } from "./pricing";
 import { go, useApp } from "./state";
 import type { Manufacturer, Product } from "./types";
 
@@ -43,7 +43,8 @@ export function ProductImage({ product, manufacturer }: { product: Product; manu
 /** Escolha do tamanho (calçado/vestuário). Lista com os tamanhos habituais; aceita outro escrito à mão. */
 export function SizePicker({ product, value, onChange }: { product: Product; value: string; onChange: (v: string) => void }) {
   if (!product.sizeType) return null;
-  const listId = `sizes-${product.sizeType}`;
+  const sizes = sizesFor(product);
+  const listId = `sizes-${product.id}`;
   const medida = product.sizeType === "medida";
   return (
     <label className="size-picker">
@@ -53,11 +54,11 @@ export function SizePicker({ product, value, onChange }: { product: Product; val
         value={value}
         inputMode={medida ? "numeric" : undefined}
         onChange={(e) => onChange(medida ? e.target.value.replace(/\D/g, "").slice(0, 5) : e.target.value.slice(0, 20))}
-        placeholder={medida ? "2450" : product.sizeType === "calcado" ? "42" : "L"}
+        placeholder={medida ? "2450" : sizes[Math.floor(sizes.length / 2)]}
         required
       />
       <datalist id={listId}>
-        {SIZES[product.sizeType].map((s) => <option key={s} value={s} />)}
+        {sizes.map((s) => <option key={s} value={s} />)}
       </datalist>
     </label>
   );

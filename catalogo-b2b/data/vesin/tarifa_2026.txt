@@ -1,0 +1,294 @@
+# Transcrição manual da TARIFA VESIN 2023 - edição 2026 (PDF digitalizado, sem texto).
+# Formato: "## Família" e depois "REF | Designação | faixa=tarifa/neto ; faixa=tarifa/neto"
+# Tarifa = pedido até 400 € netos; neto = pedido acima de 401 €.
+## Multinormas · Ignífugo, antiestático, arco elétrico, alta visibilidade (bicolor amarelo flúor - marinho)
+CPAV-30-AF/AM | Cazadora con cremallera, tapeta y velcro | 48 a 66=52,92/49,98 ; 68 y 70=58,21/58,21
+PPAV-31-AF/AM | Pantalón multibolsillos con goma | 38 a 64=45,83/40,54 ; 66 y 68=50,41/50,41
+POPAV-32-AFAM | Polo manga larga | XS a 3XL=29,28/26,70 ; 4XL y 5XL=32,20/32,20
+## Multinormas · Ignífugo, antiestático, soldadura, arco elétrico (marinho)
+PIAES25 | Buzo con cremallera, tapeta y velcro | 48 a 66=62,89/47,22 ; 68 y 70=65,99/65,99
+PIAES26 | Cazadora con cremallera, tapeta y velcro | 48 a 66=36,20/28,99 ; 68 y 70=39,90/39,90
+PIAES27 | Pantalón multibolsillos con goma | 38 a 64=32,84/28,64 ; 66 y 68=34,48/34,48
+PIAES28 | Camisa manga larga dos bolsillos | 38 a 50=29,41/25,38 ; 52 y 54=30,88/30,88
+PIAES29 | Polo manga larga | XS a 3XL=22,68/19,84 ; 4XL y 5XL=24,95/24,95
+## Multinormas · Ignífugo, antiestático, soldadura, arco elétrico, alta visibilidade (marinho)
+BPAV40 | Buzo con cremallera, tapeta y velcro | 48 a 66=75,68/63,31 ; 68 y 70=76,90/76,90
+CPAV41 | Cazadora con cremallera, tapeta y velcro | 48 a 66=45,73/37,91 ; 68 y 70=48,90/48,90
+PPAV42 | Pantalón multibolsillos con goma | 38 a 64=39,99/33,44 ; 66 y 68=42,88/42,88
+CPAV43 | Camisa manga larga dos bolsillos | 38 a 50=44,81/34,14 ; 52 y 54=46,90/46,90
+POPAV44 | Polo manga larga | XS a 3XL=29,84/27,97 ; 4XL y 5XL=31,92/31,92
+## Multinormas com tratamento · Ignífugo, antiestático (marinho)
+IA20 | Buzo con cremallera, tapeta y velcro | 48 a 66=35,68/29,90 ; 68 y 70=38,43/38,43
+IA21 | Cazadora con cremallera, tapeta y velcro | 48 a 66=23,50/17,99 ; 68 y 70=25,85/25,85
+IA22 | Pantalón multibolsillos con goma | 38 a 64=21,81/17,20 ; 66 y 68=23,99/23,99
+IA23 | Camisa manga larga dos bolsillos | 38 a 50=21,22/17,87 ; 52 y 54=23,34/23,34
+IA24 | Parka clásica | S a 3XL=63,98/51,85
+## Alta visibilidade · Amarelo flúor
+3001-AF | Buzo con cremallera | 48 a 66=21,89/17,28 ; 68 a 80=24,07/24,07
+3017-AF | Buzo con cremallera acolchado | 48 a 66=38,39/32,99
+3002-AF | Cazadora con cremallera | 46 a 66=12,51/10,97 ; 68 a 80=13,76/13,76
+3018-AF | Cazadora con cremallera acolchada | 46 a 66=20,84/16,61 ; 68 y 70=23,92/23,92
+3003-AF | Pantalón multibolsillos con goma | 36 a 64=10,38/9,84 ; 66 a 80=11,41/11,41
+3024-AF | Bermuda multibolsillos con goma | 36 a 64=9,82/8,74 ; 66 y 68=10,80/10,80
+3028-AF | Pantalón multibolsillos con cremallera (stretch) | 36 a 64=16,39/13,10 ; 66 y 68=17,20/17,20
+3019-AF | Pantalón multibolsillos acolchado | 36 a 64=17,55/13,99 ; 66 y 68=18,35/18,35
+3060-AF | Camisa manga corta dos bolsillos | XS a 3XL=9,79/7,52
+3061-AF | Camisa manga larga dos bolsillos | XS a 3XL=11,80/9,44
+3009CM-AF | Polo manga corta bolsillo (transpirable) cinta continua | XS a 3XL=8,78/6,58 ; 4XL y 5XL=9,38/9,38
+3020CM-AF | Polo manga larga bolsillo (transpirable) cinta continua | XS a 3XL=10,89/8,56 ; 4XL y 5XL=11,43/11,43
+3027-AF | Polo manga corta bolsillo (transpirable) cinta segmentada | XS a 3XL=10,86/7,24 ; 4XL y 5XL=11,94/11,94
+3030-AF | Polo manga larga bolsillo (transpirable) cinta segmentada | XS a 3XL=13,48/10,95 ; 4XL y 5XL=14,82/14,82
+3022-AF | Camiseta manga corta | XS a 3XL=8,27/5,83 ; 4XL y 5XL=9,02/9,02
+3050-AF | Forro polar abierto con cremallera | XS a 3XL=16,46/14,50 ; 4XL y 5XL=17,52/17,52
+3200-AF | Jersey con bolsillo y refuerzos | XS a 3XL=24,14/17,49
+CHA3000-AF | Chaleco con cierre de velcro | L a XXL=2,40/1,96
+3006-AF | Parka clásica | XS a 3XL=26,99/22,63 ; 4XL y 5XL=31,32/31,32
+3007-AF | Parka triple uso - chaqueta - chaleco | XS a 3XL=41,63/34,69 ; 4XL y 5XL=48,37/48,37
+3025-AF | Chaqueta de lluvia | S a 3XL=18,67/16,18 ; 4XL y 5XL=19,52/19,52
+3026-AF | Pantalón de lluvia | S a 3XL=10,79/9,28 ; 4XL y 5XL=11,86/11,86
+3040-AF | Sudadera | XS a 3XL=16,95/14,91 ; 4XL y 5XL=18,65/18,65
+3901-AF | Chaqueta bomber | XS a 3XL=20,82/19,30 ; 4XL y 5XL=21,90/21,90
+CHA3080-AF | Chaleco acolchado cintas segmentadas | XS a 3XL=16,11/13,42 ; 4XL y 5XL=17,72/17,72
+## Alta visibilidade · Amarelo flúor / verde
+3012-AFVE | Cazadora con cremallera | 46 a 66=12,51/10,97 ; 68 y 70=13,76/13,76
+3018-AFVE | Cazadora con cremallera acolchada | 46 a 66=20,84/16,61 ; 68 y 70=23,92/23,92
+3023-AFVE | Pantalón multibolsillos con goma | 36 a 64=10,38/9,84 ; 66 y 68=11,41/11,41
+3024-AFVE | Bermuda multibolsillos con goma | 36 a 64=9,82/8,74 ; 66 y 68=10,80/10,80
+3028-AFVE | Pantalón multibolsillos con cremallera (stretch) | 36 a 64=16,39/13,10 ; 66 y 68=17,20/17,20
+3029-AFVE | Pantalón multibolsillos acolchado | 36 a 64=17,55/13,99 ; 66 y 68=18,35/18,35
+3014-AFVE | Camisa manga corta dos bolsillos | XS a 3XL=9,79/7,52
+3015-AFVE | Camisa manga larga dos bolsillos | XS a 3XL=11,80/9,44
+3016CM-AFVE | Polo manga corta bolsillo (transpirable) cinta continua | XS a 3XL=8,78/6,58 ; 4XL y 5XL=9,38/9,38
+3021CM-AFVE | Polo manga larga bolsillo (transpirable) cinta continua | XS a 3XL=10,89/8,56 ; 4XL y 5XL=11,43/11,43
+3027-AF/VE | Polo manga corta bolsillo (transpirable) cinta segmentada | XS a 3XL=10,86/7,24 ; 4XL y 5XL=11,94/11,94
+3030-AF/VE | Polo manga larga bolsillo (transpirable) cinta segmentada | XS a 3XL=13,48/10,95 ; 4XL y 5XL=14,82/14,82
+3022-AFVE | Camiseta manga corta | XS a 3XL=8,27/5,83 ; 4XL y 5XL=9,02/9,02
+3051-AFVE | Forro polar abierto con cremallera | XS a 3XL=16,46/14,50 ; 4XL y 5XL=17,52/17,52
+3201-AFVE | Jersey con bolsillo y refuerzos | XS a 3XL=24,14/17,49
+3007-AFVE | Parka triple uso - chaqueta - chaleco | XS a 3XL=41,63/34,69 ; 4XL y 5XL=48,37/48,37
+3008-AFVE | Parka clásica | XS a 3XL=26,99/22,63 ; 4XL y 5XL=31,32/31,32
+3011-AFVE | Chaqueta soft shell | XS a 3XL=31,69/24,90
+3040-AFVE | Sudadera | XS a 3XL=16,95/14,91 ; 4XL y 5XL=18,65/18,65
+3901-AFVE | Chaqueta bomber | XS a 3XL=20,82/19,30 ; 4XL y 5XL=21,90/21,90
+CHA3080-AFVE | Chaleco acolchado cintas segmentadas | XS a 3XL=16,11/13,42 ; 4XL y 5XL=17,72/17,72
+## Alta visibilidade · Amarelo flúor / azulina
+3012-AFAZ | Cazadora con cremallera | 46 a 66=12,51/10,97 ; 68 y 70=13,76/13,76
+3018-AFAZ | Cazadora con cremallera acolchada | 46 a 66=20,84/16,61 ; 68 y 70=23,92/23,92
+3023-AFAZ | Pantalón multibolsillos con goma | 36 a 64=10,38/9,84 ; 66 y 68=11,41/11,41
+3029-AFAZ | Pantalón multibolsillos acolchado | 36 a 64=17,55/13,99 ; 66 y 68=18,35/18,35
+3014-AFAZ | Camisa manga corta dos bolsillos | XS a 3XL=9,79/7,52
+3015-AFAZ | Camisa manga larga dos bolsillos | XS a 3XL=11,80/9,44
+3016CM-AFAZ | Polo manga corta bolsillo (transpirable) cinta continua | XS a 3XL=8,78/6,58 ; 4XL y 5XL=9,38/9,38
+3021CM-AFAZ | Polo manga larga bolsillo (transpirable) cinta continua | XS a 3XL=10,89/8,56 ; 4XL y 5XL=11,43/11,43
+3051-AFAZ | Forro polar abierto con cremallera | XS a 3XL=16,46/14,50 ; 4XL y 5XL=17,52/17,52
+3201-AFAZ | Jersey con bolsillo y refuerzos | XS a 3XL=24,14/17,49
+3007-AFAZ | Parka triple uso - chaqueta - chaleco | XS a 3XL=41,63/34,69 ; 4XL y 5XL=48,37/48,37
+3008-AFAZ | Parka clásica | XS a 3XL=26,99/22,63 ; 4XL y 5XL=31,32/31,32
+## Alta visibilidade · Amarelo flúor / marinho
+3012-AFAM | Cazadora con cremallera | 46 a 66=12,51/10,97 ; 68 y 70=13,76/13,76
+3018-AFAM | Cazadora con cremallera acolchada | 46 a 66=20,84/16,61 ; 68 y 70=23,92/23,92
+3023-AFAM | Pantalón multibolsillos con goma | 36 a 64=10,38/9,84 ; 66 y 68=11,41/11,41
+3024-AFAM | Bermuda multibolsillos con goma | 36 a 64=9,82/8,74 ; 66 y 68=10,80/10,80
+3028-AFAM | Pantalón multibolsillos con cremallera (stretch) | 36 a 64=16,39/13,10 ; 66 y 68=17,20/17,20
+3029-AFAM | Pantalón multibolsillos acolchado | 36 a 64=17,55/13,99 ; 66 y 68=18,35/18,35
+3014-AFAM | Camisa manga corta dos bolsillos | XS a 3XL=9,79/7,52
+3015-AFAM | Camisa manga larga dos bolsillos | XS a 3XL=11,80/9,44
+3016CM-AFAM | Polo manga corta bolsillo (transpirable) cinta continua | XS a 3XL=8,78/6,58 ; 4XL y 5XL=9,38/9,38
+3021CM-AFAM | Polo manga larga bolsillo (transpirable) cinta continua | XS a 3XL=10,89/8,56 ; 4XL y 5XL=11,43/11,43
+3027-AF/AM | Polo manga corta bolsillo (transpirable) cinta segmentada | XS a 3XL=10,86/7,24 ; 4XL y 5XL=11,94/11,94
+3030-AF/AM | Polo manga larga bolsillo (transpirable) cinta segmentada | XS a 3XL=13,48/10,95 ; 4XL y 5XL=14,82/14,82
+3022-AFAM | Camiseta manga corta | XS a 3XL=8,27/5,83 ; 4XL y 5XL=9,02/9,02
+3051-AFAM | Forro polar abierto con cremallera | XS a 3XL=16,46/14,50 ; 4XL y 5XL=17,52/17,52
+3201-AFAM | Jersey con bolsillo y refuerzos | XS a 3XL=24,14/17,49
+3007-AFAM | Parka triple uso - chaqueta - chaleco | XS a 3XL=41,63/34,69 ; 4XL y 5XL=48,37/48,37
+3008-AFAM | Parka clásica | XS a 3XL=26,99/22,63 ; 4XL y 5XL=31,32/31,32
+3011-AFAM | Chaqueta soft shell | XS a 3XL=31,69/24,90 ; 4XL y 5XL=34,85/34,85
+3025-AFAM | Chaqueta de lluvia | S a 3XL=18,67/16,18 ; 4XL y 5XL=19,52/19,52
+3026-AFAM | Pantalón de lluvia | S a 3XL=10,79/9,28 ; 4XL y 5XL=11,86/11,86
+3040-AFAM | Sudadera | XS a 3XL=16,95/14,91 ; 4XL y 5XL=18,65/18,65
+3901-AFAM | Chaqueta bomber | XS a 3XL=20,82/19,30 ; 4XL y 5XL=21,90/21,90
+CHA3080-AFAM | Chaleco acolchado cintas segmentadas | XS a 3XL=16,11/13,42 ; 4XL y 5XL=17,72/17,72
+## Alta visibilidade Super Élite bicolor · Amarelo flúor / marinho
+ES400-AF/AM | Cazadora stretch bandas segmentadas | 46 a 66=20,43/16,34 ; 68 a 74=22,47/22,47
+ES401-AFAM | Pantalón stretch bandas segmentadas | 36 a 64=17,48/13,98 ; 66 y 68=19,22/19,22
+PDC403-AF/AM | Polo manga larga bandas segmentadas | XS a 3XL=12,10/11,75 ; 4XL y 5XL=13,31/13,31
+PDC402-AF/AM | Polo manga corta bandas segmentadas | XS a 3XL=9,59/9,20 ; 4XL y 5XL=10,54/10,54
+## Alta visibilidade · Laranja flúor / marinho
+3012-NFAM | Cazadora con cremallera | 46 a 66=12,51/10,97 ; 68 y 70=13,76/13,76
+3018-NFAM | Cazadora con cremallera acolchada | 46 a 66=20,84/16,61 ; 68 y 70=23,92/23,92
+3023-NFAM | Pantalón multibolsillos con goma | 36 a 64=10,38/9,84 ; 66 y 68=11,41/11,41
+3024-NFAM | Bermuda multibolsillos con goma | 36 a 64=9,82/8,74 ; 66 y 68=10,80/10,80
+3029-NFAM | Pantalón multibolsillos acolchado | 36 a 64=17,55/13,99 ; 66 y 68=18,35/18,35
+3016CM-NFAM | Polo manga corta bolsillo (transpirable) cinta continua | XS a 3XL=8,78/6,58 ; 4XL y 5XL=9,38/9,38
+3021CM-NFAM | Polo manga larga bolsillo (transpirable) cinta continua | XS a 3XL=10,89/8,56 ; 4XL y 5XL=11,43/11,43
+3022-NFAM | Camiseta manga corta | XS a 3XL=8,27/5,83 ; 4XL y 5XL=8,68/8,68
+3051-NFAM | Forro polar abierto con cremallera | XS a 3XL=16,46/14,50 ; 4XL y 5XL=17,52/17,52
+3008-NFAM | Parka clásica | XS a 3XL=26,99/22,63 ; 4XL y 5XL=31,32/31,32
+## Linha de visibilidade realçada · Poliéster/algodão
+P-30 REFLEX {AZULINA,GRIS,MARINO,VERDE} | Cazadora con cremallera | 48 a 66=11,13/9,46
+PGM31 REFLEX {AZULINA,GRIS,MARINO,VERDE} | Pantalón multibolsillos con goma | 38 a 64=9,72/8,73
+P-19 REFLEX AZULINA | Camisa manga larga con dos bolsillos | 38 a 54=10,23/9,17
+P-29 REFLEX AZULINA | Camisa manga corta con dos bolsillos | 38 a 54=9,95/8,42
+P-0 REFLEX AZULINA | Buzo con cremallera y tapeta | 48 a 66=15,65/14,36
+## Multissetoriais · Linha Super Élite Stretch (algodão/elastano)
+SE-910-AM,SE-910-GR | Cazadora multibolsillos con vivos flúor | 48 a 66=20,26/17,62 ; 68 y 70=22,28/22,28
+SE-911-AM,SE-911-GR | Pantalón multibolsillos con vivos flúor | 38 a 64=18,90/16,85 ; 66 y 68=20,79/20,79
+SE-901-AM,SE-901-GR | Cazadora multibolsillos triple costura | 48 a 66=18,92/16,19 ; 68 y 70=20,81/20,81
+SE-902-AM,SE-902-GR | Pantalón multibolsillos triple costura | 38 a 64=16,45/14,24 ; 66 y 68=17,99/17,99
+SEL-904-AMNA,SEL-904-GRNA | Polo piqué manga corta y bolsillo | S a 3XL=7,31/6,81 ; 4XL y 5XL=8,04/8,04
+SE-903-AM,SE-903-GR | Bermudas multibolsillos triple costura | 38 a 64=13,86/11,99 ; 66 y 68=15,24/15,24
+SE-908-NE | Cazadora multibolsillos vivos reflectantes | 48 a 66=19,80/17,90 ; 68 y 70=21,78/21,78
+SE-907-NE | Pantalón 8 bolsillos vivos reflectantes | 38 a 64=20,53/19,95 ; 66 y 68=22,58/22,58
+SE-920-AM,SE-920-GR | Pantalones 6 bolsillos | 38 a 64=15,34/13,18 ; 66 y 68=16,87/16,87
+SE-921-AM,SE-921-GR | Bermudas 6 bolsillos | 38 a 64=13,10/11,49 ; 66 y 68=14,41/14,41
+SE-915-AM,SE-915-GR | Pantalón 8 bolsillos multicremalleras | 38 a 64=17,13/15,99 ; 66 y 68=18,84/18,84
+SE-916-AM,SE-916-GR | Bermudas 6 bolsillos multicremalleras | 38 a 64=15,41/14,39 ; 66 y 68=16,33/16,33
+## Multissetoriais · Linha Super Élite Stretch (poliéster/algodão/elastano)
+PCHINO-AM,PCHINO-GR | Pantalón chino multibolsillos | 38 a 64=10,88/9,92 ; 66 y 68=11,96/11,96
+SE-922-AM,SE-922-GR | Pantalón multibolsillos (6 bolsillos) pespuntes color naranja | 38 a 64=13,16/12,40 ; 66 y 68=14,47/14,47
+SE-822-AM,SE-822-GR,SE-822-BL | Pantalón multibolsillos (6 bolsillos) pespuntes al tono | 38 a 64=11,97/10,64 ; 66 y 68=13,16/13,16
+SE-823-AM,SE-823-GR,SE-823-BL | Bermuda multibolsillos (6 bolsillos) pespuntes al tono | 38 a 64=9,10/8,60 ; 66 y 68=9,75/9,75
+## Multissetoriais · Linha Élite bicolor
+EC-700-AMAZ,EC-700-GRAZ | Cazadora multibolsillos cremallera | 48 a 66=15,37/12,87
+EP-701-AMAZ,EP-701-GRAZ | Pantalón multibolsillos con refuerzos | 38 a 64=14,22/11,99
+EL-703-AMAZ | Polo piqué manga corta y bolsillo | S a 3XL=7,31/6,81 ; 4XL y 5XL=8,04/8,04
+EL-703-GRAZ | Polo piqué manga corta y bolsillo | S a 3XL=7,31/6,81
+EPB-702-AMAZ,EPB-702-GRAZ | Bermudas multibolsillos con refuerzos | 38 a 64=10,95/9,75
+## Multissetoriais · Linha Élite unicolor
+EP-900-U {BEIGE,GRIS,MARINO,NEGRO,VERDE CAZA} | Pantalón multibolsillos con refuerzos (pespuntes al tono) | 38 a 64=14,22/12,08
+## Multissetoriais · Linha Cargo bicolor
+PR39 {MARINO/ROJO,GRIS/ROJO} | Cazadora multibolsillos cremallera | 48 a 66=11,68/10,54
+PRGM33 {MARINO/ROJO,GRIS/ROJO} | Pantalón multibolsillos con refuerzos | 38 a 64=11,83/10,49 ; 66 y 68=12,99/12,99
+PBGM34 {MARINO/ROJO,GRIS/ROJO} | Bermudas multibolsillos con refuerzos | 38 a 64=9,54/7,95
+POLO CARGO MARINO/ROJO | Polo piqué manga corta con bolsillo | S a XXL=6,65/6,21 ; 4XL a 5XL=7,31/7,31
+POLO CARGO GRIS/ROJO | Polo piqué manga corta con bolsillo | S a XXL=6,65/6,21
+PRA35 {MARINO/NARANJA,GRIS/NARANJA} | Cazadora multibolsillos cremallera (100% algodón) | 48 a 66=13,68/12,40
+PRGA36 {MARINO/NARANJA,GRIS/NARANJA} | Pantalón multibolsillos con refuerzos (100% algodón) | 38 a 64=12,62/11,35
+## Multissetoriais · Linha Cargo unicolor
+PCM80 {MARINO,GRIS} | Pantalón multibolsillos con refuerzos | 38 a 64=12,37/10,99
+## Multissetoriais · Linha ganga stretch (algodão/elastano)
+AE82 | Cazadora multibolsillos azul jeans | 48 a 66=16,95/14,28
+AE80 | Pantalón multibolsillos azul jeans | 38 a 66=14,19/11,99
+AE84 | Bermudas multibolsillos azul jeans | 38 a 66=12,43/10,62
+AE82-AM | Cazadora multibolsillos azul oscuro | 48 a 66=19,90/16,85
+AE85 | Pantalón multibolsillos azul oscuro | 38 a 64=19,76/17,38 ; 66 y 68=21,73/21,73
+AE86 | Bermudas multibolsillos azul oscuro | 38 a 64=18,57/16,24 ; 66 y 68=19,68/19,68
+## Limpeza · Casacas femininas
+CFP-93 {BLANCO/AZUL,BLANCO/VERDE} | Casaca cuello pico manga corta rayas | 2 a 12=10,51/8,65
+CFP-94 {BLANCO/AZUL,BLANCO/VERDE} | Casaca cuello solapa manga corta rayas | 2 a 12=10,51/8,65
+## Limpeza · Calças unissexo
+PSU-92 {BLANCO,AZUL,VERDE} | Pantalón pijama con goma y cremallera | 2 a 12=9,30/6,24 ; 14 y 16=10,23/10,23
+PSU-99 {BLANCO,AZUL,VERDE} | Pantalón pijama con goma en toda la cintura | 2 a 12=8,40/5,96 ; 14 y 16=9,24/9,24
+PSGC-104 BLANCO | Pantalón con goma en toda la cintura y cinta regulable | XS a 3XL=10,28/7,19 ; 4XL y 5XL=10,90/10,90
+## Limpeza · Batas de senhora
+BFML-96 {BLANCO/AZUL,BLANCO/VERDE} | Bata señora manga larga de rayas | 38 a 64=11,47/9,15
+BFMC-97 {BLANCO/AZUL,BLANCO/VERDE} | Bata señora manga corta de rayas | 38 a 64=11,30/8,83
+P-38 {AZUL,CELESTE,VERDE} | Bata señora manga larga colores lisos | 40 a 64=10,71/8,90
+P38-MC {AZUL,CELESTE,VERDE} | Bata señora manga corta colores lisos | 40 a 64=10,50/8,70
+## Indústria alimentar · Branco
+LBA-83 | Cazadora acolchada con broches ocultos para frío | S a 3XL=21,09/13,79
+LBA-87 | Chaleco acolchado con broches ocultos para frío | S a 3XL=16,28/12,21
+LBA-84 | Pantalón acolchado con broches ocultos para frío | S a 3XL=19,12/12,55
+LBA-81 | Cazadora broches ocultos | S a 3XL=12,50/8,30
+LBA-80 | Bata unisex broches ocultos | XS a 3XL=13,09/8,83
+LBA-85 | Camisola pijama cuello pico manga corta | XS a 3XL=8,72/6,20
+LBA-82 | Pantalón con broches ocultos | S a 3XL=10,53/7,55
+LBA-86 | Pantalón pijama con goma | S a 3XL=9,65/6,59
+LBA-92 | Delantal con peto | Única=5,72/3,71
+LBA-88 | Delantal con peto de PVC | Única=6,49/5,18
+LBA-93 | Delantal sin peto | Única=5,13/3,50
+LBA-89 | Gorro con visera | Única=4,75/2,79
+LBA-91 | Gorro militar con rejilla | Única=3,15/1,99
+LBA-90 | Cofia de señora con rejilla | Única=3,03/2,36
+## Saúde e laboratório · Casacas
+CCCB-103 BLANCO | Casaca cruzada con clips (femenina) | XS a 4XL=11,99/10,23
+CCPB-105 BLANCO | Casaca cuello pico con clips (femenina) | XS a 4XL=12,51/10,60
+CMCR-102 BLANCO | Casaca con cremallera (femenina) | XS a 4XL=13,17/11,88
+CRU-90 {BLANCO,AZUL,VERDE} | Casaca cuello redondo unisex manga corta | 2 a 12=7,21/5,99 ; 14 y 16=7,93/7,93
+CPU-91 {BLANCO,AZUL,VERDE} | Casaca cuello pico unisex manga corta | 2 a 12=7,21/5,99 ; 14 y 16=7,93/7,93
+CCPB-101 BLANCO | Casaca cuello pico con cierre de clips | XS a 3XL=9,25/7,48 ; 4XL y 5XL=10,17/10,17
+## Saúde e laboratório · Batas
+BSU-100 BLANCO | Bata manga larga y manga corta (unisex) | 38 a 66=10,56/8,39 ; 68 y 70=11,61/11,61
+P-38 BLANCO | Bata señora entallada manga larga | 40 a 64=10,25/8,78
+P38-MC BLANCO | Bata señora entallada manga corta | 40 a 64=10,25/8,78
+## Cozinha · Linha Élite
+CCE-502 NEGRO | Chaqueta cocinera manga larga (espalda transpirable) | S a 5XL=14,87/11,91
+CCE-503 NEGRO | Chaqueta cocinera manga corta (espalda transpirable) | S a 5XL=12,99/9,92
+CCE-500 NEGRO | Chaqueta cocinero manga larga (espalda transpirable) | S a 3XL=14,37/11,68 ; 4XL y 5XL=15,80/15,80
+CCE-501 NEGRO | Chaqueta cocinero manga corta (espalda transpirable) | S a 3XL=13,68/11,13 ; 4XL y 5XL=15,04/15,04
+PSGC-106 CUADROS | Pantalón con goma en toda la cintura con cinta regulable | XS a 3XL=9,74/7,50 ; 4XL y 5XL=10,71/10,71
+PSGC-104 NEGRO | Pantalón con goma en toda la cintura y cinta regulable | XS a 3XL=10,28/7,19 ; 4XL y 5XL=10,90/10,90
+GFE-507 {BLANCO,NEGRO} | Gorro champiñón | Única=3,93/2,96
+GBE-506 {BLANCO,NEGRO} | Gorro bandana | Única=4,41/3,12
+DPA-104 {BLANCO,NEGRO} | Delantal con peto ajustable | Única=6,62/5,18
+DLE-505 {BLANCO,NEGRO} | Delantal sin peto | Única=6,33/4,75
+## Cozinha · Linha clássica
+CC-600 BLANCO | Chaqueta unisex manga larga | 46 a 66=11,53/9,97
+CC-601 BLANCO | Chaqueta unisex manga corta | 46 a 66=10,67/8,47
+PU-602 BLANCO/AZUL | Pantalón con goma y cremallera (pata de gallo) | 38 a 66=10,84/8,19
+PU-609 BLANCO/AZUL | Pantalón con goma en toda la cintura (pata de gallo) | 2 a 16=10,84/8,19
+DP-603 BLANCO | Delantal con peto | Única=5,72/3,71
+DSP-604 BLANCO | Delantal sin peto | Única=5,13/3,50
+GC-605 BLANCO | Gorro cocinero medio / alto | Única=3,95/2,96
+GC-606 BLANCO | Gorro cocinero tipo militar con rejilla | Única=3,15/1,99
+CS-607 BLANCO | Cofia señora con rejilla | Única=3,03/2,36
+PC-608 BLANCO | Pico cocinero | Única=3,13/2,12
+## Verão clássico
+POLO CM100 {AZULINA,GRIS,MARINO,ROJO,VERDE} | Polo técnico transpirable manga corta con bolsillo | S a 2XL=6,78/5,92
+POLO CM101 {AZULINA,GRIS,MARINO,ROJO,VERDE} | Polo técnico transpirable manga larga con bolsillo | S a 2XL=7,90/6,89
+POLO PQ200 {GRIS,MARINO,ROJO,VERDE} | Polo piqué manga corta con bolsillo | S a 3XL=6,56/5,98
+CA26 MARINO | Camiseta manga corta con bolsillo | S a 3XL=4,68/3,99 ; 4XL y 5XL=5,61/5,61
+CA26 {AZULINA,BLANCO,GRIS,ROJO,VERDE,AMARILLO} | Camiseta manga corta con bolsillo | S a 3XL=4,68/3,99
+P19 {AZULINA,BEIGE,CELESTE,GRIS,MARINO} | Camisa manga larga dos bolsillos | 38 a 54=7,82/6,32
+P29 {AZULINA,BEIGE,CELESTE,GRIS,MARINO} | Camisa manga corta dos bolsillos | 38 a 54=6,78/5,56
+P37 {AZULINA,BEIGE,BLANCO,GRIS,MARINO,VERDE} | Peto con goma en tirantes y hebillas | 38 a 66=10,24/9,21
+PB35 {AZULINA,BEIGE,BLANCO,GRIS,MARINO,VERDE} | Bermuda multibolsillos | 38 a 64=6,85/5,91
+## Inverno · Linha Élite
+SEL-906-AMNA | Chaqueta soft shell vivos reflectantes (marino) | XS a 3XL=22,95/18,36 ; 4XL y 5XL=25,24/25,24
+SEL-905-NEGRO | Chaqueta soft shell vivos reflectantes (bicolor negro/gris) | XS a 3XL=32,89/25,78
+1050-AMNA | Parka (marino) | XS a 3XL=24,32/21,97 ; 4XL y 5XL=26,75/26,75
+1051-AMRO | Parka bicolor (marino/rojo) | XS a 3XL=22,54/20,28 ; 4XL y 5XL=24,79/24,79
+CHA1023-AM | Chaleco acolchado (marino) | XS a 3XL=13,44/12,62 ; 4XL y 5XL=14,78/14,78
+CHA1060-AMGR | Chaleco bicolor acolchado (marino/gris) | XS a 3XL=15,75/14,35 ; 4XL y 5XL=17,32/17,32
+FP200-AM3C | Forro polar bicolor (marino/azul medio) | XS a 3XL=13,17/11,40 ; 4XL y 5XL=14,48/14,48
+## Inverno · Linha clássica
+PF38 CONFORT | Buzo acolchado con cremallera y tapeta (azulina) | 48 a 66=24,12/19,29
+PF34 CONFORT | Cazadora acolchada con cremallera y tapeta (azulina) | 48 a 66=15,16/12,13
+PFGM32 CONFORT | Pantalón acolchado multibolsillos con goma (azulina) | 38 a 64=13,99/12,94
+FP50 | Forro polar abierto entero con cremallera (marino) | XS a 3XL=12,47/9,18 ; 4XL y 5XL=15,00/15,00
+FP100 | Forro polar cuello con cremallera (marino) | XS a 3XL=10,15/8,20
+PA1027 | Parka bicolor náutica forro polar (marino/rojo) | M a XXL=9,90/8,75
+PA1028 | Parka tricolor (beige, negro, verde) | M a XXL=11,50/10,15
+PA1029 | Parka bicolor sport (marino y verde) | M a XXL=10,85/9,20
+CHA1020 | Chaleco 7 bolsillos forro polar azul (marino) | S a 3XL=14,82/13,22 ; 4XL y 5XL=16,30/16,30
+1026 | Cazadora acolchada mangas desmontables (marino) | S a 3XL=19,18/16,44
+1030 | Cazadora pilot acolchada y forro polar (marino) | S a 3XL=13,90/11,50
+JCCB-201 | Jersey cuello cremallera con refuerzos y bolsillo (marino) | XS a 5XL=13,96/11,95
+JAC-300 | Chaqueta abierta cremallera (marino) | M a XXL=6,90/5,74
+PANA | Pantalón de pana stretch multibolsillos (marino) | 38 a 66=16,61/13,96
+PANA REFLEX | Pantalón de pana stretch multibolsillos con cinta reflectante (marino) | 38 a 66=19,87/16,93
+SUD800 | Sudadera cuello redondo (marino) | S a 3XL=10,60/8,91 ; 4XL y 5XL=11,66/11,66
+PCMFF81 | Pantalón multibolsillos con forro de franela (marino) | 38 a 64=19,61/15,97
+## Vestuário de pintor · Branco (poliéster/algodão 200 g)
+P0-BL | Buzo con cremallera y tapeta | 48 a 66=13,83/11,61
+P37-BL | Peto con goma en tirantes y hebilla | 38 a 66=10,24/9,21
+P30-BL | Cazadora con cremallera | 48 a 66=8,32/6,79
+PGM31-BL | Pantalón multibolsillos con goma | 38 a 64=7,44/6,29
+CA26-BL | Camiseta manga corta con bolsillo | S a 3XL=4,68/3,99
+PB35-BL | Bermuda multibolsillos con goma | 38 a 64=6,85/5,91
+## Linha generalista 200 g (poliéster/algodão)
+P0 {BEIGE,GRIS,VERDE,MARINO,AZULINA,BLANCO} | Buzo con cremallera y tapeta | 48 a 66=13,83/11,61 ; 68 a 80=15,21/15,21
+P53 AZUL MEDIO | Buzo deportivo | 48 a 66=16,84/14,90 ; 68 a 80=18,52/18,52
+P30 {BEIGE,GRIS,VERDE,MARINO,AZULINA,BLANCO} | Cazadora con cremallera | 48 a 66=8,32/6,79 ; 68 a 80=9,15/9,15
+PGM31 {BEIGE,GRIS,VERDE,MARINO,AZULINA,BLANCO} | Pantalones multibolsillos | 38 a 64=7,44/6,29 ; 66 a 80=8,18/8,18
+## Linha generalista 200 g (100% algodão)
+A1 {AZULINA,MARINO} | Buzo con cremallera y tapeta | 48 a 66=15,95/12,99 ; 68 a 80=17,54/17,54
+A40 {AZULINA,MARINO} | Cazadora con cremallera | 48 a 66=10,60/8,23
+A45 {AZULINA,MARINO} | Cazadora con botones | 48 a 66=6,15/5,10
+AGM41 {AZULINA,MARINO} | Pantalones multibolsillos | 38 a 64=9,44/7,53
+A36 {AZULINA,MARINO} | Bata caballero con botones | 48 a 66=9,10/8,15
+A47 {AZULINA,MARINO} | Camisa manga corta | 38 a 54=6,15/5,10
+A43 {AZULINA,MARINO} | Camisa manga larga | 38 a 54=6,90/5,25
+## Linha generalista 240 g
+PGM9 {AZULINA,BLANCO,MARINO} | Pantalones multibolsillos (poliéster/algodón 240 g) | 38 a 64=9,96/7,98 ; 66 a 80=10,95/10,95
+AGM8 {AZULINA,MARINO} | Pantalones multibolsillos (100% algodón 240 g) | 38 a 64=11,24/8,54 ; 66 a 80=12,36/12,36
