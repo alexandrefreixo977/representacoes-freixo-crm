@@ -18,11 +18,12 @@ export function LoginPage() {
         <h1>A sua conta</h1>
         <p>
           Sessão iniciada como <strong>{session.email}</strong>
-          {session.client ? <> · {session.client.name}</> : session.role === "admin" ? " · Gestão Freixo" : ""}
+          {session.client ? <> · {session.client.name}</> : session.role === "admin" ? " · Gestão Freixo" : session.role === "comercial" ? " · Equipa comercial Freixo" : ""}
         </p>
         <div className="row">
           {session.role === "admin" && <button className="btn primary" onClick={() => go("gestao")}>Área de gestão</button>}
-          <button className="btn ghost" onClick={() => go("encomendas")}>As minhas encomendas</button>
+          {session.role !== "client" && <button className="btn primary" onClick={() => go("propostas")}>Propostas</button>}
+          {session.role === "client" && <button className="btn ghost" onClick={() => go("encomendas")}>As minhas encomendas</button>}
           <button className="btn ghost" onClick={async () => { await api.signOut(); await refreshSession(); go(""); }}>Terminar sessão</button>
         </div>
       </div>
@@ -36,7 +37,7 @@ export function LoginPage() {
     try {
       const s = await api.signIn(email, password);
       await refreshSession();
-      go(back || (s.role === "admin" ? "gestao" : ""));
+      go(back || (s.role === "admin" ? "gestao" : s.role === "comercial" ? "propostas" : ""));
     } catch (err) {
       setError((err as Error).message);
     } finally {
@@ -159,7 +160,7 @@ export function SetPasswordPage() {
         try {
           await api.setPassword(password);
           await refreshSession();
-          go(session.role === "admin" ? "gestao" : "");
+          go(session.role === "admin" ? "gestao" : session.role === "comercial" ? "propostas" : "");
         } catch (err) {
           setError((err as Error).message);
         } finally {

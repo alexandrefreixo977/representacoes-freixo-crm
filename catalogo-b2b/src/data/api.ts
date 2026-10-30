@@ -13,7 +13,9 @@ import type {
   Product,
   ProductPage,
   ProductQuery,
+  Quote,
   Session,
+  StaffUser,
 } from "../types";
 
 export type SubmitResult = { groupNumber: string; orders: Order[] };
@@ -57,4 +59,13 @@ export interface Api {
   deleteRule(id: string): Promise<void>;
   importPriceList(manufacturerId: string, rows: PriceImportRow[]): Promise<ImportResult>;
   listAccessRequests(): Promise<AccessRequest[]>;
+  listStaff(): Promise<StaffUser[]>;
+  inviteStaff(email: string, name: string): Promise<string>;
+  removeStaff(userId: string): Promise<void>;
+
+  /** Equipa Freixo (gestão e comercial). O comercial só vê as suas propostas; a gestão vê todas. */
+  listQuotes(): Promise<Quote[]>;
+  getQuote(id: string): Promise<Quote>;
+  saveQuote(quote: Quote): Promise<{ id: string; number: string }>;
+  deleteQuote(id: string): Promise<void>;
 }

@@ -1,11 +1,11 @@
 import { needsVariant, normRef, normSearch, splitByManufacturer, variantLabel } from "../pricing";
-import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, Product, Session } from "../types";
+import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, Product, Quote, Session } from "../types";
 import { slugify } from "../slug";
 import type { Api } from "./api";
 import { seedCampaigns, seedClients, seedFamilies, seedManufacturers, seedPrices, seedProducts, seedRules } from "./demo-seed";
 
 // Modo demonstração: tudo fica guardado só neste browser (localStorage).
-// Contas: cliente@demo.pt / demo  e  gestao@demo.pt / demo
+// Contas: cliente@demo.pt / demo, gestao@demo.pt / demo e comercial@demo.pt / demo
 
 type DemoDb = {
   manufacturers?: Manufacturer[];
@@ -16,7 +16,8 @@ type DemoDb = {
   rules: DiscountRule[];
   orders: Order[];
   requests: AccessRequest[];
-  users: { email: string; password: string; role: "client" | "admin"; clientId?: string }[];
+  users: { email: string; password: string; role: "client" | "admin" | "comercial"; clientId?: string; name?: string }[];
+  quotes?: Quote[];
   session: string | null;
   seq: number;
 };
@@ -35,7 +36,8 @@ function fresh(): DemoDb {
     requests: [],
     users: [
       { email: "cliente@demo.pt", password: "demo", role: "client", clientId: "cl-1" },
-      { email: "gestao@demo.pt", password: "demo", role: "admin" },
+      { email: "gestao@demo.pt", password: "demo", role: "admin", name: "Gestão Demo" },
+      { email: "comercial@demo.pt", password: "demo", role: "comercial", name: "Comercial Demo" },
     ],
     session: null,
     seq: 0,
@@ -72,14 +74,16 @@ function currentSession(db: DemoDb): Session | null {
     userId: user.email,
     email: user.email,
     role: user.role,
+    name: user.name ?? null,
     client: user.clientId ? db.clients.find((c) => c.id === user.clientId) ?? null : null,
   };
 }
 
-function requireSession(db: DemoDb, role?: "admin") {
+function requireSession(db: DemoDb, role?: "admin" | "staff") {
   const s = currentSession(db);
   if (!s) throw new Error("Inicie sessão para continuar.");
   if (role === "admin" && s.role !== "admin") throw new Error("Sem permissão.");
+  if (role === "staff" && s.role === "client") throw new Error("Sem permissão.");
   return s;
 }
 
@@ -154,7 +158,7 @@ export const demoApi: Api = {
     const s = requireSession(db);
     return {
       listPrices: db.prices,
-      rules: db.rules.filter((r) => s.role === "admin" || !r.clientId || r.clientId === s.client?.id),
+      rules: db.rules.filter((r) => s.role !== "client" || !r.clientId || r.clientId === s.client?.id),
     };
   },
   async getPrices(productIds) {
@@ -236,7 +240,7 @@ export const demoApi: Api = {
   },
   async listClients() {
     const db = load();
-    requireSession(db, "admin");
+    requireSession(db, "staff");
     return db.clients;
   },
   async saveClient(client) {
@@ -327,6 +331,67 @@ export const demoApi: Api = {
     const db = load();
     requireSession(db, "admin");
     return db.requests;
+  },
+  async listStaff() {
+    const db = load();
+    requireSession(db, "admin");
+    return db.users
+      .filter((u) => u.role !== "client")
+      .map((u) => ({ userId: u.email, email: u.email, name: u.name ?? null, role: u.role as "admin" | "comercial" }));
+  },
+  async inviteStaff(email, name) {
+    const db = load();
+    requireSession(db, "admin");
+    if (db.users.some((u) => u.email === email)) throw new Error("Já existe uma conta com este email.");
+    save({ ...db, users: [...db.users, { email, password: "demo", role: "comercial", name }] });
+    return "Conta criada. Em modo demonstração a palavra-passe é \"demo\".";
+  },
+  async removeStaff(userId) {
+    const db = load();
+    requireSession(db, "admin");
+    save({ ...db, users: db.users.filter((u) => !(u.email === userId && u.role === "comercial")) });
+  },
+
+  async listQuotes() {
+    const db = load();
+    const s = requireSession(db, "staff");
+    return (db.quotes ?? []).filter((q) => s.role === "admin" || q.ownerId === s.userId);
+  },
+  async getQuote(id) {
+    const q = (await this.listQuotes()).find((x) => x.id === id);
+    if (!q) throw new Error("Proposta não encontrada.");
+    return q;
+  },
+  async saveQuote(quote) {
+    const db = load();
+    const s = requireSession(db, "staff");
+    if (!quote.customerName.trim()) throw new Error("Indique o cliente da proposta");
+    const quotes = db.quotes ?? [];
+    const old = quote.id ? quotes.find((q) => q.id === quote.id && (s.role === "admin" || q.ownerId === s.userId)) : undefined;
+    if (quote.id && !old) throw new Error("Proposta não encontrada");
+    const seq = db.seq + 1;
+    const lines = quote.lines
+      .filter((l) => l.qty > 0 && l.reference.trim())
+      .map((l) => ({ ...l, lineTotal: Math.round(l.netPrice * l.qty * 100) / 100 }));
+    const saved: Quote = {
+      ...quote,
+      id: old?.id ?? uid(),
+      number: old?.number ?? `PROP-${new Date().getFullYear()}-${String(seq).padStart(4, "0")}`,
+      ownerId: old?.ownerId ?? s.userId,
+      ownerName: old?.ownerName ?? s.name ?? s.email,
+      ownerEmail: old?.ownerEmail ?? s.email,
+      createdAt: old?.createdAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      lines,
+      total: Math.round(lines.reduce((t, l) => t + l.lineTotal, 0) * 100) / 100,
+    };
+    save({ ...db, seq: old ? db.seq : seq, quotes: old ? quotes.map((q) => (q.id === old.id ? saved : q)) : [saved, ...quotes] });
+    return { id: saved.id!, number: saved.number! };
+  },
+  async deleteQuote(id) {
+    const db = load();
+    const s = requireSession(db, "staff");
+    save({ ...db, quotes: (db.quotes ?? []).filter((q) => !(q.id === id && (s.role === "admin" || q.ownerId === s.userId))) });
   },
 };
 

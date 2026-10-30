@@ -99,7 +99,9 @@ export type Client = {
 export type Session = {
   userId: string;
   email: string;
-  role: "client" | "admin";
+  /** admin = gestão Freixo; comercial = equipa comercial (propostas); client = revendedor. */
+  role: "client" | "admin" | "comercial";
+  name?: string | null;
   client?: Client | null;
 };
 
@@ -159,3 +161,48 @@ export type PriceImportRow = {
 };
 
 export type ImportResult = { created: number; updated: number; skipped: number };
+
+export type QuoteStatus = "draft" | "sent" | "accepted" | "lost";
+
+export type QuoteLine = {
+  productId?: string | null;
+  manufacturerName?: string | null;
+  reference: string;
+  designation: string;
+  variant?: string | null;
+  salesUnit: string;
+  qty: number;
+  listPrice: number;
+  discounts: number[];
+  netPrice: number;
+  lineTotal: number;
+};
+
+/** Proposta comercial. clientId vazio = potencial cliente (dados escritos na proposta). */
+export type Quote = {
+  id?: string;
+  number?: string;
+  ownerId?: string;
+  ownerName?: string | null;
+  ownerEmail?: string | null;
+  clientId?: string | null;
+  customerName: string;
+  customerNif?: string | null;
+  customerEmail?: string | null;
+  customerPhone?: string | null;
+  customerAddress?: string | null;
+  contactName?: string | null;
+  status: QuoteStatus;
+  validUntil?: string | null;
+  deliveryTerms?: string | null;
+  paymentTerms?: string | null;
+  notes?: string | null;
+  internalNote?: string | null;
+  total: number;
+  createdAt?: string;
+  updatedAt?: string;
+  lines: QuoteLine[];
+};
+
+/** Membro da equipa Freixo com acesso à app. */
+export type StaffUser = { userId: string; email: string; name?: string | null; role: "admin" | "comercial" };
