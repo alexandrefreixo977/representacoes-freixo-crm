@@ -305,3 +305,6 @@ code { background: #e9eff3; padding: 1px 6px; border-radius: 4px; }
 .size-picker { display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--muted, #5b6b7a); flex: 1 0 100%; }
 .size-picker input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid var(--line); border-radius: 8px; font-size: 0.95rem; }
 .card-actions:has(.size-picker) { flex-wrap: wrap; }
+.brand-group { display: flex; gap: 8px; align-items: center; flex-shrink: 0; }
+.brand-group + .brand-group { border-left: 1px solid var(--line); padding-left: 8px; }
+.brand-group-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); max-width: 120px; white-space: normal; line-height: 1.2; }

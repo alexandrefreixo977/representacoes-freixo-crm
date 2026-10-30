@@ -3,10 +3,10 @@ import type { Campaign, Client, DiscountRule, Family, Manufacturer, Product } fr
 // Dados fictícios só para experimentar a app. Os nomes de fabricante são genéricos de propósito.
 
 export const seedManufacturers: Manufacturer[] = [
-  { id: "m-epi", name: "Proteção Pro", slug: "protecao-pro", sort: 1, ordersEmail: "encomendas@protecao-pro.example" },
-  { id: "m-abr", name: "AbraTec", slug: "abratec", sort: 2, ordersEmail: "orders@abratec.example" },
-  { id: "m-fer", name: "ToolMaster", slug: "toolmaster", sort: 3, ordersEmail: "pedidos@toolmaster.example" },
-  { id: "m-con", name: "FixLine", slug: "fixline", sort: 4, ordersEmail: "sales@fixline.example" },
+  { id: "m-epi", name: "Proteção Pro", slug: "protecao-pro", sort: 110, ordersEmail: "encomendas@protecao-pro.example" },
+  { id: "m-abr", name: "AbraTec", slug: "abratec", sort: 210, ordersEmail: "orders@abratec.example" },
+  { id: "m-fer", name: "ToolMaster", slug: "toolmaster", sort: 220, ordersEmail: "pedidos@toolmaster.example" },
+  { id: "m-con", name: "FixLine", slug: "fixline", sort: 230, ordersEmail: "sales@fixline.example" },
 ];
 
 export const seedFamilies: Family[] = [

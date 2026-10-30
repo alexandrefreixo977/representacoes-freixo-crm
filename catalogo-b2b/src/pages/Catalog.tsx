@@ -3,6 +3,7 @@ import { Icon, ProductCard, ProductModal } from "../components";
 import { api } from "../data";
 import { go, useApp } from "../state";
 import type { Product } from "../types";
+import { BRAND_GROUPS, brandGroup } from "../brands";
 
 const PAGE = 48;
 
@@ -74,11 +75,20 @@ export function CatalogPage() {
     <>
       <nav className="brands" aria-label="Fabricantes">
         <button className={!manufacturer ? "active" : ""} onClick={() => go("", { q: q || undefined })}>Todos</button>
-        {catalog.manufacturers.map((m) => (
-          <button key={m.id} className={manufacturer?.id === m.id ? "active" : ""} onClick={() => go("", { m: m.slug, q: q || undefined })}>
-            {m.logoUrl ? <img src={m.logoUrl} alt={m.name} /> : m.name}
-          </button>
-        ))}
+        {BRAND_GROUPS.map((g) => {
+          const list = catalog.manufacturers.filter((m) => brandGroup(m) === g.id);
+          if (!list.length) return null;
+          return (
+            <div key={g.id} className="brand-group" role="group" aria-label={g.label}>
+              <span className="brand-group-label">{g.label}</span>
+              {list.map((m) => (
+                <button key={m.id} className={manufacturer?.id === m.id ? "active" : ""} onClick={() => go("", { m: m.slug, q: q || undefined })}>
+                  {m.logoUrl ? <img src={m.logoUrl} alt={m.name} /> : m.name}
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </nav>
 
       {!q && !familyId && campaigns.length > 0 && <Campaigns onOpen={setOpen} />}
