@@ -4,7 +4,7 @@ import { api } from "../data";
 import { detectColumns, mapRows, readSpreadsheet, type ColumnMap } from "../importer";
 import { formatDiscounts, formatEur, normRef, parseDiscounts } from "../pricing";
 import { go, useApp } from "../state";
-import type { AccessRequest, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow } from "../types";
+import type { AccessRequest, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow, StaffUser } from "../types";
 import { OrderLinesTable } from "./Orders";
 
 const TABS = [
@@ -13,6 +13,7 @@ const TABS = [
   ["precos", "Importar preços"],
   ["clientes", "Clientes e descontos"],
   ["pedidos", "Pedidos de acesso"],
+  ["equipa", "Equipa"],
 ] as const;
 
 export function AdminPage() {
@@ -40,6 +41,7 @@ export function AdminPage() {
       {tab === "precos" && <ImportAdmin />}
       {tab === "clientes" && <ClientsAdmin />}
       {tab === "pedidos" && <RequestsAdmin />}
+      {tab === "equipa" && <TeamAdmin />}
     </div>
   );
 }
@@ -603,6 +605,91 @@ function ManufacturersAdmin() {
           </tbody>
         </table>
       </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ equipa (gestão e comerciais)
+
+function TeamAdmin() {
+  const { session } = useApp();
+  const [list, setList] = useState<StaffUser[] | null>(null);
+  const [email, setEmail] = useState("");
+  const [name, setName] = useState("");
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const load = useCallback(() => {
+    api.listStaff().then(setList, (e) => setMsg((e as Error).message));
+  }, []);
+  useEffect(load, [load]);
+  return (
+    <div className="panel wide">
+      <h2>Equipa Freixo</h2>
+      <p className="muted">
+        <strong>Gestão</strong> vê e faz tudo, incluindo as propostas de todos. <strong>Comercial</strong> vê os preços e os descontos dos
+        clientes e só as suas próprias propostas. Os clientes nunca veem as propostas.
+      </p>
+      {!list ? (
+        <div className="empty">A carregar…</div>
+      ) : (
+        <div className="table-wrap">
+          <table className="table">
+            <thead><tr><th>Nome</th><th>Email</th><th>Perfil</th><th /></tr></thead>
+            <tbody>
+              {list.map((u) => (
+                <tr key={u.userId}>
+                  <td>{u.name || "—"}</td>
+                  <td>{u.email}</td>
+                  <td>{u.role === "admin" ? "Gestão" : "Comercial"}</td>
+                  <td className="num">
+                    {u.role === "comercial" && u.userId !== session?.userId && (
+                      <button
+                        className="link danger"
+                        onBlur={() => setRemoving(null)}
+                        onClick={async () => {
+                          if (removing !== u.userId) return setRemoving(u.userId);
+                          await api.removeStaff(u.userId);
+                          setRemoving(null);
+                          load();
+                        }}
+                      >
+                        {removing === u.userId ? "Confirmar: retirar acesso" : "Retirar acesso"}
+                      </button>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <h3>Convidar comercial</h3>
+      <div className="row wrap">
+        <input placeholder="Nome" value={name} onChange={(e) => setName(e.target.value)} />
+        <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <button
+          className="btn primary"
+          disabled={!email.includes("@") || !name.trim() || busy}
+          onClick={async () => {
+            setBusy(true);
+            try {
+              setMsg(await api.inviteStaff(email.trim().toLowerCase(), name.trim()));
+              setEmail("");
+              setName("");
+              load();
+            } catch (e) {
+              setMsg((e as Error).message);
+            } finally {
+              setBusy(false);
+            }
+          }}
+        >
+          Enviar convite
+        </button>
+      </div>
+      <p className="muted small">O comercial recebe um email para definir a palavra-passe. Para dar o perfil de gestão a alguém, fale com o Claude.</p>
+      {msg && <p className="warn">{msg}</p>}
     </div>
   );
 }

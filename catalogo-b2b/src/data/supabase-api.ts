@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Session } from "../types";
+import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Quote, Session, StaffUser } from "../types";
 import { normRef, normSearch } from "../pricing";
 import { slugify } from "../slug";
 import type { Api } from "./api";
@@ -60,6 +60,45 @@ const mapOrder = (o: Row): Order => ({
   ),
 });
 
+const mapQuote = (q: Row): Quote => ({
+  id: q.id,
+  number: q.number,
+  ownerId: q.owner_id,
+  ownerName: q.owner_name,
+  ownerEmail: q.owner_email,
+  clientId: q.client_id,
+  customerName: q.customer_name,
+  customerNif: q.customer_nif,
+  customerEmail: q.customer_email,
+  customerPhone: q.customer_phone,
+  customerAddress: q.customer_address,
+  contactName: q.contact_name,
+  status: q.status,
+  validUntil: q.valid_until,
+  deliveryTerms: q.delivery_terms,
+  paymentTerms: q.payment_terms,
+  notes: q.notes,
+  internalNote: q.internal_note,
+  total: num(q.total),
+  createdAt: q.created_at,
+  updatedAt: q.updated_at,
+  lines: [...(q.b2b_quote_lines ?? [])]
+    .sort((a: Row, b: Row) => a.position - b.position)
+    .map((l: Row) => ({
+      productId: l.product_id,
+      manufacturerName: l.manufacturer_name,
+      reference: l.reference,
+      designation: l.designation,
+      variant: l.variant,
+      salesUnit: l.sales_unit,
+      qty: num(l.qty),
+      listPrice: num(l.list_price),
+      discounts: nums(l.discounts),
+      netPrice: num(l.net_price),
+      lineTotal: num(l.line_total),
+    })),
+});
+
 const PRODUCT_COLS =
   "id, manufacturer_id, family_id, reference, ean, designation, description, image_url, tech_sheet_url, sales_unit, pack_qty, moq, is_new, size_type";
 
@@ -91,12 +130,13 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     const { data } = await sb.auth.getSession();
     const user = data.session?.user;
     if (!user) return null;
-    const { data: link } = await sb.from("b2b_users").select("role, client_id, b2b_clients(*)").eq("user_id", user.id).maybeSingle();
+    const { data: link } = await sb.from("b2b_users").select("role, name, client_id, b2b_clients(*)").eq("user_id", user.id).maybeSingle();
     const l = link as Row | null;
     return {
       userId: user.id,
       email: user.email ?? "",
-      role: l?.role === "admin" ? "admin" : "client",
+      role: l?.role === "admin" || l?.role === "comercial" ? l.role : "client",
+      name: l?.name ?? null,
       client: l?.b2b_clients ? mapClient(l.b2b_clients) : null,
     };
   }
@@ -282,6 +322,58 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const { data, error } = await sb.from("b2b_access_requests").select("*").order("created_at", { ascending: false });
       fail(error);
       return (data ?? []).map((r: Row): AccessRequest => ({ ...r, createdAt: r.created_at }) as AccessRequest);
+    },
+    async listStaff() {
+      const { data, error } = await sb.from("b2b_users").select("user_id, email, name, role").in("role", ["admin", "comercial"]).order("role");
+      fail(error);
+      return (data ?? []).map((r: Row): StaffUser => ({ userId: r.user_id, email: r.email ?? "", name: r.name, role: r.role }));
+    },
+    async inviteStaff(email, name) {
+      const { data, error } = await sb.functions.invoke("invite-client", { body: { email, name, role: "comercial" } });
+      if (error) throw new Error("Não foi possível enviar o convite. Confirme que a função invite-client está publicada.");
+      return (data as Row)?.message ?? "Convite enviado por email.";
+    },
+    async removeStaff(userId) {
+      const { error } = await sb.from("b2b_users").delete().eq("user_id", userId).eq("role", "comercial");
+      fail(error);
+    },
+
+    async listQuotes() {
+      const { data, error } = await sb.from("b2b_quotes").select("*").order("created_at", { ascending: false }).limit(500);
+      fail(error);
+      return (data ?? []).map((q: Row) => mapQuote({ ...q, b2b_quote_lines: [] }));
+    },
+    async getQuote(id) {
+      const { data, error } = await sb.from("b2b_quotes").select("*, b2b_quote_lines(*)").eq("id", id).single();
+      fail(error);
+      return mapQuote(data as Row);
+    },
+    async saveQuote(q) {
+      const { data, error } = await sb.rpc("b2b_save_quote", {
+        p_quote: {
+          id: q.id ?? "",
+          clientId: q.clientId ?? "",
+          customerName: q.customerName,
+          customerNif: q.customerNif ?? "",
+          customerEmail: q.customerEmail ?? "",
+          customerPhone: q.customerPhone ?? "",
+          customerAddress: q.customerAddress ?? "",
+          contactName: q.contactName ?? "",
+          status: q.status,
+          validUntil: q.validUntil ?? "",
+          deliveryTerms: q.deliveryTerms ?? "",
+          paymentTerms: q.paymentTerms ?? "",
+          notes: q.notes ?? "",
+          internalNote: q.internalNote ?? "",
+        },
+        p_lines: q.lines,
+      });
+      fail(error);
+      return data as { id: string; number: string };
+    },
+    async deleteQuote(id) {
+      const { error } = await sb.from("b2b_quotes").delete().eq("id", id);
+      fail(error);
     },
   };
   return self;

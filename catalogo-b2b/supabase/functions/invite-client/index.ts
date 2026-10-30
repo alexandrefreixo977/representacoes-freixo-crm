@@ -1,4 +1,4 @@
-// A gestão convida um utilizador para um cliente: o Supabase envia um email com a ligação para definir a palavra-passe.
+// A gestão convida um utilizador para um cliente, ou um membro da equipa comercial (role "comercial"): o Supabase envia um email com a ligação para definir a palavra-passe.
 // Só pode ser chamada por um utilizador com role 'admin' em b2b_users.
 // Segredos: APP_URL
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
@@ -18,11 +18,21 @@ Deno.serve(async (req) => {
   const { data: isAdmin } = await userClient.rpc("b2b_is_admin");
   if (!isAdmin) return json({ message: "Sem permissão." }, 403);
 
-  const { clientId, email } = await req.json();
+  const body = await req.json();
+  const email = String(body.email ?? "").trim().toLowerCase();
+  const role = body.role === "comercial" ? "comercial" : "client";
+  if (!email) return json({ message: "Indique o email." }, 400);
+  if (role === "client" && !body.clientId) return json({ message: "Indique o cliente." }, 400);
   const admin = createClient(env("SUPABASE_URL"), serviceKey());
-  const { data, error } = await admin.auth.admin.inviteUserByEmail(String(email).trim().toLowerCase(), { redirectTo: env("APP_URL") });
+  const { data, error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo: env("APP_URL") });
   if (error || !data.user) return json({ message: error?.message ?? "Erro ao convidar." }, 400);
-  const { error: e2 } = await admin.from("b2b_users").upsert({ user_id: data.user.id, client_id: clientId, role: "client" });
+  const { error: e2 } = await admin.from("b2b_users").upsert({
+    user_id: data.user.id,
+    client_id: role === "client" ? body.clientId : null,
+    role,
+    email,
+    name: body.name ? String(body.name).slice(0, 120) : null,
+  });
   if (e2) return json({ message: e2.message }, 400);
   return json({ message: `Convite enviado para ${email}.` });
 });

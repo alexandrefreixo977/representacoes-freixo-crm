@@ -10,6 +10,7 @@ import { CartPage } from "./pages/Cart";
 import { CatalogPage } from "./pages/Catalog";
 import { OrdersPage } from "./pages/Orders";
 import { QuickOrderPage } from "./pages/QuickOrder";
+import { QuotesPage } from "./pages/Quotes";
 import { AppProvider, go, useApp } from "./state";
 
 export function App() {
@@ -40,6 +41,7 @@ function Shell() {
         {page === "entrar" && <LoginPage />}
         {page === "pedir-acesso" && <AccessRequestPage />}
         {page === "gestao" && <AdminPage />}
+        {page === "propostas" && <QuotesPage />}
         {page === "definir-senha" && <SetPasswordPage />}
       </main>
       <footer className="footer">
@@ -78,7 +80,8 @@ function Header() {
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Procurar referência, produto ou marca" aria-label="Procurar" />
         </form>
         <nav className="header-actions">
-          <a href="#/rapida" className="hide-sm"><Icon name="bolt" size={18} /> Encomenda rápida</a>
+          {(!session || session.role === "client") && <a href="#/rapida" className="hide-sm"><Icon name="bolt" size={18} /> Encomenda rápida</a>}
+          {session && session.role !== "client" && <a href="#/propostas" className="hide-sm"><Icon name="doc" size={18} /> Propostas</a>}
           {session?.role === "admin" && <a href="#/gestao" className="hide-sm"><Icon name="gear" size={18} /> Gestão</a>}
           <a href="#/entrar" className="hide-sm" title={session?.email}>
             <Icon name="user" size={18} /> {session ? session.client?.name.split(/[ ,]/)[0] ?? "Conta" : "Entrar"}
@@ -96,9 +99,10 @@ function Header() {
 
 function BottomNav() {
   const { route, cartCount, session } = useApp();
+  const staff = !!session && session.role !== "client";
   const items: [string, string, string][] = [
     ["", "home", "Catálogo"],
-    ["rapida", "bolt", "Rápida"],
+    staff ? ["propostas", "doc", "Propostas"] : ["rapida", "bolt", "Rápida"],
     ["carrinho", "cart", "Carrinho"],
     ["encomendas", "list", "Encomendas"],
     [session?.role === "admin" ? "gestao" : "entrar", session?.role === "admin" ? "gear" : "user", session?.role === "admin" ? "Gestão" : "Conta"],
