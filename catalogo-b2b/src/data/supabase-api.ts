@@ -186,9 +186,13 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       return { listPrices: {}, rules: (data ?? []).filter((x: Row) => !x.valid_until || x.valid_until >= today).map(mapRule) };
     },
     async getPrices(productIds) {
-      const pages = await Promise.all(chunks([...new Set(productIds)]).map((part) => sb.from("b2b_prices").select("product_id, list_price").in("product_id", part)));
+      const pages = await Promise.all(chunks([...new Set(productIds)]).map((part) => sb.from("b2b_prices").select("product_id, list_price, weld_price").in("product_id", part)));
       pages.forEach((p) => fail(p.error));
-      return Object.fromEntries(pages.flatMap((p) => (p.data ?? []).map((x: Row) => [x.product_id, num(x.list_price)])));
+      const rows = pages.flatMap((p) => p.data ?? []) as Row[];
+      return {
+        listPrices: Object.fromEntries(rows.map((x) => [x.product_id, num(x.list_price)])),
+        weldPrices: Object.fromEntries(rows.filter((x) => x.weld_price != null).map((x) => [x.product_id, num(x.weld_price)])),
+      };
     },
     async submitOrder(items, customerRef, notes) {
       const { data, error } = await sb.rpc("b2b_submit_order", { p_items: items, p_customer_ref: customerRef, p_notes: notes });

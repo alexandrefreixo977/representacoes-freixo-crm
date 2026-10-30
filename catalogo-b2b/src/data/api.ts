@@ -40,7 +40,7 @@ export interface Api {
 
   /** Só com sessão iniciada. getPricing traz as regras; os preços de tabela pedem-se com getPrices. */
   getPricing(): Promise<Pricing>;
-  getPrices(productIds: string[]): Promise<Record<string, number>>;
+  getPrices(productIds: string[]): Promise<{ listPrices: Record<string, number>; weldPrices: Record<string, number> }>;
   submitOrder(items: CartItem[], customerRef: string, notes: string): Promise<SubmitResult>;
   listMyOrders(): Promise<Order[]>;
 

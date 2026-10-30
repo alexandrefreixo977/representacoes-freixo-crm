@@ -32,11 +32,29 @@ export function pickRule(rules: DiscountRule[], product: Product, clientId?: str
     .sort((a, b) => score(b) - score(a))[0];
 }
 
-export function priceFor(product: Product, pricing: Pricing | null, clientId?: string | null): PriceInfo | null {
-  const listPrice = pricing?.listPrices[product.id];
+/** Comprimento em mm de uma fita à medida (null se não for um número válido entre 100 e 20 000 mm). */
+export function lengthMm(value?: string | null) {
+  const mm = Number(String(value ?? "").trim().replace(/\s|mm$/gi, ""));
+  return Number.isInteger(mm) && mm >= 100 && mm <= 20000 ? mm : null;
+}
+
+/** Falta escolher o tamanho / comprimento? */
+export function needsVariant(product: Product, value?: string | null) {
+  if (!product.sizeType) return false;
+  return product.sizeType === "medida" ? lengthMm(value) == null : !String(value ?? "").trim();
+}
+
+/**
+ * Preço por unidade. Nas fitas à medida o preço de tabela é por metro: com o comprimento escolhido
+ * passa a preço por fita = metros x preço/m + soldadura. Tem de bater certo com b2b_submit_order() no SQL.
+ */
+export function priceFor(product: Product, pricing: Pricing | null, clientId?: string | null, variant?: string | null): PriceInfo | null {
+  let listPrice = pricing?.listPrices[product.id];
   if (listPrice == null || !pricing) return null;
+  const mm = product.sizeType === "medida" ? lengthMm(variant) : null;
+  if (mm != null) listPrice = round4(listPrice * (mm / 1000) + (pricing.weldPrices?.[product.id] ?? 0));
   const rule = pickRule(pricing.rules, product, clientId);
-  if (rule?.specialNetPrice != null) {
+  if (rule?.specialNetPrice != null && mm == null) {
     return { listPrice, discounts: [], netPrice: rule.specialNetPrice, special: true };
   }
   const discounts = cleanDiscounts(rule?.discounts ?? []);
@@ -72,7 +90,7 @@ export function splitByManufacturer(
   for (const item of cart) {
     const product = byId.get(item.productId);
     if (!product || item.qty <= 0) continue;
-    const price = priceFor(product, pricing, clientId);
+    const price = priceFor(product, pricing, clientId, item.variant);
     const total = price ? lineTotal(price.netPrice, item.qty) : 0;
     const group = groups.get(product.manufacturerId) ?? { manufacturerId: product.manufacturerId, items: [], subtotal: 0 };
     group.items.push({ product, qty: item.qty, variant: item.variant, price, total });
@@ -98,9 +116,10 @@ export function parseQuickOrder(text: string) {
 }
 
 /** Tamanhos propostos na loja (o cliente pode escrever outro). */
-export const SIZES: Record<"calcado" | "vestuario", string[]> = {
+export const SIZES: Record<"calcado" | "vestuario" | "medida", string[]> = {
   calcado: Array.from({ length: 14 }, (_, i) => String(35 + i)),
   vestuario: ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"],
+  medida: ["1440", "1638", "2085", "2360", "2450", "2750", "2950", "3160", "3660", "4115"],
 };
 
 /** Texto para pesquisa: minúsculas e sem acentos (igual à coluna search_text no SQL). */
@@ -116,4 +135,10 @@ export const formatDiscounts = (values: number[]) =>
     .join(" + ");
 export function parseDiscounts(value: string) {
   return cleanDiscounts(value.split(/[+;]/).map((s) => Number(s.trim().replace("%", "").replace(",", "."))));
+}
+
+/** Texto do tamanho/comprimento escolhido, para o carrinho e para as encomendas. */
+export function variantLabel(product: Pick<Product, "sizeType">, variant?: string | null) {
+  if (!variant) return "";
+  return product.sizeType === "medida" ? `Comprimento ${variant} mm` : `Tam. ${variant}`;
 }

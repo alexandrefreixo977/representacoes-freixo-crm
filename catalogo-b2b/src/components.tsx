@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { SIZES, formatDiscounts, formatEur, normalizeQty } from "./pricing";
+import { SIZES, formatDiscounts, formatEur, needsVariant, normalizeQty, variantLabel } from "./pricing";
 import { go, useApp } from "./state";
 import type { Manufacturer, Product } from "./types";
 
@@ -44,10 +44,18 @@ export function ProductImage({ product, manufacturer }: { product: Product; manu
 export function SizePicker({ product, value, onChange }: { product: Product; value: string; onChange: (v: string) => void }) {
   if (!product.sizeType) return null;
   const listId = `sizes-${product.sizeType}`;
+  const medida = product.sizeType === "medida";
   return (
     <label className="size-picker">
-      <span>Tamanho</span>
-      <input list={listId} value={value} onChange={(e) => onChange(e.target.value.slice(0, 20))} placeholder={product.sizeType === "calcado" ? "42" : "L"} required />
+      <span>{medida ? "Comprimento (mm)" : "Tamanho"}</span>
+      <input
+        list={listId}
+        value={value}
+        inputMode={medida ? "numeric" : undefined}
+        onChange={(e) => onChange(medida ? e.target.value.replace(/\D/g, "").slice(0, 5) : e.target.value.slice(0, 20))}
+        placeholder={medida ? "2450" : product.sizeType === "calcado" ? "42" : "L"}
+        required
+      />
       <datalist id={listId}>
         {SIZES[product.sizeType].map((s) => <option key={s} value={s} />)}
       </datalist>
@@ -104,7 +112,7 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
   const inCart = cart.filter((c) => c.productId === product.id).reduce((n, c) => n + c.qty, 0);
   const [qty, setQty] = useState(normalizeQty(product, 1));
   const [size, setSize] = useState("");
-  const needsSize = !!product.sizeType && !size.trim();
+  const needsSize = needsVariant(product, size);
   return (
     <article className="card">
       <button className="card-media" onClick={onOpen} aria-label={`Ver ${product.designation}`}>
@@ -126,10 +134,10 @@ export function ProductCard({ product, onOpen }: { product: Product; onOpen: () 
             <button
               className="btn primary"
               disabled={qty <= 0 || needsSize}
-              title={needsSize ? "Escolha o tamanho" : undefined}
+              title={needsSize ? (product.sizeType === "medida" ? "Indique o comprimento em mm" : "Escolha o tamanho") : undefined}
               onClick={() => {
                 addToCart(product, qty, size);
-                toast(`${product.reference}${size ? ` (tam. ${size})` : ""} adicionado ao carrinho`);
+                toast(`${product.reference}${size ? ` (${variantLabel(product, size)})` : ""} adicionado ao carrinho`);
               }}
             >
               <Icon name="cart" size={16} />
@@ -170,7 +178,7 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
   const family = catalog?.families.find((f) => f.id === product.familyId);
   const [qty, setQty] = useState(normalizeQty(product, 1));
   const [size, setSize] = useState("");
-  const needsSize = !!product.sizeType && !size.trim();
+  const needsSize = needsVariant(product, size);
   return (
     <Modal onClose={onClose} title={product.designation}>
       <div className="product-detail">
@@ -201,7 +209,7 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
                   disabled={qty <= 0 || needsSize}
                   onClick={() => {
                     addToCart(product, qty, size);
-                    toast(`${product.reference}${size ? ` (tam. ${size})` : ""} adicionado ao carrinho`);
+                    toast(`${product.reference}${size ? ` (${variantLabel(product, size)})` : ""} adicionado ao carrinho`);
                     onClose();
                   }}
                 >
@@ -210,7 +218,11 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
               </div>
             )}
           </div>
-          {product.sizeType && <p className="hint">Para vários tamanhos, adicione um de cada vez.</p>}
+          {product.sizeType === "medida" ? (
+            <p className="hint">Fita soldada à medida: indique o comprimento em mm. O preço por fita (metros × preço por metro + soldadura) aparece no carrinho. Para vários comprimentos, adicione um de cada vez.</p>
+          ) : product.sizeType ? (
+            <p className="hint">Para vários tamanhos, adicione um de cada vez.</p>
+          ) : null}
           <p className="vat-note">Preços sem IVA. Quantidades arredondadas a caixas completas.</p>
         </div>
       </div>
