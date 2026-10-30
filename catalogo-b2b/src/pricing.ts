@@ -122,6 +122,26 @@ export const SIZES: Record<"calcado" | "vestuario" | "medida", string[]> = {
   medida: ["1440", "1638", "2085", "2360", "2450", "2750", "2950", "3160", "3660", "4115"],
 };
 
+const LETTER_SIZES = ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"];
+
+/** Tamanhos a sugerir: os da faixa escrita na designação ("Tam. 48 a 66", "Tam. 4XL e 5XL"), senão os habituais. */
+export function sizesFor(product: Product): string[] {
+  if (!product.sizeType) return [];
+  const m = product.designation.match(/Tam\. (\w+) (a|e) (\w+)/);
+  if (m && product.sizeType !== "medida") {
+    const [from, to] = [m[1].toUpperCase().replace(/^2XL$/, "XXL"), m[3].toUpperCase().replace(/^2XL$/, "XXL")];
+    if (m[2] === "e") return [from, to];
+    if (/^\d+$/.test(from) && /^\d+$/.test(to)) {
+      const out: string[] = [];
+      for (let n = Number(from); n <= Number(to); n += 2) out.push(String(n));
+      return out;
+    }
+    const a = LETTER_SIZES.indexOf(from), b = LETTER_SIZES.indexOf(to);
+    if (a >= 0 && b >= a) return LETTER_SIZES.slice(a, b + 1);
+  }
+  return SIZES[product.sizeType];
+}
+
 /** Texto para pesquisa: minúsculas e sem acentos (igual à coluna search_text no SQL). */
 export const normSearch = (s: string) => s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 

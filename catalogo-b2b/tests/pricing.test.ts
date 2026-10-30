@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { applyDiscounts, lengthMm, needsVariant, normalizeQty, parseDiscounts, parseQuickOrder, pickRule, priceFor, splitByManufacturer } from "../src/pricing";
+import { applyDiscounts, lengthMm, needsVariant, normalizeQty, parseDiscounts, parseQuickOrder, pickRule, priceFor, sizesFor, splitByManufacturer } from "../src/pricing";
 import type { DiscountRule, Product } from "../src/types";
 
 const prod = (id: string, manufacturerId: string, familyId = "f1", packQty = 1): Product => ({
@@ -85,5 +85,15 @@ describe("fita à medida", () => {
   it("o carrinho calcula cada comprimento à parte", () => {
     const groups = splitByManufacturer([{ productId: "fita", qty: 2, variant: "2450" }, { productId: "fita", qty: 1, variant: "3160" }], [fita], pricing, null);
     expect(groups[0].items.map((i) => i.total)).toEqual([109.13, 68.25]);
+  });
+});
+
+describe("tamanhos sugeridos", () => {
+  const base = { id: "v", manufacturerId: "m", reference: "R", salesUnit: "un", packQty: 1, moq: 1, isNew: false } as Product;
+  it("usa a faixa escrita na designação", () => {
+    expect(sizesFor({ ...base, sizeType: "vestuario", designation: "Calças · Tam. 38 a 46" })).toEqual(["38", "40", "42", "44", "46"]);
+    expect(sizesFor({ ...base, sizeType: "vestuario", designation: "Polo · Tam. S a XL" })).toEqual(["S", "M", "L", "XL"]);
+    expect(sizesFor({ ...base, sizeType: "vestuario", designation: "Polo · Tam. 4XL e 5XL" })).toEqual(["4XL", "5XL"]);
+    expect(sizesFor({ ...base, sizeType: "vestuario", designation: "Polo" })).toContain("XXL");
   });
 });
