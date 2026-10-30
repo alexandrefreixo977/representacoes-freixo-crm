@@ -20,12 +20,12 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install pillow
-      - run: python data/fetch_acha_images.py supabase/migrations/20261029030000_acha_catalogo.sql public/img/acha supabase/migrations/20261030100000_acha_imagens.sql
+      - run: python data/fetch_acha_images.py supabase/migrations/20261029030000_acha_catalogo.sql public/img/acha supabase/migrations/20261030130000_acha_imagens.sql
       - name: Enviar para o ramo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898099+github-actions[bot]@users.noreply.github.com"
           git checkout -B claude/project-thread-1a2ogw
-          git add public/img/acha supabase/migrations/20261030100000_acha_imagens.sql
+          git add public/img/acha supabase/migrations/20261030130000_acha_imagens.sql
           git commit -m "feat(catalogo-b2b): ACHA photos served by the shop in the uniform format"
           git push -f origin claude/project-thread-1a2ogw
