@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { BrandBar } from "./BrandMenu";
 import logoSymbol from "./assets/logo-simbolo.png";
 import logoText from "./assets/logo-texto.png";
 import { Icon } from "./components";
@@ -88,6 +89,7 @@ function Header() {
           </a>
         </nav>
       </div>
+      <BrandBar />
     </header>
   );
 }
