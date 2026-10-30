@@ -2,7 +2,7 @@
 -- Preço de tabela = P.V.P. da tarifa. Fotos tiradas da própria tarifa (public/img/jomiba).
 
 insert into public.b2b_manufacturers (name, slug, orders_email, sort, active)
-values ('JOMIBA', 'jomiba', 'ventas@jomiba.com', 70, true)
+values ('JOMIBA', 'jomiba', 'ventas@jomiba.com', 80, true)
 on conflict (slug) do update set orders_email = excluded.orders_email, active = true;
 
 create temp table jomiba_import (reference text, designation text, description text, family text,
