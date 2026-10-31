@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AccessRequest, Campaign, CampaignImportResult, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Quote, Session, StaffUser } from "../types";
+import type { AccessRequest, Campaign, CampaignImportResult, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, ProductEdit, Quote, Session, StaffUser } from "../types";
 import { normRef, normSearch } from "../pricing";
 import { slugify } from "../slug";
 import type { Api } from "./api";
@@ -102,7 +102,7 @@ const mapQuote = (q: Row): Quote => ({
 });
 
 const PRODUCT_COLS =
-  "id, manufacturer_id, family_id, reference, ean, designation, description, image_url, tech_sheet_url, sales_unit, pack_qty, moq, is_new, size_type";
+  "id, manufacturer_id, family_id, reference, ean, designation, description, image_url, tech_sheet_url, sales_unit, pack_qty, moq, is_new, size_type, active";
 
 const mapProduct = (r: Row): Product => ({
   id: r.id,
@@ -119,7 +119,10 @@ const mapProduct = (r: Row): Product => ({
   moq: num(r.moq),
   isNew: r.is_new,
   sizeType: r.size_type,
+  active: r.active ?? true,
 });
+
+const IMAGES_BUCKET = "b2b-imagens";
 
 /** Divide uma lista em blocos (para não fazer URLs gigantes). */
 const chunks = <T,>(list: T[], size = 150) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
@@ -190,8 +193,10 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         })),
       };
     },
-    async searchProducts({ manufacturerId, familyId, q, onlyNew, offset, limit }) {
-      let query = sb.from("b2b_products").select(PRODUCT_COLS, { count: "exact" }).eq("active", true);
+    async searchProducts({ manufacturerId, familyId, q, onlyNew, includeInactive, noImage, offset, limit }) {
+      let query = sb.from("b2b_products").select(PRODUCT_COLS, { count: "exact" });
+      if (!includeInactive) query = query.eq("active", true);
+      if (noImage) query = query.is("image_url", null);
       if (manufacturerId) query = query.eq("manufacturer_id", manufacturerId);
       if (familyId) query = query.eq("family_id", familyId);
       if (onlyNew) query = query.eq("is_new", true);
@@ -226,8 +231,14 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
 
     async getPricing() {
-      const { data, error } = await sb.from("b2b_discount_rules").select("*").eq("active", true);
-      fail(error);
+      // Em páginas de 1000 (limite do servidor): as campanhas trazem centenas de preços por artigo.
+      const data: Row[] = [];
+      for (let from = 0; ; from += 1000) {
+        const { data: page, error } = await sb.from("b2b_discount_rules").select("*").eq("active", true).order("id").range(from, from + 999);
+        fail(error);
+        data.push(...((page ?? []) as Row[]));
+        if (!page || page.length < 1000) break;
+      }
       const today = new Date().toISOString().slice(0, 10);
       return { listPrices: {}, rules: (data ?? []).filter((x: Row) => !x.valid_until || x.valid_until >= today).map(mapRule) };
     },
@@ -323,6 +334,76 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const { data, error } = await sb.rpc("b2b_import_prices", { p_manufacturer: manufacturerId, p_rows: rows });
       fail(error);
       return data as { created: number; updated: number; skipped: number };
+    },
+    async getProductForEdit(id) {
+      const [p, pr] = await Promise.all([
+        sb.from("b2b_products").select(PRODUCT_COLS).eq("id", id).single(),
+        sb.from("b2b_prices").select("list_price, weld_price").eq("product_id", id).maybeSingle(),
+      ]);
+      fail(p.error);
+      fail(pr.error);
+      return {
+        ...mapProduct(p.data as Row),
+        active: (p.data as Row).active,
+        listPrice: pr.data ? num(pr.data.list_price) : null,
+        weldPrice: pr.data?.weld_price != null ? num(pr.data.weld_price) : null,
+      };
+    },
+    async saveProduct(p: ProductEdit) {
+      let familyId = p.familyId || null;
+      if (p.newFamily?.trim()) {
+        const { data, error } = await sb
+          .from("b2b_families")
+          .upsert({ manufacturer_id: p.manufacturerId, name: p.newFamily.trim() }, { onConflict: "manufacturer_id,name" })
+          .select("id")
+          .single();
+        fail(error);
+        familyId = (data as Row).id;
+      }
+      const row = {
+        manufacturer_id: p.manufacturerId,
+        family_id: familyId,
+        reference: p.reference.trim(),
+        ean: p.ean?.trim() || null,
+        designation: p.designation.trim(),
+        description: p.description?.trim() || null,
+        image_url: p.imageUrl?.trim() || null,
+        tech_sheet_url: p.techSheetUrl?.trim() || null,
+        sales_unit: p.salesUnit.trim() || "un",
+        pack_qty: p.packQty,
+        moq: p.moq,
+        is_new: p.isNew,
+        size_type: p.sizeType || null,
+        active: p.active,
+        updated_at: new Date().toISOString(),
+      };
+      const saved = p.id
+        ? await sb.from("b2b_products").update(row).eq("id", p.id).select(PRODUCT_COLS).single()
+        : await sb.from("b2b_products").insert(row).select(PRODUCT_COLS).single();
+      if (saved.error?.code === "23505") throw new Error(`Já existe um artigo ${row.reference} nesta marca.`);
+      fail(saved.error);
+      const id = (saved.data as Row).id as string;
+      if (p.listPrice != null) {
+        const { error } = await sb
+          .from("b2b_prices")
+          .upsert({ product_id: id, list_price: p.listPrice, weld_price: p.weldPrice ?? null, updated_at: new Date().toISOString() }, { onConflict: "product_id" });
+        fail(error);
+      } else {
+        const { error } = await sb.from("b2b_prices").delete().eq("product_id", id);
+        fail(error);
+      }
+      return mapProduct(saved.data as Row);
+    },
+    async uploadImage(file, name) {
+      const path = `produtos/${Date.now()}-${slugify(name) || "foto"}.${file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg"}`;
+      const { error } = await sb.storage.from(IMAGES_BUCKET).upload(path, file, { contentType: file.type || "image/jpeg", upsert: false });
+      if (error) throw new Error(`Não consegui guardar a foto: ${error.message}`);
+      return sb.storage.from(IMAGES_BUCKET).getPublicUrl(path).data.publicUrl;
+    },
+    async renameFamily(familyId, name) {
+      const { error } = await sb.from("b2b_families").update({ name: name.trim() }).eq("id", familyId);
+      if (error?.code === "23505") throw new Error(`Já existe uma família "${name.trim()}" nesta marca.`);
+      fail(error);
     },
     async listAccessRequests() {
       const { data, error } = await sb.from("b2b_access_requests").select("*").order("created_at", { ascending: false });

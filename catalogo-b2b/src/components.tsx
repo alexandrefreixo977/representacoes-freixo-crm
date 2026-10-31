@@ -85,7 +85,7 @@ export function QtyStepper({ product, value, onChange }: { product: Product; val
 }
 
 export function PriceTag({ product, compact }: { product: Product; compact?: boolean }) {
-  const { session, price } = useApp();
+  const { session, price, pricesLoading } = useApp();
   if (!session) {
     return (
       <button className="price-locked" onClick={() => go("entrar")}>
@@ -94,7 +94,7 @@ export function PriceTag({ product, compact }: { product: Product; compact?: boo
     );
   }
   const p = price(product);
-  if (!p) return <span className="price-na">Preço sob consulta</span>;
+  if (!p) return <span className="price-na">{pricesLoading ? "A carregar preço…" : "Preço sob consulta"}</span>;
   const discounted = p.netPrice < p.listPrice;
   return (
     <div className={`price ${compact ? "compact" : ""}`}>
@@ -228,6 +228,17 @@ export function ProductModal({ product, onClose }: { product: Product; onClose: 
             <p className="hint">Para vários tamanhos, adicione um de cada vez.</p>
           ) : null}
           <p className="vat-note">Preços sem IVA. Quantidades arredondadas a caixas completas.</p>
+          {session?.role === "admin" && (
+            <button
+              className="btn ghost small"
+              onClick={() => {
+                onClose();
+                go("gestao", { t: "artigos", id: product.id });
+              }}
+            >
+              Editar artigo
+            </button>
+          )}
         </div>
       </div>
     </Modal>

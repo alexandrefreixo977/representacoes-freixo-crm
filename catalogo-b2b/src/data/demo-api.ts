@@ -126,13 +126,15 @@ export const demoApi: Api = {
       campaigns: (db.campaigns ?? seedCampaigns).filter((c) => c.active !== false && (!c.membersOnly || !!currentSession(db))),
     };
   },
-  async searchProducts({ manufacturerId, familyId, q, onlyNew, offset, limit }) {
+  async searchProducts({ manufacturerId, familyId, q, onlyNew, includeInactive, noImage, offset, limit }) {
     const terms = normSearch(q ?? "").split(/\s+/).filter(Boolean);
     const found = load()
       .products.filter((p) => {
         if (manufacturerId && p.manufacturerId !== manufacturerId) return false;
         if (familyId && p.familyId !== familyId) return false;
         if (onlyNew && !p.isNew) return false;
+        if (!includeInactive && p.active === false) return false;
+        if (noImage && p.imageUrl) return false;
         const hay = normSearch(`${p.reference} ${p.designation} ${p.ean ?? ""}`);
         return terms.every((t) => hay.includes(t));
       })
@@ -327,6 +329,48 @@ export const demoApi: Api = {
     }
     save({ ...db, products, prices, families });
     return { created, updated, skipped };
+  },
+  async getProductForEdit(id) {
+    const db = load();
+    requireSession(db, "admin");
+    const p = db.products.find((x) => x.id === id);
+    if (!p) throw new Error("Artigo não encontrado.");
+    return { ...p, active: p.active !== false, listPrice: db.prices[id] ?? null, weldPrice: null };
+  },
+  async saveProduct(edit) {
+    const db = load();
+    requireSession(db, "admin");
+    const { listPrice, weldPrice: _w, newFamily, ...fields } = edit;
+    const families = [...db.families];
+    let familyId = fields.familyId || null;
+    if (newFamily?.trim()) {
+      let fam = families.find((f) => f.manufacturerId === fields.manufacturerId && f.name.toLowerCase() === newFamily.trim().toLowerCase());
+      if (!fam) families.push((fam = { id: uid(), manufacturerId: fields.manufacturerId, name: newFamily.trim() }));
+      familyId = fam.id;
+    }
+    const clash = db.products.find((x) => x.id !== fields.id && x.manufacturerId === fields.manufacturerId && normRef(x.reference) === normRef(fields.reference));
+    if (clash) throw new Error(`Já existe um artigo ${fields.reference} nesta marca.`);
+    const product = { ...fields, id: fields.id ?? uid(), familyId };
+    const products = fields.id ? db.products.map((x) => (x.id === fields.id ? product : x)) : [...db.products, product];
+    const prices = { ...db.prices };
+    if (listPrice != null) prices[product.id] = listPrice;
+    else delete prices[product.id];
+    save({ ...db, products, prices, families });
+    return product;
+  },
+  async uploadImage(file) {
+    // Na demonstração a foto fica no próprio browser.
+    return await new Promise<string>((ok, ko) => {
+      const r = new FileReader();
+      r.onload = () => ok(String(r.result));
+      r.onerror = () => ko(new Error("Não consegui ler a foto."));
+      r.readAsDataURL(file);
+    });
+  },
+  async renameFamily(familyId, name) {
+    const db = load();
+    requireSession(db, "admin");
+    save({ ...db, families: db.families.map((f) => (f.id === familyId ? { ...f, name: name.trim() } : f)) });
   },
   async listAccessRequests() {
     const db = load();
