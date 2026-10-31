@@ -95,7 +95,15 @@ jobs:
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
           curl -s -X POST "$api/domains" "${auth[@]}" -H "Content-Type: application/json" -d '{"name":"crm.representacoesfreixo.com"}' > /dev/null || true
           sub=$(curl -s "$api" "${auth[@]}" | jq -r '.result.subdomain // "?"')
-          dom=$(curl -s "$api/domains/crm.representacoesfreixo.com" "${auth[@]}" | jq -r '.result.status // "?"')
+          # Pede nova validação e espera até 5 minutos que o domínio fique ativo.
+          dom=unknown
+          for i in $(seq 1 20); do
+            r=$(curl -s "$api/domains/crm.representacoesfreixo.com" "${auth[@]}")
+            dom=$(echo "$r" | jq -r '.result.status // "?"')
+            [ "$dom" = active ] && break
+            [ "$i" = 1 ] && { echo "$r" | jq -c '.result | {status, verification_data, validation_data}'; curl -s -X PATCH "$api/domains/crm.representacoesfreixo.com" "${auth[@]}" > /dev/null || true; }
+            sleep 15
+          done
           echo "### CRM publicado (Worker freixo-crm e Pages https://$sub)" >> "$GITHUB_STEP_SUMMARY"
           echo "CNAME crm → $sub · estado do domínio: $dom" >> "$GITHUB_STEP_SUMMARY"
           echo "Pages: $sub · domínio crm: $dom"
