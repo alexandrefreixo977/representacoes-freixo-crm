@@ -14,6 +14,7 @@ export function CatalogPage() {
   const q = route.params.get("q") ?? "";
   const familyId = route.params.get("f") ?? "";
   const onlyNew = route.params.get("novidades") === "1";
+  const campaignId = route.params.get("campanha") ?? "";
   const [open, setOpen] = useState<Product | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [results, setResults] = useState<Product[]>([]);
@@ -67,6 +68,7 @@ export function CatalogPage() {
   const setParam = (patch: Record<string, string | undefined>) =>
     go("", { m: slug || undefined, q: q || undefined, f: familyId || undefined, novidades: onlyNew ? "1" : undefined, ...patch });
 
+  if (campaignId) return <CampaignPage id={campaignId} />;
   if (catalogError || searchError) return <div className="empty">Não foi possível carregar o catálogo. {catalogError ?? searchError}</div>;
   if (!catalog) return <div className="empty">A carregar o catálogo…</div>;
 
@@ -163,7 +165,7 @@ export function CatalogPage() {
 }
 
 function Campaigns({ onOpen }: { onOpen: (p: Product) => void }) {
-  const { catalog, productsById } = useApp();
+  const { catalog, productsById, pricing } = useApp();
   const [i, setI] = useState(0);
   const list = catalog!.campaigns;
   useEffect(() => {
@@ -180,10 +182,16 @@ function Campaigns({ onOpen }: { onOpen: (p: Product) => void }) {
         <span className="eyebrow">Campanha{mfr ? ` · ${mfr.name}` : ""}</span>
         <h2>{c.title}</h2>
         {c.subtitle && <p>{c.subtitle}</p>}
-        {product && (
-          <button className="btn accent" onClick={() => onOpen(product)}>
-            Ver artigo
+        {pricing?.rules.some((r) => r.campaignId === c.id) ? (
+          <button className="btn accent" onClick={() => go("", { campanha: c.id })}>
+            Ver campanha
           </button>
+        ) : (
+          product && (
+            <button className="btn accent" onClick={() => onOpen(product)}>
+              Ver artigo
+            </button>
+          )
         )}
       </div>
       {c.badge && <div className="hero-badge">{c.badge}</div>}
@@ -214,5 +222,111 @@ function FamilyChips({ families, value, onPick }: { families: { id: string; name
         <button className="more-chip" onClick={() => setAll((v) => !v)}>{all ? "Ver menos" : `Ver todas (${families.length})`}</button>
       )}
     </div>
+  );
+}
+
+/** Página de uma campanha: todos os artigos com preço de campanha, por família. */
+function CampaignPage({ id }: { id: string }) {
+  const { catalog, pricing, session, ensureProducts } = useApp();
+  const [open, setOpen] = useState<Product | null>(null);
+  const [products, setProducts] = useState<Product[] | null>(null);
+  const [familyId, setFamilyId] = useState<string | undefined>();
+  const [error, setError] = useState<string | null>(null);
+  const campaign = catalog?.campaigns.find((c) => c.id === id);
+  const ids = useMemo(
+    () => (pricing?.rules ?? []).filter((r) => r.campaignId === id && r.productId).map((r) => r.productId as string),
+    [pricing, id]
+  );
+  const key = ids.join(",");
+  useEffect(() => {
+    if (!ids.length) return setProducts([]);
+    let stale = false;
+    ensureProducts(ids).then(
+      (list) => !stale && setProducts(list),
+      (e) => !stale && setError((e as Error).message)
+    );
+    return () => {
+      stale = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+
+  const familyName = (fid?: string | null) => catalog?.families.find((f) => f.id === fid)?.name ?? "Outros";
+  const families = useMemo(() => {
+    const seen = new Map<string, string>();
+    (products ?? []).forEach((p) => seen.set(p.familyId ?? "", familyName(p.familyId)));
+    return [...seen].map(([fid, name]) => ({ id: fid, name })).sort((a, b) => a.name.localeCompare(b.name, "pt"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [products, catalog]);
+
+  const back = (
+    <nav className="crumbs" aria-label="Caminho">
+      <button className="link" onClick={() => go("")}>Início</button>
+      <span>›</span>
+      <strong>Campanha</strong>
+    </nav>
+  );
+  if (!catalog || (session && !pricing)) return <div className="empty">A carregar a campanha…</div>;
+  if (!session) {
+    return (
+      <>
+        {back}
+        <div className="notice">
+          <Icon name="lock" size={18} />
+          <p>
+            Esta campanha é exclusiva para revendedores. <a href="#/entrar">Entre na sua conta</a> para ver os preços, ou{" "}
+            <a href="#/pedir-acesso">peça acesso</a>.
+          </p>
+        </div>
+      </>
+    );
+  }
+  if (!campaign) return <>{back}<div className="empty">Esta campanha já terminou ou não está disponível.</div></>;
+  const mfr = catalog.manufacturers.find((m) => m.id === campaign.manufacturerId);
+  const shown = (products ?? [])
+    .filter((p) => familyId === undefined || (p.familyId ?? "") === familyId)
+    .sort((a, b) => familyName(a.familyId).localeCompare(familyName(b.familyId), "pt") || a.reference.localeCompare(b.reference));
+  return (
+    <>
+      {back}
+      <section className="hero campaign-head">
+        <div className="hero-text">
+          <span className="eyebrow">Campanha{mfr ? ` · ${mfr.name}` : ""}</span>
+          <h2>{campaign.title}</h2>
+          {campaign.subtitle && <p>{campaign.subtitle}</p>}
+          {campaign.endsOn && <p className="small">Válida até {new Date(campaign.endsOn).toLocaleDateString("pt-PT")}.</p>}
+        </div>
+        {campaign.badge && <div className="hero-badge">{campaign.badge}</div>}
+      </section>
+      {campaign.details && (
+        <div className="notice">
+          <Icon name="doc" size={18} />
+          <p>{campaign.details}</p>
+        </div>
+      )}
+      {families.length > 1 && (
+        <FamilyChips families={families} value={familyId ?? ""} onPick={(f) => setFamilyId(f === familyId ? undefined : f)} />
+      )}
+      <div className="results-bar">
+        <h1>
+          {familyId !== undefined ? familyName(familyId || null) : "Artigos da campanha"}
+          <small>{products ? `${shown.length} artigos` : "a carregar…"}</small>
+        </h1>
+      </div>
+      {error ? (
+        <div className="empty">Não foi possível carregar os artigos. {error}</div>
+      ) : !products ? (
+        <div className="empty">A carregar os artigos…</div>
+      ) : shown.length === 0 ? (
+        <div className="empty">Esta campanha ainda não tem artigos com preço.</div>
+      ) : (
+        <div className="grid">
+          {shown.map((p) => (
+            <ProductCard key={p.id} product={p} onOpen={() => setOpen(p)} />
+          ))}
+        </div>
+      )}
+      {open && <ProductModal product={open} onClose={() => setOpen(null)} />}
+    </>
   );
 }

@@ -38,6 +38,10 @@ export type Campaign = {
   imageUrl?: string | null;
   manufacturerId?: string | null;
   productId?: string | null;
+  /** Só para revendedores com conta (os visitantes não a veem). */
+  membersOnly?: boolean;
+  /** Condições da campanha, mostradas na página da campanha. */
+  details?: string | null;
   /** Só na gestão. */
   startsOn?: string | null;
   endsOn?: string | null;
@@ -75,6 +79,10 @@ export type DiscountRule = {
   discounts: number[];
   /** Preço líquido especial: substitui os descontos. */
   specialNetPrice?: number | null;
+  /** Preço de uma campanha (aparece na página da campanha). */
+  campaignId?: string | null;
+  /** Quantidade de referência da oferta do fabricante (só informativo). */
+  offerQty?: number | null;
 };
 
 export type Pricing = {
@@ -90,6 +98,9 @@ export type PriceInfo = {
   discounts: number[];
   netPrice: number;
   special: boolean;
+  /** Preço de campanha. */
+  campaignId?: string | null;
+  offerQty?: number | null;
 };
 
 export type Client = {

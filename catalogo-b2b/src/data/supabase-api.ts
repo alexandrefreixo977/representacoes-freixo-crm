@@ -24,6 +24,8 @@ const mapRule = (r: Row): DiscountRule => ({
   productId: r.product_id,
   discounts: nums(r.discounts),
   specialNetPrice: r.special_net_price == null ? null : Number(r.special_net_price),
+  campaignId: r.campaign_id ?? null,
+  offerQty: r.offer_qty == null ? null : Number(r.offer_qty),
 });
 
 const ORDER_SELECT =
@@ -184,6 +186,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
           return (!r.starts_on || r.starts_on <= today) && (!r.ends_on || r.ends_on >= today);
         }).map((r: Row) => ({
           id: r.id, title: r.title, subtitle: r.subtitle, badge: r.badge, imageUrl: r.image_url, manufacturerId: r.manufacturer_id, productId: r.product_id,
+          membersOnly: r.members_only, details: r.details, endsOn: r.ends_on,
         })),
       };
     },
@@ -332,6 +335,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       return (data ?? []).map((r: Row): Campaign => ({
         id: r.id, title: r.title, subtitle: r.subtitle, badge: r.badge, imageUrl: r.image_url, manufacturerId: r.manufacturer_id,
         productId: r.product_id, startsOn: r.starts_on, endsOn: r.ends_on, active: r.active, sort: r.sort,
+        membersOnly: r.members_only, details: r.details,
       }));
     },
     async saveCampaign(c) {
@@ -339,6 +343,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         title: c.title.trim(), subtitle: c.subtitle || null, badge: c.badge || null, image_url: c.imageUrl || null,
         manufacturer_id: c.manufacturerId || null, product_id: c.productId || null, starts_on: c.startsOn || null,
         ends_on: c.endsOn || null, active: c.active !== false, sort: c.sort ?? 100,
+        members_only: c.membersOnly !== false, details: c.details || null,
       };
       const { error } = c.id ? await sb.from("b2b_campaigns").update(row).eq("id", c.id) : await sb.from("b2b_campaigns").insert(row);
       fail(error);

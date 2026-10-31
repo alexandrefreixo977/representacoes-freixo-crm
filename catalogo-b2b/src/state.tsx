@@ -145,10 +145,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    refreshCatalog();
     refreshSession();
     return api.onSessionChange(() => refreshSession());
-  }, [refreshCatalog, refreshSession]);
+  }, [refreshSession]);
+
+  // As campanhas só para revendedores dependem da sessão: o catálogo recarrega ao entrar e ao sair.
+  const sessionKey = session ? session.userId : "";
+  useEffect(() => {
+    refreshCatalog();
+  }, [refreshCatalog, sessionKey]);
 
   useEffect(() => {
     try {

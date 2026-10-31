@@ -75,6 +75,8 @@ export const seedCampaigns: Campaign[] = [
     badge: "-35%",
     manufacturerId: "m-fer",
     productId: "p-15",
+    membersOnly: true,
+    details: "Preço de campanha já aplicado no carrinho.",
   },
   {
     id: "c-2",
@@ -93,7 +95,7 @@ export const seedClients: Client[] = [
 
 export const seedRules: DiscountRule[] = [
   // Campanha geral: chave de caixa com 35% para todos.
-  { id: "r-1", manufacturerId: "m-fer", productId: "p-15", discounts: [35] },
+  { id: "r-1", manufacturerId: "m-fer", productId: "p-15", discounts: [35], campaignId: "c-1" },
   // Ferragens do Minho: descontos por fabricante.
   { id: "r-2", clientId: "cl-1", manufacturerId: "m-epi", discounts: [35, 5] },
   { id: "r-3", clientId: "cl-1", manufacturerId: "m-abr", discounts: [40] },

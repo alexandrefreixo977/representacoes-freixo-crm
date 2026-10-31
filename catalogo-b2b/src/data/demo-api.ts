@@ -123,7 +123,7 @@ export const demoApi: Api = {
       manufacturers: (db.manufacturers ?? seedManufacturers).filter((m) => m.active !== false).sort((a, b) => a.sort - b.sort),
       families: db.families,
       products: db.products.filter((p) => campaignProducts.has(p.id)),
-      campaigns: (db.campaigns ?? seedCampaigns).filter((c) => c.active !== false),
+      campaigns: (db.campaigns ?? seedCampaigns).filter((c) => c.active !== false && (!c.membersOnly || !!currentSession(db))),
     };
   },
   async searchProducts({ manufacturerId, familyId, q, onlyNew, offset, limit }) {
