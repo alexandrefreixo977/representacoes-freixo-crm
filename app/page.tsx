@@ -835,8 +835,10 @@ function Tasks({
 }
 
 // COMPONENTE: PIPELINE (OPORTUNIDADES)
+// Converte "12 500,00 €" (formato pt-PT) em 12500.
+const parseEuro = (value: string) => Number(value.replace(/[^\d,-]/g, "").replace(",", ".")) || 0;
 function Reports({ clients, visits, tasks, opportunities }: { clients: typeof initialClients; visits: typeof initialVisits; tasks: typeof initialTasks; opportunities: typeof initialOpportunities }) {
-  const total = opportunities.reduce((sum, item) => sum + (Number(item.value.replace(/[^0-9]/g, "")) || 0), 0);
+  const total = opportunities.reduce((sum, item) => sum + parseEuro(item.value), 0);
   return <>
     <PageTitle eyebrow="ANÁLISE COMERCIAL" title="Relatórios" />
     <p className="subtitle">Visão consolidada da atividade comercial atual.</p>
