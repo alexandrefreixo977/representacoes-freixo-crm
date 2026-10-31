@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AccessRequest, Campaign, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Quote, Session, StaffUser } from "../types";
+import type { AccessRequest, Campaign, CampaignImportResult, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Quote, Session, StaffUser } from "../types";
 import { normRef, normSearch } from "../pricing";
 import { slugify } from "../slug";
 import type { Api } from "./api";
@@ -345,8 +345,16 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         ends_on: c.endsOn || null, active: c.active !== false, sort: c.sort ?? 100,
         members_only: c.membersOnly !== false, details: c.details || null,
       };
-      const { error } = c.id ? await sb.from("b2b_campaigns").update(row).eq("id", c.id) : await sb.from("b2b_campaigns").insert(row);
+      const { data, error } = c.id
+        ? await sb.from("b2b_campaigns").update(row).eq("id", c.id).select("id").single()
+        : await sb.from("b2b_campaigns").insert(row).select("id").single();
       fail(error);
+      return (data as Row).id as string;
+    },
+    async importCampaign(campaignId, rows, replace) {
+      const { data, error } = await sb.rpc("b2b_import_campaign", { p_campaign: campaignId, p_rows: rows, p_replace: replace });
+      fail(error);
+      return data as CampaignImportResult;
     },
     async deleteCampaign(id) {
       const { error } = await sb.from("b2b_campaigns").delete().eq("id", id);

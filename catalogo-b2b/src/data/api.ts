@@ -1,3 +1,4 @@
+import type { CampaignImportRow } from "../campaignImport";
 import type {
   AccessRequest,
   Campaign,
@@ -16,8 +17,7 @@ import type {
   ProductQuery,
   Quote,
   Session,
-  StaffUser,
-} from "../types";
+  StaffUser, CampaignImportResult } from "../types";
 
 export type SubmitResult = { groupNumber: string; orders: Order[] };
 
@@ -61,7 +61,10 @@ export interface Api {
   importPriceList(manufacturerId: string, rows: PriceImportRow[]): Promise<ImportResult>;
   listAccessRequests(): Promise<AccessRequest[]>;
   listCampaigns(): Promise<Campaign[]>;
-  saveCampaign(c: Omit<Campaign, "id"> & { id?: string }): Promise<void>;
+  /** Devolve o id da campanha. */
+  saveCampaign(c: Omit<Campaign, "id"> & { id?: string }): Promise<string>;
+  /** Grava os preços de campanha lidos do ficheiro do fabricante (replace = apaga os anteriores). */
+  importCampaign(campaignId: string, rows: CampaignImportRow[], replace: boolean): Promise<CampaignImportResult>;
   deleteCampaign(id: string): Promise<void>;
   listStaff(): Promise<StaffUser[]>;
   inviteStaff(email: string, name: string): Promise<string>;

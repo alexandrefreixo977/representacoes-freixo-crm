@@ -344,6 +344,29 @@ export const demoApi: Api = {
     const list = db.campaigns ?? seedCampaigns;
     const saved = { ...c, id: c.id ?? uid() } as Campaign;
     save({ ...db, campaigns: list.some((x) => x.id === saved.id) ? list.map((x) => (x.id === saved.id ? saved : x)) : [...list, saved] });
+    return saved.id;
+  },
+  async importCampaign(campaignId, rows, replace) {
+    const db = load();
+    requireSession(db, "admin");
+    const campaign = (db.campaigns ?? seedCampaigns).find((c) => c.id === campaignId);
+    if (!campaign?.manufacturerId) throw new Error("Escolha a marca da campanha antes de importar");
+    let rules = replace ? db.rules.filter((r) => r.campaignId !== campaignId) : db.rules;
+    const missing: string[] = [];
+    let applied = 0;
+    for (const row of rows) {
+      if (row.netPrice == null) continue;
+      const product = db.products.find((p) => p.manufacturerId === campaign.manufacturerId && normRef(p.reference) === normRef(row.reference));
+      if (!product) {
+        missing.push(row.reference);
+        continue;
+      }
+      rules = rules.filter((r) => !(r.campaignId === campaignId && r.productId === product.id));
+      rules.push({ id: uid(), manufacturerId: product.manufacturerId, productId: product.id, discounts: [], specialNetPrice: row.netPrice, campaignId, offerQty: row.offerQty ?? null });
+      applied++;
+    }
+    save({ ...db, rules });
+    return { applied, created: 0, missing };
   },
   async deleteCampaign(id) {
     const db = load();

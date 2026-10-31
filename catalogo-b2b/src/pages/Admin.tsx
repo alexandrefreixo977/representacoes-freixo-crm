@@ -6,6 +6,7 @@ import { formatDiscounts, formatEur, normRef, parseDiscounts } from "../pricing"
 import { go, useApp } from "../state";
 import type { AccessRequest, Campaign, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow, StaffUser } from "../types";
 import { OrderLinesTable } from "./Orders";
+import { CampaignImport } from "./CampaignImport";
 
 const TABS = [
   ["encomendas", "Encomendas"],
@@ -706,6 +707,8 @@ function CampaignsAdmin() {
   const [draft, setDraft] = useState<CampaignDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
   const load = useCallback(() => {
     api.listCampaigns().then(setList, (e) => setError((e as Error).message));
   }, []);
@@ -726,10 +729,28 @@ function CampaignsAdmin() {
     <div className="panel wide">
       <div className="row between">
         <h2>Campanhas</h2>
-        {!draft && <button className="btn primary" onClick={() => edit()}>+ Nova campanha</button>}
+        {!draft && !importing && (
+          <div className="row">
+            <button className="btn primary" onClick={() => { setMessage(null); setImporting(true); }}>Importar ficheiro do fabricante</button>
+            <button className="btn ghost" onClick={() => edit()}>+ Nova campanha</button>
+          </div>
+        )}
       </div>
-      <p className="hint">As campanhas ativas aparecem na faixa grande do topo da página inicial, em rotação. Sem campanhas ativas, a faixa não aparece. Por defeito só os revendedores com conta as veem. Os preços de campanha por artigo aparecem na página da campanha (botão "Ver campanha").</p>
+      <p className="hint">As campanhas ativas aparecem na faixa grande do topo da página inicial, em rotação. Sem campanhas ativas, a faixa não aparece. Por defeito só os revendedores com conta as veem. Os preços de campanha por artigo aparecem na página da campanha (botão "Ver campanha"). Para carregar os preços, use "Importar ficheiro do fabricante" (Excel ou PDF).</p>
       {error && <p className="error">{error}</p>}
+      {message && <p className="ok">{message}</p>}
+
+      {importing && (
+        <CampaignImport
+          campaigns={list}
+          onCancel={() => setImporting(false)}
+          onDone={(msg) => {
+            setImporting(false);
+            setMessage(msg);
+            load();
+          }}
+        />
+      )}
 
       {draft && (
         <form
