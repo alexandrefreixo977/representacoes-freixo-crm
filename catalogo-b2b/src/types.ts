@@ -178,6 +178,9 @@ export type PriceImportRow = {
 
 export type ImportResult = { created: number; updated: number; skipped: number };
 
+/** Resultado de importar uma campanha: preços aplicados, artigos criados e referências que não existem no catálogo. */
+export type CampaignImportResult = { applied: number; created: number; missing: string[] };
+
 export type QuoteStatus = "draft" | "sent" | "accepted" | "lost";
 
 export type QuoteLine = {
