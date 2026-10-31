@@ -42,6 +42,10 @@ describe("escolha da regra", () => {
     expect(priceFor(p, pricing, "c2")?.netPrice).toBe(10);
     expect(priceFor(p, null, "c1")).toBeNull();
   });
+  it("preço de campanha indica a campanha", () => {
+    const pricing = { listPrices: { a: 10 }, rules: [{ id: "x", manufacturerId: "m1", productId: "a", discounts: [], specialNetPrice: 6, campaignId: "camp", offerQty: 4 }] };
+    expect(priceFor(p, pricing, "c1")).toEqual({ listPrice: 10, discounts: [], netPrice: 6, special: true, campaignId: "camp", offerQty: 4 });
+  });
 });
 
 describe("quantidades e carrinho", () => {
