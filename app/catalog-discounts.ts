@@ -1,0 +1,5 @@
+export function normalizeDiscounts(values:number[]){return values.map(Number).filter(value=>Number.isFinite(value)&&value>=0&&value<=100)}
+import Decimal from "decimal.js";
+export function calculateSuccessiveDiscounts(price:number,discounts:number[]){const clean=normalizeDiscounts(discounts);const original=new Decimal(Number.isFinite(price)?price:0);const net=clean.reduce((value,discount)=>value.mul(new Decimal(1).minus(new Decimal(discount).div(100))),original);return {netPrice:net.toDecimalPlaces(2,Decimal.ROUND_HALF_UP).toNumber(),effectiveDiscount:original.gt(0)?new Decimal(1).minus(net.div(original)).mul(100).toDecimalPlaces(2,Decimal.ROUND_HALF_UP).toNumber():0,discounts:clean}}
+export function parseDiscounts(value:string){return normalizeDiscounts(value.split(/[+;]/).map(item=>Number(item.trim().replace("%","").replace(",","."))))}
+export function formatDiscounts(values:number[]){return normalizeDiscounts(values).map(value=>`${new Intl.NumberFormat("pt-PT",{maximumFractionDigits:2}).format(value)}%`).join(" + ")}

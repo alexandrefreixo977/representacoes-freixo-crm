@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#15314c"/>
+  <rect x="106" y="106" width="300" height="300" rx="64" fill="none" stroke="#8fb5c9" stroke-width="9"/>
+  <text x="256" y="306" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="150" font-weight="500" fill="#ffffff">RF</text>
+  <path d="M180 350h152" stroke="#ef9b45" stroke-width="10" stroke-linecap="round"/>
+</svg>

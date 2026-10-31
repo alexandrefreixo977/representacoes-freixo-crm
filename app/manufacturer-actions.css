@@ -1,0 +1,48 @@
+.manufacturer-title-actions {
+  justify-content: flex-end;
+}
+
+.manufacturer-title-actions .primary {
+  border-color: #347eb5;
+  background: linear-gradient(135deg, #347eb5, #3f90c4);
+  color: #fff;
+}
+
+.manufacturer-title-actions .danger-action {
+  border-color: #f1b6b1;
+  background: #fff7f6;
+  color: #a83229;
+  font-weight: 650;
+}
+
+.danger-confirm {
+  border: 1px solid #b42318;
+  background: #b42318;
+  color: #fff;
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.danger-confirm:disabled {
+  opacity: .65;
+  cursor: wait;
+}
+
+.delete-history-warning {
+  background: #fff4e8;
+  color: #8f4914 !important;
+  border-radius: 8px;
+  padding: 12px;
+}
+
+.confirm-dialog strong {
+  color: var(--ink);
+}
+
+@media (max-width: 900px) {
+  .manufacturer-title-actions {
+    justify-content: flex-start;
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "coordinate_references": 7017,
+  "independent_text_references": 6822,
+  "missing_from_coordinates": {},
+  "price_mismatches": {},
+  "conflicting_duplicates": [],
+  "ambiguous_titles": [],
+  "families": {
+    "METROLOGÍA": 1573,
+    "HERRAMIENTAS DE SEGURIDAD": 1410,
+    "HERRAMIENTAS": 3107,
+    "MARCAJE": 564,
+    "CONSTRUCCIÓN": 363
+  },
+  "official_references": 7037,
+  "products_after_import": 7026,
+  "existing_variants": 16,
+  "priced_references": 7037,
+  "products_with_images": 5,
+  "products_without_images": 7021,
+  "page10_references": 20,
+  "page10_prices_independently_checked": true,
+  "reimport_verified": true,
+  "source_sha256": "20f1fabb2bb418002d60f8c51b37073afd1c7be13a492943ed6747b3f269aba4"
+}
