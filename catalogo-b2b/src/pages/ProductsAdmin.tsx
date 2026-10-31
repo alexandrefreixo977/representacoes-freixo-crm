@@ -77,6 +77,7 @@ export function ProductsAdmin() {
           Mostrar também os inativos
         </label>
       </div>
+      {mfrId && <FamiliesEditor manufacturerId={mfrId} />}
       {error && <p className="error">{error}</p>}
       {result && (
         <>
@@ -108,6 +109,40 @@ export function ProductsAdmin() {
         </>
       )}
     </section>
+  );
+}
+
+/** Renomear as famílias da marca (aparecem no menu e nos filtros da loja). */
+function FamiliesEditor({ manufacturerId }: { manufacturerId: string }) {
+  const { catalog, refreshCatalog } = useApp();
+  const [names, setNames] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState<string | null>(null);
+  const families = (catalog?.families ?? []).filter((f) => f.manufacturerId === manufacturerId).sort((a, b) => a.name.localeCompare(b.name));
+  if (!families.length) return null;
+  async function rename(id: string) {
+    const name = names[id]?.trim();
+    if (!name) return;
+    setMsg(null);
+    try {
+      await api.renameFamily(id, name);
+      await refreshCatalog();
+      setNames(({ [id]: _, ...rest }) => rest);
+      setMsg(`Família renomeada para "${name}".`);
+    } catch (e) {
+      setMsg((e as Error).message);
+    }
+  }
+  return (
+    <details className="families-editor">
+      <summary>Famílias desta marca ({families.length}): mudar nomes</summary>
+      {families.map((f) => (
+        <div key={f.id} className="row" style={{ marginTop: 6 }}>
+          <input value={names[f.id] ?? f.name} onChange={(e) => setNames({ ...names, [f.id]: e.target.value })} />
+          <button className="btn ghost small" disabled={!names[f.id]?.trim() || names[f.id].trim() === f.name} onClick={() => rename(f.id)}>Gravar</button>
+        </div>
+      ))}
+      {msg && <p className="hint">{msg}</p>}
+    </details>
   );
 }
 
