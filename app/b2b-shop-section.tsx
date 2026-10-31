@@ -39,7 +39,8 @@ export default function B2BShopSection({ clientId, clientEmail, session, canEdit
     const body = await response.json().catch(() => ({}));
     setBusy(false);
     setNotice(response.ok ? body.message : body.error ?? "Não foi possível dar acesso à loja.");
-    if (response.ok) { setInviteOpen(false); await load(); }
+    if (response.ok) setInviteOpen(false);
+    await load();
   };
 
   if (!clientId) return null;

@@ -10,6 +10,18 @@ async function readClient(db: Awaited<ReturnType<typeof crmSession>>["db"], id: 
   return data as CrmClient;
 }
 
+/** Procura uma conta da loja pelo email (as listas do Supabase Auth são paginadas). */
+async function findShopUser(shop: ReturnType<typeof shopAdmin>, email: string): Promise<string | null> {
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await shop.auth.admin.listUsers({ page, perPage: 200 });
+    if (error) throw new B2BError(502, error.message);
+    const found = data.users.find(u => (u.email ?? "").toLowerCase() === email);
+    if (found) return found.id;
+    if (data.users.length < 200) return null;
+  }
+  return null;
+}
+
 export async function GET(request: Request) {
   try {
     const { db } = await crmSession(request);
@@ -54,11 +66,20 @@ export async function POST(request: Request) {
       linked = created.data;
     }
     if (!email) return json({ message: "Cliente criado na loja B2B." });
-    const invite = await shop.auth.admin.inviteUserByEmail(email, { redirectTo: B2B_SHOP_URL });
-    if (invite.error || !invite.data.user) {
-      const exists = /already|registered|exists/i.test(invite.error?.message ?? "");
-      throw new B2BError(400, exists ? "Este email já tem conta na loja. Associe-o ao cliente na gestão da loja." : `Não foi possível enviar o convite: ${invite.error?.message ?? "erro"}`);
+    // Se o email já tiver conta na loja: só se liga a este cliente quando é uma conta sem papel (nunca rebaixa um administrador/comercial).
+    const adminEmail = await shop.from("b2b_admin_emails").select("email").eq("email", email).maybeSingle();
+    if (adminEmail.data) throw new B2BError(409, "Este email é de um administrador da loja. Use o email da pessoa do cliente que vai fazer as encomendas.");
+    const existing = await findShopUser(shop, email);
+    if (existing) {
+      const role = await shop.from("b2b_users").select("role,client_id").eq("user_id", existing).maybeSingle();
+      if (role.data?.role === "admin" || role.data?.role === "comercial") throw new B2BError(409, "Este email é de um administrador ou comercial da loja. Use o email da pessoa do cliente que vai fazer as encomendas.");
+      if (role.data?.client_id && role.data.client_id !== linked!.id) throw new B2BError(409, "Este email já dá acesso a outro cliente da loja. Use outro email.");
+      const user = await shop.from("b2b_users").upsert({ user_id: existing, client_id: linked!.id, role: "client", email, name: client.trade_name });
+      if (user.error) throw new B2BError(502, user.error.message);
+      return json({ message: `${email} já tinha conta na loja e passou a encomendar por este cliente.` });
     }
+    const invite = await shop.auth.admin.inviteUserByEmail(email, { redirectTo: B2B_SHOP_URL });
+    if (invite.error || !invite.data.user) throw new B2BError(400, `Não foi possível enviar o convite: ${invite.error?.message ?? "erro"}`);
     const user = await shop.from("b2b_users").upsert({ user_id: invite.data.user.id, client_id: linked!.id, role: "client", email, name: client.trade_name });
     if (user.error) throw new B2BError(502, user.error.message);
     return json({ message: `Convite enviado para ${email}. O cliente define a palavra-passe e passa a ver os preços na loja.` });
