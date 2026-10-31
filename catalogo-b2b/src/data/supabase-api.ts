@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Quote, Session, StaffUser } from "../types";
+import type { AccessRequest, Campaign, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Quote, Session, StaffUser } from "../types";
 import { normRef, normSearch } from "../pricing";
 import { slugify } from "../slug";
 import type { Api } from "./api";
@@ -179,7 +179,10 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         manufacturers: (m.data ?? []).map((r: Row) => ({ id: r.id, name: r.name, slug: r.slug, logoUrl: r.logo_url, ordersEmail: r.orders_email, sort: r.sort })),
         families: (f.data ?? []).map((r: Row) => ({ id: r.id, manufacturerId: r.manufacturer_id, name: r.name })),
         products: campaignProducts.length ? await self.getProducts(campaignProducts) : [],
-        campaigns: (c.data ?? []).map((r: Row) => ({
+        campaigns: (c.data ?? []).filter((r: Row) => {
+          const today = new Date().toISOString().slice(0, 10);
+          return (!r.starts_on || r.starts_on <= today) && (!r.ends_on || r.ends_on >= today);
+        }).map((r: Row) => ({
           id: r.id, title: r.title, subtitle: r.subtitle, badge: r.badge, imageUrl: r.image_url, manufacturerId: r.manufacturer_id, productId: r.product_id,
         })),
       };
@@ -322,6 +325,27 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const { data, error } = await sb.from("b2b_access_requests").select("*").order("created_at", { ascending: false });
       fail(error);
       return (data ?? []).map((r: Row): AccessRequest => ({ ...r, createdAt: r.created_at }) as AccessRequest);
+    },
+    async listCampaigns() {
+      const { data, error } = await sb.from("b2b_campaigns").select("*").order("sort").order("title");
+      fail(error);
+      return (data ?? []).map((r: Row): Campaign => ({
+        id: r.id, title: r.title, subtitle: r.subtitle, badge: r.badge, imageUrl: r.image_url, manufacturerId: r.manufacturer_id,
+        productId: r.product_id, startsOn: r.starts_on, endsOn: r.ends_on, active: r.active, sort: r.sort,
+      }));
+    },
+    async saveCampaign(c) {
+      const row = {
+        title: c.title.trim(), subtitle: c.subtitle || null, badge: c.badge || null, image_url: c.imageUrl || null,
+        manufacturer_id: c.manufacturerId || null, product_id: c.productId || null, starts_on: c.startsOn || null,
+        ends_on: c.endsOn || null, active: c.active !== false, sort: c.sort ?? 100,
+      };
+      const { error } = c.id ? await sb.from("b2b_campaigns").update(row).eq("id", c.id) : await sb.from("b2b_campaigns").insert(row);
+      fail(error);
+    },
+    async deleteCampaign(id) {
+      const { error } = await sb.from("b2b_campaigns").delete().eq("id", id);
+      fail(error);
     },
     async listStaff() {
       const { data, error } = await sb.from("b2b_users").select("user_id, email, name, role").in("role", ["admin", "comercial"]).order("role");

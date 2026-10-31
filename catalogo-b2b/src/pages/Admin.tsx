@@ -4,12 +4,13 @@ import { api } from "../data";
 import { detectColumns, mapRows, readSpreadsheet, type ColumnMap } from "../importer";
 import { formatDiscounts, formatEur, normRef, parseDiscounts } from "../pricing";
 import { go, useApp } from "../state";
-import type { AccessRequest, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow, StaffUser } from "../types";
+import type { AccessRequest, Campaign, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow, StaffUser } from "../types";
 import { OrderLinesTable } from "./Orders";
 
 const TABS = [
   ["encomendas", "Encomendas"],
   ["fabricantes", "Fabricantes"],
+  ["campanhas", "Campanhas"],
   ["precos", "Importar preços"],
   ["clientes", "Clientes e descontos"],
   ["pedidos", "Pedidos de acesso"],
@@ -38,6 +39,7 @@ export function AdminPage() {
       </nav>
       {tab === "encomendas" && <OrdersAdmin />}
       {tab === "fabricantes" && <ManufacturersAdmin />}
+      {tab === "campanhas" && <CampaignsAdmin />}
       {tab === "precos" && <ImportAdmin />}
       {tab === "clientes" && <ClientsAdmin />}
       {tab === "pedidos" && <RequestsAdmin />}
@@ -690,6 +692,126 @@ function TeamAdmin() {
       </div>
       <p className="muted small">O comercial recebe um email para definir a palavra-passe. Para dar o perfil de gestão a alguém, fale com o Claude.</p>
       {msg && <p className="warn">{msg}</p>}
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------ campanhas (faixa no topo do catálogo)
+
+type CampaignDraft = Omit<Campaign, "id"> & { id?: string; productRef: string };
+
+function CampaignsAdmin() {
+  const { catalog, refreshCatalog } = useApp();
+  const [list, setList] = useState<Campaign[] | null>(null);
+  const [draft, setDraft] = useState<CampaignDraft | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+  const load = useCallback(() => {
+    api.listCampaigns().then(setList, (e) => setError((e as Error).message));
+  }, []);
+  useEffect(load, [load]);
+  if (!list || !catalog) return <div className="empty">A carregar…</div>;
+  const today = new Date().toISOString().slice(0, 10);
+  const live = (c: Campaign) => c.active !== false && (!c.startsOn || c.startsOn <= today) && (!c.endsOn || c.endsOn >= today);
+  const mfrName = (id?: string | null) => catalog.manufacturers.find((m) => m.id === id)?.name ?? "";
+
+  async function edit(c?: Campaign) {
+    setError(null);
+    let productRef = "";
+    if (c?.productId) productRef = (await api.getProducts([c.productId]))[0]?.reference ?? "";
+    setDraft(c ? { ...c, productRef } : { title: "", subtitle: "", badge: "", imageUrl: "", manufacturerId: null, productId: null, startsOn: today, endsOn: null, active: true, sort: 100, productRef: "" });
+  }
+
+  return (
+    <div className="panel wide">
+      <div className="row between">
+        <h2>Campanhas</h2>
+        {!draft && <button className="btn primary" onClick={() => edit()}>+ Nova campanha</button>}
+      </div>
+      <p className="hint">As campanhas ativas aparecem na faixa grande do topo da página inicial, em rotação. Sem campanhas ativas, a faixa não aparece.</p>
+      {error && <p className="error">{error}</p>}
+
+      {draft && (
+        <form
+          className="form-grid"
+          onSubmit={async (e) => {
+            e.preventDefault();
+            setError(null);
+            try {
+              let productId: string | null = null;
+              if (draft.productRef.trim()) {
+                const found = await api.findProducts([draft.productRef.trim()], draft.manufacturerId || undefined);
+                if (!found.length) throw new Error(`Não encontrei o artigo ${draft.productRef}.`);
+                productId = found[0].id;
+              }
+              const { productRef: _r, ...c } = draft;
+              await api.saveCampaign({ ...c, productId, manufacturerId: c.manufacturerId || null });
+              setDraft(null);
+              load();
+              refreshCatalog();
+            } catch (err) {
+              setError((err as Error).message);
+            }
+          }}
+        >
+          <label className="full">Título *<input required maxLength={80} value={draft.title} onChange={(e) => setDraft({ ...draft, title: e.target.value })} placeholder="ex. Luvas anticorte JSP com 15% de desconto" /></label>
+          <label className="full">Texto<input maxLength={140} value={draft.subtitle ?? ""} onChange={(e) => setDraft({ ...draft, subtitle: e.target.value })} placeholder="ex. Até ao fim do mês ou fim de stock" /></label>
+          <label>Selo (opcional)<input maxLength={10} value={draft.badge ?? ""} onChange={(e) => setDraft({ ...draft, badge: e.target.value })} placeholder="ex. -15%" /></label>
+          <label>
+            Marca
+            <select value={draft.manufacturerId ?? ""} onChange={(e) => setDraft({ ...draft, manufacturerId: e.target.value || null })}>
+              <option value="">— Todas —</option>
+              {catalog.manufacturers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+            </select>
+          </label>
+          <label>Artigo em destaque (referência, opcional)<input value={draft.productRef} onChange={(e) => setDraft({ ...draft, productRef: e.target.value })} placeholder="mostra o botão Ver artigo" /></label>
+          <label>Imagem de fundo (endereço, opcional)<input type="url" value={draft.imageUrl ?? ""} onChange={(e) => setDraft({ ...draft, imageUrl: e.target.value })} placeholder="https://…" /></label>
+          <label>Início<input type="date" value={draft.startsOn ?? ""} onChange={(e) => setDraft({ ...draft, startsOn: e.target.value || null })} /></label>
+          <label>Fim (opcional)<input type="date" value={draft.endsOn ?? ""} onChange={(e) => setDraft({ ...draft, endsOn: e.target.value || null })} /></label>
+          <label>Ordem<input type="number" value={draft.sort ?? 100} onChange={(e) => setDraft({ ...draft, sort: Number(e.target.value) })} /></label>
+          <label className="check" style={{ flexDirection: "row", alignItems: "center" }}>
+            <input type="checkbox" style={{ width: "auto" }} checked={draft.active !== false} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
+            Ativa
+          </label>
+          <div className="row full">
+            <button className="btn primary">Guardar</button>
+            <button type="button" className="btn ghost" onClick={() => setDraft(null)}>Cancelar</button>
+          </div>
+        </form>
+      )}
+
+      <div className="table-wrap">
+        <table className="table">
+          <thead><tr><th>Campanha</th><th>Marca</th><th>Datas</th><th>Estado</th><th /></tr></thead>
+          <tbody>
+            {list.length === 0 && <tr><td colSpan={5} className="muted">Ainda não há campanhas. Crie a primeira com "+ Nova campanha".</td></tr>}
+            {list.map((c) => (
+              <tr key={c.id}>
+                <td><strong>{c.title}</strong>{c.badge && <> · {c.badge}</>}<div className="muted small">{c.subtitle}</div></td>
+                <td>{mfrName(c.manufacturerId) || <span className="muted">—</span>}</td>
+                <td>{c.startsOn ? new Date(c.startsOn).toLocaleDateString("pt-PT") : "—"} a {c.endsOn ? new Date(c.endsOn).toLocaleDateString("pt-PT") : "sem fim"}</td>
+                <td>{live(c) ? <span className="status s-delivered">No ar</span> : <span className="status s-cancelled">{c.active === false ? "Desligada" : "Fora de prazo"}</span>}</td>
+                <td className="num">
+                  <button className="link" onClick={() => edit(c)}>Editar</button>{" "}
+                  <button
+                    className="link danger"
+                    onBlur={() => setRemoving(null)}
+                    onClick={async () => {
+                      if (removing !== c.id) return setRemoving(c.id);
+                      await api.deleteCampaign(c.id);
+                      setRemoving(null);
+                      load();
+                      refreshCatalog();
+                    }}
+                  >
+                    {removing === c.id ? "Confirmar eliminar" : "Eliminar"}
+                  </button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
