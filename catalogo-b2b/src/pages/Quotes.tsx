@@ -702,7 +702,7 @@ tr{page-break-inside:avoid}
 <tfoot><tr><td colspan=${anyDiscount ? 7 : 5} class=n><strong>Total sem IVA</strong></td><td class=n><strong>${formatEur(q.total)}</strong></td></tr></tfoot></table>
 ${terms ? `<div class=terms>${terms}</div>` : ""}
 ${q.notes ? `<div class=notes>${esc(q.notes)}</div>` : ""}
-<div class=foot><span>Valores em euros, sem IVA. Proposta sujeita a confirmação de stock.</span><span>Representações Freixo · encomendas.representacoesfreixo.com</span></div>
+<div class=foot><span>Valores em euros, sem IVA. Proposta sujeita a confirmação de stock.</span><span>Representações Freixo · b2b.representacoesfreixo.com</span></div>
 <script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`);
   w.document.close();
 }

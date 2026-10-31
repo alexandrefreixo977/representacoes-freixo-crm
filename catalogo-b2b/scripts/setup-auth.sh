@@ -5,7 +5,7 @@
 # Precisa das variáveis exportadas por resolve-config.sh.
 set -euo pipefail
 
-allow="https://freixo-b2b.pages.dev/**,https://encomendas.representacoesfreixo.com/**,${APP_URL}/**"
+allow="https://freixo-b2b.pages.dev/**,https://b2b.representacoesfreixo.com/**,https://encomendas.representacoesfreixo.com/**,${APP_URL}/**"
 curl -sf -X PATCH "https://api.supabase.com/v1/projects/$SUPABASE_PROJECT_REF/config/auth" \
   -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" \
   -d "$(jq -n --arg s "$APP_URL" --arg a "$allow" '{site_url: $s, uri_allow_list: $a}')" > /dev/null
