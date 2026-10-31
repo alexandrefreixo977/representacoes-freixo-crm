@@ -719,7 +719,7 @@ function CampaignsAdmin() {
     setError(null);
     let productRef = "";
     if (c?.productId) productRef = (await api.getProducts([c.productId]))[0]?.reference ?? "";
-    setDraft(c ? { ...c, productRef } : { title: "", subtitle: "", badge: "", imageUrl: "", manufacturerId: null, productId: null, startsOn: today, endsOn: null, active: true, sort: 100, productRef: "" });
+    setDraft(c ? { ...c, productRef } : { title: "", subtitle: "", badge: "", imageUrl: "", manufacturerId: null, productId: null, startsOn: today, endsOn: null, active: true, sort: 100, membersOnly: true, details: "", productRef: "" });
   }
 
   return (
@@ -728,7 +728,7 @@ function CampaignsAdmin() {
         <h2>Campanhas</h2>
         {!draft && <button className="btn primary" onClick={() => edit()}>+ Nova campanha</button>}
       </div>
-      <p className="hint">As campanhas ativas aparecem na faixa grande do topo da página inicial, em rotação. Sem campanhas ativas, a faixa não aparece.</p>
+      <p className="hint">As campanhas ativas aparecem na faixa grande do topo da página inicial, em rotação. Sem campanhas ativas, a faixa não aparece. Por defeito só os revendedores com conta as veem. Os preços de campanha por artigo aparecem na página da campanha (botão "Ver campanha").</p>
       {error && <p className="error">{error}</p>}
 
       {draft && (
@@ -769,9 +769,14 @@ function CampaignsAdmin() {
           <label>Início<input type="date" value={draft.startsOn ?? ""} onChange={(e) => setDraft({ ...draft, startsOn: e.target.value || null })} /></label>
           <label>Fim (opcional)<input type="date" value={draft.endsOn ?? ""} onChange={(e) => setDraft({ ...draft, endsOn: e.target.value || null })} /></label>
           <label>Ordem<input type="number" value={draft.sort ?? 100} onChange={(e) => setDraft({ ...draft, sort: Number(e.target.value) })} /></label>
+          <label className="full">Condições (opcional, aparecem na página da campanha)<textarea rows={3} maxLength={2000} value={draft.details ?? ""} onChange={(e) => setDraft({ ...draft, details: e.target.value })} /></label>
           <label className="check" style={{ flexDirection: "row", alignItems: "center" }}>
             <input type="checkbox" style={{ width: "auto" }} checked={draft.active !== false} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
             Ativa
+          </label>
+          <label className="check" style={{ flexDirection: "row", alignItems: "center" }}>
+            <input type="checkbox" style={{ width: "auto" }} checked={draft.membersOnly !== false} onChange={(e) => setDraft({ ...draft, membersOnly: e.target.checked })} />
+            Só para revendedores com conta
           </label>
           <div className="row full">
             <button className="btn primary">Guardar</button>
@@ -787,7 +792,7 @@ function CampaignsAdmin() {
             {list.length === 0 && <tr><td colSpan={5} className="muted">Ainda não há campanhas. Crie a primeira com "+ Nova campanha".</td></tr>}
             {list.map((c) => (
               <tr key={c.id}>
-                <td><strong>{c.title}</strong>{c.badge && <> · {c.badge}</>}<div className="muted small">{c.subtitle}</div></td>
+                <td><strong>{c.title}</strong>{c.badge && <> · {c.badge}</>}<div className="muted small">{c.subtitle}</div><div className="muted small">{c.membersOnly !== false ? "Só revendedores com conta" : "Visível a todos"}</div></td>
                 <td>{mfrName(c.manufacturerId) || <span className="muted">—</span>}</td>
                 <td>{c.startsOn ? new Date(c.startsOn).toLocaleDateString("pt-PT") : "—"} a {c.endsOn ? new Date(c.endsOn).toLocaleDateString("pt-PT") : "sem fim"}</td>
                 <td>{live(c) ? <span className="status s-delivered">No ar</span> : <span className="status s-cancelled">{c.active === false ? "Desligada" : "Fora de prazo"}</span>}</td>

@@ -103,7 +103,7 @@ export function PriceTag({ product, compact }: { product: Product; compact?: boo
       {discounted && (
         <div className="price-detail">
           <s>{formatEur(p.listPrice)}</s>
-          <em>{p.special ? "Preço especial" : formatDiscounts(p.discounts)}</em>
+          <em>{p.campaignId ? `Campanha${p.offerQty && p.offerQty > 1 ? ` · oferta ${p.offerQty} un.` : ""}` : p.special ? "Preço especial" : formatDiscounts(p.discounts)}</em>
         </div>
       )}
     </div>

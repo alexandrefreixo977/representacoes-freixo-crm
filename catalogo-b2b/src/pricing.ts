@@ -55,10 +55,10 @@ export function priceFor(product: Product, pricing: Pricing | null, clientId?: s
   if (mm != null) listPrice = round4(listPrice * (mm / 1000) + (pricing.weldPrices?.[product.id] ?? 0));
   const rule = pickRule(pricing.rules, product, clientId);
   if (rule?.specialNetPrice != null && mm == null) {
-    return { listPrice, discounts: [], netPrice: rule.specialNetPrice, special: true };
+    return { listPrice, discounts: [], netPrice: rule.specialNetPrice, special: true, campaignId: rule.campaignId ?? null, offerQty: rule.offerQty ?? null };
   }
   const discounts = cleanDiscounts(rule?.discounts ?? []);
-  return { listPrice, discounts, netPrice: applyDiscounts(listPrice, discounts), special: false };
+  return { listPrice, discounts, netPrice: applyDiscounts(listPrice, discounts), special: false, campaignId: rule?.campaignId ?? null, offerQty: rule?.offerQty ?? null };
 }
 
 /** Acerta uma quantidade para cima: pelo menos a mínima, e sempre em caixas completas. */
