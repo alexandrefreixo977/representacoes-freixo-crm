@@ -7,9 +7,11 @@ import { go, useApp } from "../state";
 import type { AccessRequest, Campaign, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow, StaffUser } from "../types";
 import { OrderLinesTable } from "./Orders";
 import { CampaignImport } from "./CampaignImport";
+import { ProductsAdmin } from "./ProductsAdmin";
 
 const TABS = [
   ["encomendas", "Encomendas"],
+  ["artigos", "Artigos"],
   ["fabricantes", "Fabricantes"],
   ["campanhas", "Campanhas"],
   ["precos", "Importar preços"],
@@ -39,6 +41,7 @@ export function AdminPage() {
         ))}
       </nav>
       {tab === "encomendas" && <OrdersAdmin />}
+      {tab === "artigos" && <ProductsAdmin />}
       {tab === "fabricantes" && <ManufacturersAdmin />}
       {tab === "campanhas" && <CampaignsAdmin />}
       {tab === "precos" && <ImportAdmin />}

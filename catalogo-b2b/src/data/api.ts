@@ -13,6 +13,7 @@ import type {
   PriceImportRow,
   Pricing,
   Product,
+  ProductEdit,
   ProductPage,
   ProductQuery,
   Quote,
@@ -59,6 +60,13 @@ export interface Api {
   saveRule(rule: Omit<DiscountRule, "id"> & { id?: string }): Promise<void>;
   deleteRule(id: string): Promise<void>;
   importPriceList(manufacturerId: string, rows: PriceImportRow[]): Promise<ImportResult>;
+  /** Ficha completa do artigo (com preço de tabela) para editar. */
+  getProductForEdit(id: string): Promise<ProductEdit & { id: string }>;
+  /** Cria ou grava um artigo e o preço de tabela. Devolve o artigo como fica na loja. */
+  saveProduct(p: ProductEdit): Promise<Product>;
+  /** Carrega uma foto (já reduzida) e devolve o link público. */
+  uploadImage(file: Blob, name: string): Promise<string>;
+  renameFamily(familyId: string, name: string): Promise<void>;
   listAccessRequests(): Promise<AccessRequest[]>;
   listCampaigns(): Promise<Campaign[]>;
   /** Devolve o id da campanha. */

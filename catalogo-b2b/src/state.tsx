@@ -31,6 +31,12 @@ type Ctx = {
   /** Garante que estes artigos estão carregados e devolve-os. */
   ensureProducts: (ids: string[]) => Promise<Product[]>;
   price: (p: Product) => PriceInfo | null;
+  /** Há preços de tabela a caminho (para mostrar "a carregar" em vez de "sob consulta"). */
+  pricesLoading: boolean;
+  /** Volta a pedir os preços destes artigos (ex. depois de os editar na gestão). */
+  refreshPrices: (ids: string[]) => void;
+  /** Troca um artigo já carregado pela versão editada na gestão. */
+  updateProduct: (p: Product) => void;
   setQty: (productId: string, qty: number, variant?: string) => void;
   addToCart: (product: Product, qty: number, variant?: string) => void;
   clearCart: () => void;
@@ -64,6 +70,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [productsById, setProductsById] = useState<Map<string, Product>>(() => new Map());
   const knownIds = useRef(new Set<string>());
   const pricedIds = useRef(new Set<string>());
+  const [pricesPending, setPricesPending] = useState(0);
+  const [priceRetry, setPriceRetry] = useState(0);
 
   useEffect(() => {
     const onHash = () => {
@@ -83,6 +91,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
       fresh.forEach((p) => next.set(p.id, p));
       return next;
     });
+  }, []);
+
+  const updateProduct = useCallback((p: Product) => {
+    knownIds.current.add(p.id);
+    setProductsById((m) => new Map(m).set(p.id, p));
+    setCatalog((c) => (c ? { ...c, products: c.products.map((x) => (x.id === p.id ? p : x)) } : c));
   }, []);
 
   const ensureProducts = useCallback(
@@ -121,6 +135,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const missing = [...productsById.keys()].filter((id) => !pricedIds.current.has(id));
     if (!missing.length) return;
     missing.forEach((id) => pricedIds.current.add(id));
+    setPricesPending((n) => n + 1);
     api
       .getPrices(missing)
       .then((prices) =>
@@ -128,8 +143,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
           p ? { ...p, listPrices: { ...p.listPrices, ...prices.listPrices }, weldPrices: { ...p.weldPrices, ...prices.weldPrices } } : p
         )
       )
-      .catch(() => missing.forEach((id) => pricedIds.current.delete(id)));
-  }, [productsById, session, pricing]);
+      .catch(() => {
+        // Falhou (rede): tenta outra vez daqui a pouco, em vez de deixar "sob consulta".
+        missing.forEach((id) => pricedIds.current.delete(id));
+        window.setTimeout(() => setPriceRetry((n) => n + 1), 3000);
+      })
+      .finally(() => setPricesPending((n) => n - 1));
+  }, [productsById, session, pricing, priceRetry]);
+
+  const refreshPrices = useCallback((ids: string[]) => {
+    ids.forEach((id) => pricedIds.current.delete(id));
+    setPriceRetry((n) => n + 1);
+  }, []);
 
   // O carrinho fica guardado no browser: carrega os artigos dele ao abrir a app.
   useEffect(() => {
@@ -204,6 +229,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     remember,
     ensureProducts,
     price,
+    pricesLoading: pricesPending > 0,
+    refreshPrices,
+    updateProduct,
     setQty,
     addToCart,
     clearCart: () => setCart([]),

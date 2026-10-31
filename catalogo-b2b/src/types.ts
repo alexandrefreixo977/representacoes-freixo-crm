@@ -28,6 +28,20 @@ export type Product = {
   isNew: boolean;
   /** Calçado ou vestuário: o cliente tem de escolher o tamanho. "medida": fita à medida, o cliente indica o comprimento em mm. */
   sizeType?: "calcado" | "vestuario" | "medida" | null;
+  /** Só a gestão vê artigos inativos (escondidos da loja). */
+  active?: boolean;
+};
+
+/** Artigo na ficha de edição da gestão: com preço de tabela e família nova opcional. */
+export type ProductEdit = Omit<Product, "id"> & {
+  id?: string;
+  active: boolean;
+  /** Preço de tabela (sem IVA). Vazio = "preço sob consulta". */
+  listPrice: number | null;
+  /** Fitas à medida: soldadura por fita. */
+  weldPrice?: number | null;
+  /** Cria esta família (na marca do artigo) e põe lá o artigo. */
+  newFamily?: string;
 };
 
 export type Campaign = {
@@ -62,6 +76,10 @@ export type ProductQuery = {
   familyId?: string;
   q?: string;
   onlyNew?: boolean;
+  /** Só gestão: inclui os artigos inativos. */
+  includeInactive?: boolean;
+  /** Só artigos sem foto. */
+  noImage?: boolean;
   offset: number;
   limit: number;
 };
