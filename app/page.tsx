@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase, supabaseConfigured } from "./supabase";
 import Opportunities from "./opportunities";
@@ -188,6 +188,18 @@ export default function Home() {
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
   }, []);
+
+  // Propostas da loja B2B entram no pipeline como oportunidades (uma vez por sessão, em segundo plano).
+  const b2bSyncedFor = useRef<string | null>(null);
+  useEffect(() => {
+    const token = session?.access_token;
+    if (!token || b2bSyncedFor.current === session.user.id) return;
+    b2bSyncedFor.current = session.user.id;
+    fetch("/api/b2b/sync", { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(r => { if (r && (r.created || r.updated)) window.dispatchEvent(new Event("crm-records-changed")); })
+      .catch(() => {});
+  }, [session]);
 
   useEffect(() => {
     if (!supabaseConfigured) return;
