@@ -1,0 +1,34 @@
+# CRM Freixo: corre um ficheiro SQL de supabase/crm-sql/ na base de dados do CRM
+# (projeto Supabase ubkscstjgcrrxpudvoie) através da API de gestão do Supabase.
+# Usado para migrações e verificações; o log do GitHub é público, por isso as
+# consultas de verificação só devolvem totais e nomes de colunas, nunca dados pessoais.
+name: CRM base de dados
+
+on:
+  workflow_dispatch:
+    inputs:
+      ficheiro:
+        description: "Ficheiro em supabase/crm-sql/ (ex.: 001-verificar.sql)"
+        required: true
+
+jobs:
+  sql:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Correr SQL
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          FICHEIRO: ${{ inputs.ficheiro }}
+        run: |
+          case "$FICHEIRO" in */*|*..*|"") echo "Nome de ficheiro inválido"; exit 1;; esac
+          f="supabase/crm-sql/$FICHEIRO"
+          [ -f "$f" ] || { echo "Não existe: $f"; exit 1; }
+          body=$(jq -Rs '{query: .}' < "$f")
+          code=$(curl -s -o out.json -w '%{http_code}' -X POST \
+            "https://api.supabase.com/v1/projects/ubkscstjgcrrxpudvoie/database/query" \
+            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$body")
+          echo "HTTP $code"
+          jq -c '.' out.json | head -c 20000
+          echo
+          [ "$code" -lt 300 ]
