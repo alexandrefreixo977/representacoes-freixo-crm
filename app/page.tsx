@@ -78,6 +78,9 @@ const initialUsers: User[] = [
   { id: "lcosta", name: "Lucia Costa", email: "lcosta@representacoesfreixo.com", role: "commercial", status: "active", title: "Comercial", initials: "LC" },
 ];
 
+// App de vendas e comissões (artefacto Claude), só para administradores.
+const COMMISSIONS_APP_URL = "https://claude.ai/artifact/MDuuRtJQ6KQBFPeGiNVjHK";
+
 const initialClients: ClientRecord[] = [];
 type TaskItem = { id: string; title: string; client: string; clientCode: string; assignedUserId: string; time: string; dueAt: string; priority: string; source: "tasks"|"activities"; origin: string; completedAt?: string };
 const initialTasks: TaskItem[] = [];
@@ -332,6 +335,16 @@ export default function Home() {
         >
           <span>▤</span> Relatórios
         </button>
+
+        {currentUser.role === "admin" && (
+          <button
+            type="button"
+            title="Abre a app de vendas e comissões num novo separador"
+            onClick={() => { window.open(COMMISSIONS_APP_URL, "_blank", "noopener,noreferrer"); setMobileOpen(false); }}
+          >
+            <span>€</span> Comissões ↗
+          </button>
+        )}
 
         {currentUser.role === "admin" && (
           <button
