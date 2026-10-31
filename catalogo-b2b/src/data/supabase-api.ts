@@ -1,9 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-<<<<<<< HEAD
 import type { AccessRequest, Campaign, CampaignImportResult, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, ProductEdit, Quote, Session, StaffUser } from "../types";
-=======
-import type { AccessRequest, Campaign, CampaignImportResult, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, Quote, Session, StaffUser } from "../types";
->>>>>>> origin/main
 import { normRef, normSearch } from "../pricing";
 import { slugify } from "../slug";
 import type { Api } from "./api";
