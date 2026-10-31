@@ -68,5 +68,25 @@ jobs:
             require("fs").writeFileSync(process.env.RUNNER_TEMP+"/crm-secrets.json",JSON.stringify(out));'
           npx --yes wrangler@4 deploy --config dist/server/wrangler.json --name freixo-crm
           npx --yes wrangler@4 secret bulk "$RUNNER_TEMP/crm-secrets.json" --name freixo-crm
+          # Cloudflare Pages (modo _worker.js): permite ligar crm.representacoesfreixo.com por CNAME,
+          # porque o DNS do domínio está no Microsoft 365 e não no Cloudflare.
+          out="$RUNNER_TEMP/crm-pages"
+          rm -rf "$out" && mkdir -p "$out/site/_worker.js"
+          cp -r dist/client/. "$out/site/"
+          cp -r dist/server/. "$out/site/_worker.js/"
+          rm -f "$out/site/_worker.js/wrangler.json"
+          cat > "$out/wrangler.json" <<'JSON'
+          {"name":"freixo-crm","pages_build_output_dir":"./site","compatibility_date":"2026-05-15","compatibility_flags":["nodejs_compat"]}
+          JSON
+          (cd "$out" && npx --yes wrangler@4 pages project create freixo-crm --production-branch main) || true
+          (cd "$out" && npx --yes wrangler@4 pages secret bulk "$RUNNER_TEMP/crm-secrets.json" --project-name freixo-crm)
+          (cd "$out" && npx --yes wrangler@4 pages deploy --branch main --commit-dirty=true --no-bundle)
           rm -f "$RUNNER_TEMP/crm-secrets.json"
-          echo "### CRM publicado no Worker freixo-crm" >> "$GITHUB_STEP_SUMMARY"
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/freixo-crm"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          curl -s -X POST "$api/domains" "${auth[@]}" -H "Content-Type: application/json" -d '{"name":"crm.representacoesfreixo.com"}' > /dev/null || true
+          sub=$(curl -s "$api" "${auth[@]}" | jq -r '.result.subdomain // "?"')
+          dom=$(curl -s "$api/domains/crm.representacoesfreixo.com" "${auth[@]}" | jq -r '.result.status // "?"')
+          echo "### CRM publicado (Worker freixo-crm e Pages https://$sub)" >> "$GITHUB_STEP_SUMMARY"
+          echo "CNAME crm → $sub · estado do domínio: $dom" >> "$GITHUB_STEP_SUMMARY"
+          echo "Pages: $sub · domínio crm: $dom"
