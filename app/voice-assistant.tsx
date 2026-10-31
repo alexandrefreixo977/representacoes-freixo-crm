@@ -151,4 +151,3 @@ export default function VoiceAssistant({ session, onSaved }: { session: Session 
     </>
   );
 }
-

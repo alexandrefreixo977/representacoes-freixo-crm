@@ -1,0 +1,17 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { moduleUrl } from './mail-module.mjs';
+const {evaluateDay,optimizeWeek,commercialScore}=await import(await moduleUrl(new URL('../app/route-planner/engine.ts',import.meta.url)));
+const {GoogleMapsProvider}=await import(await moduleUrl(new URL('../app/route-planner/maps.ts',import.meta.url)));
+const day={date:'2026-10-26',start:540,end:1080,lunchStart:780,lunchEnd:840,maxVisits:5,margin:10,origin:0,destination:0};
+const matrix=Array.from({length:4},(_,i)=>Array.from({length:4},(_,j)=>({seconds:i===j?0:600,meters:i===j?0:10000})));
+const stop=(id,node,extra={})=>({id,node,minutes:30,priority:10,...extra});
+test('fixed appointment stays at confirmed time; end journey counted',()=>{const r=evaluateDay(day,[stop('a',1,{fixedMinute:600})],matrix);assert.equal(r.stops[0].arrival,600);assert.equal(r.meters,20000);assert.equal(r.feasible,true);});
+test('cannot move a confirmed appointment to fix an impossible journey',()=>{const r=evaluateDay(day,[stop('a',1,{fixedMinute:545})],matrix);assert.equal(r.feasible,false);});
+test('lunch and return deadline respected',()=>{assert.equal(evaluateDay(day,[stop('a',1,{fixedMinute:790})],matrix).feasible,false);assert.equal(evaluateDay({...day,end:600},[stop('a',1,{minutes:50})],matrix).feasible,false);});
+test('missing road segment is not estimated',()=>{const m=structuredClone(matrix);m[0][1]=null;assert.equal(evaluateDay(day,[stop('a',1)],m).feasible,false);});
+test('weekly optimization preserves fixed day/hour and reports unplaced items',()=>{const r=optimizeWeek([day],[stop('a',1,{day:day.date,fixedMinute:600}),stop('b',2),stop('c',3,{day:'2026-10-27',fixedMinute:600})],matrix);assert.equal(r.days[0].stops.find(s=>s.id==='a').arrival,600);assert.equal(r.unassigned[0].id,'c');});
+test('locked positions preserved',()=>{const r=optimizeWeek([day],[stop('a',1,{day:day.date,lockedPosition:0}),stop('b',2)],matrix);assert.equal(r.days[0].stops[0].id,'a');});
+test('score does not infer missing commercial data',()=>{assert.deepEqual(commercialScore({openOpportunities:0,pendingProposals:0,overdueTasks:0,strategic:false}),{score:0,reasons:[]});});
+test('Google matrix handles unordered elements and missing roads',async()=>{const provider=new GoogleMapsProvider('test',async()=>Response.json([{originIndex:1,destinationIndex:0,condition:'ROUTE_EXISTS',distanceMeters:100,duration:'20s'},{originIndex:0,destinationIndex:1,condition:'ROUTE_NOT_FOUND'}]));const r=await provider.matrix([{latitude:40,longitude:-8},{latitude:41,longitude:-8}]);assert.deepEqual(r[1][0],{seconds:20,meters:100});assert.equal(r[0][1],null);});
+test('Google unavailable fails explicitly',async()=>{const provider=new GoogleMapsProvider('test',async()=>new Response('',{status:503}));await assert.rejects(()=>provider.matrix([{latitude:40,longitude:-8},{latitude:41,longitude:-8}]),/indisponível/);});
