@@ -7,7 +7,10 @@ import { go, useApp } from "../state";
 import type { AccessRequest, Campaign, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow, StaffUser } from "../types";
 import { OrderLinesTable } from "./Orders";
 import { CampaignImport } from "./CampaignImport";
+<<<<<<< HEAD
 import { ProductsAdmin } from "./ProductsAdmin";
+=======
+>>>>>>> origin/main
 
 const TABS = [
   ["encomendas", "Encomendas"],
