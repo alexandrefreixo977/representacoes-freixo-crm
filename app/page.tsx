@@ -49,7 +49,18 @@ interface User {
   status: "active" | "inactive";
   title: string;
   initials: string;
+  profileId?: string;
 }
+
+type ProfileRow = { id: string; full_name: string; role: "admin" | "commercial"; active: boolean; email: string | null };
+const initialsOf = (name: string) => name.split(" ").filter(Boolean).map(n => n[0]).join("").slice(0, 2).toUpperCase();
+// Converte um perfil do Supabase num utilizador do CRM; os utilizadores conhecidos mantêm o identificador curto usado nos filtros.
+const profileToUser = (p: ProfileRow): User => {
+  const known = initialUsers.find(u => p.email && u.email.toLowerCase() === p.email.toLowerCase());
+  const name = p.full_name || known?.name || p.email || "Utilizador";
+  return { id: known?.id ?? p.id, profileId: p.id, name, email: p.email ?? known?.email ?? "", role: p.role, status: p.active ? "active" : "inactive",
+    title: p.role === "admin" ? "Administrador" : "Comercial", initials: initialsOf(name) };
+};
 
 interface ClientRecord {
   id?: string; code: string; name: string; city: string; email: string; phone?: string; taxId?: string;
@@ -87,6 +98,13 @@ export default function Home() {
   // Estado inicial limpo; os registos reais são guardados no Supabase.
   const [users, setUsers] = useState<User[]>(initialUsers);
   const [currentUser, setCurrentUser] = useState<User>(initialUsers[0]);
+  const [pendingApproval, setPendingApproval] = useState(false);
+  // Lista de utilizadores real (perfis do Supabase); só os administradores a carregam.
+  const loadUsers = async () => {
+    const { data, error } = await supabase.from("profiles").select("id,full_name,role,active,email").order("full_name");
+    if (error || !data?.length) return;
+    setUsers((data as ProfileRow[]).map(profileToUser));
+  };
   const [clients, setClients] = useState(initialClients);
   const [tasks, setTasks] = useState(initialTasks);
   const [opportunities, setOpportunities] = useState(initialOpportunities);
@@ -136,7 +154,15 @@ export default function Home() {
       setAccessDenied(false);
       return;
     }
-    const account = initialUsers.find((user) => user.email.toLowerCase() === nextSession.user.email?.toLowerCase());
+    void resolveAccount(nextSession);
+  };
+
+  // O acesso e o perfil vêm da tabela profiles; se não for possível lê-la, usa a lista base de utilizadores.
+  const resolveAccount = async (nextSession: Session) => {
+    const { data: profile, error } = await supabase.from("profiles").select("id,full_name,role,active,email").eq("id", nextSession.user.id).maybeSingle();
+    const fallback = initialUsers.find((user) => user.email.toLowerCase() === nextSession.user.email?.toLowerCase());
+    const account = profile ? (profile.active ? profileToUser(profile as ProfileRow) : null) : (error ? fallback : null);
+    setPendingApproval(Boolean(profile && !profile.active));
     if (account) {
       setCurrentUser(account);
       setAccessDenied(false);
@@ -150,6 +176,8 @@ export default function Home() {
       setAccessDenied(true);
     }
   };
+
+  useEffect(() => { if (session && !accessDenied && currentUser.role === "admin") void loadUsers(); }, [session?.user.id, accessDenied, currentUser.role]);
 
   useEffect(() => {
     applyRoute();
@@ -263,7 +291,7 @@ export default function Home() {
       <h1>O seu dia comercial,<br/>mais simples.</h1>
       <p>Clientes, visitas e oportunidades reunidos num só lugar.</p>
       <button onClick={signIn}>{session && !accessDenied ? "Entrar no CRM" : "Entrar com Microsoft 365"} <b>→</b></button>
-      {accessDenied && <p role="alert">Esta conta não tem autorização para aceder ao CRM.</p>}
+      {accessDenied && <p role="alert">{pendingApproval ? "A sua conta foi registada e aguarda aprovação de um administrador." : "Esta conta não tem autorização para aceder ao CRM."}</p>}
       <small>Representações Freixo · Portugal</small>
     </section>
   </main>;
@@ -385,7 +413,7 @@ export default function Home() {
         {section === "Correio" && <Mailbox key={session?.user.id ?? "anonymous"} session={session} clients={filteredClients} />}
         {section === "Relatórios" && <Reports clients={filteredClients} visits={filteredVisits} tasks={filteredTasks} opportunities={filteredOpportunities} />}
         {section === "Utilizadores" && currentUser.role === "admin" && (
-          <UsersAdmin users={users} setUsers={setUsers} currentUser={currentUser} />
+          <UsersAdmin users={users} setUsers={setUsers} currentUser={currentUser} onReload={loadUsers} />
         )}
         {section === "Perfil" && <><NotificationSettings/><PersonalArea currentUser={currentUser} session={session} onLogout={() => setShowLogout(true)} /></>}
       </div>
@@ -854,150 +882,95 @@ function Reports({ clients, visits, tasks, opportunities }: { clients: typeof in
 
 // COMPONENTE: EMAILS MICROSOFT 365 + HISTÓRICO SUPABASE
 // NOVO COMPONENTE: ADMINISTRAÇÃO DE UTILIZADORES
-function UsersAdmin({ 
-  users, 
-  setUsers,
-  currentUser 
-}: { 
-  users: User[]; 
+// ADMINISTRAÇÃO DE UTILIZADORES (perfis reais do Supabase)
+function UsersAdmin({ users, setUsers, currentUser, onReload }: {
+  users: User[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
   currentUser: User;
+  onReload: () => Promise<void>;
 }) {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [editingUserId, setEditingUserId] = useState<string | null>(null);
-
-  // Form Fields
+  const [editing, setEditing] = useState<User | null>(null);
   const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
   const [role, setRole] = useState<"admin" | "commercial">("commercial");
   const [status, setStatus] = useState<"active" | "inactive">("active");
+  const [saving, setSaving] = useState(false);
+  const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
 
-  const resetForm = () => {
-    setName("");
-    setEmail("");
-    setRole("commercial");
-    setStatus("active");
-    setEditingUserId(null);
+  const activeAdmins = users.filter(u => u.role === "admin" && u.status === "active");
+  const isSelf = (u: User) => u.id === currentUser.id || (!!u.profileId && u.profileId === currentUser.profileId);
+  const pending = users.filter(u => u.status === "inactive");
+
+  const save = async (user: User, changes: { name?: string; role?: "admin" | "commercial"; status?: "active" | "inactive" }) => {
+    const next = { ...user, ...changes };
+    if (isSelf(user) && (next.role !== user.role || next.status !== user.status)) {
+      setNotice({ kind: "error", text: "Não pode mudar o perfil nem o estado da sua própria conta." });
+      return false;
+    }
+    if (user.role === "admin" && user.status === "active" && (next.role !== "admin" || next.status !== "active") && activeAdmins.length <= 1) {
+      setNotice({ kind: "error", text: "Tem de existir pelo menos um administrador ativo." });
+      return false;
+    }
+    if (!user.profileId) {
+      setNotice({ kind: "error", text: "Este utilizador ainda não entrou no CRM. Peça-lhe que entre uma vez com o Microsoft 365." });
+      return false;
+    }
+    setSaving(true);
+    const { error } = await supabase.from("profiles").update({ full_name: next.name.trim(), role: next.role, active: next.status === "active", updated_at: new Date().toISOString() }).eq("id", user.profileId);
+    setSaving(false);
+    if (error) { setNotice({ kind: "error", text: `Não foi possível guardar: ${error.message}` }); return false; }
+    setUsers(prev => prev.map(u => u.profileId === user.profileId ? { ...next, title: next.role === "admin" ? "Administrador" : "Comercial", initials: initialsOf(next.name) } : u));
+    setNotice({ kind: "ok", text: `${next.name} atualizado.` });
+    void onReload();
+    return true;
   };
 
-  const handleCreateOrUpdate = (e: React.FormEvent) => {
+  const startEdit = (user: User) => { setEditing(user); setName(user.name); setRole(user.role); setStatus(user.status); setNotice(null); };
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name || !email) {
-      alert("Por favor, preencha todos os campos obrigatórios.");
-      return;
-    }
-
-    if (editingUserId) {
-      // Regra de segurança: Não permitir desativar ou retirar o perfil de Admin do último Administrador ativo
-      if (editingUserId === currentUser.id && (status === "inactive" || role === "commercial")) {
-        alert("Erro de Segurança: Não pode desativar ou mudar o perfil do seu próprio utilizador enquanto estiver logado.");
-        return;
-      }
-
-      setUsers(prev => prev.map(u => u.id === editingUserId ? {
-        ...u,
-        name,
-        email,
-        role,
-        status,
-        title: role === "admin" ? "Administrador" : "Comercial",
-        initials: name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
-      } : u));
-    } else {
-      const newUser: User = {
-        id: `u${users.length + 1}`,
-        name,
-        email,
-        role,
-        status,
-        title: role === "admin" ? "Administrador" : "Comercial",
-        initials: name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()
-      };
-      setUsers(prev => [...prev, newUser]);
-    }
-
-    resetForm();
-    setShowAddForm(false);
+    if (!editing || !name.trim()) return;
+    if (await save(editing, { name: name.trim(), role, status })) setEditing(null);
   };
 
-  const startEdit = (user: User) => {
-    setEditingUserId(user.id);
-    setName(user.name);
-    setEmail(user.email);
-    setRole(user.role);
-    setStatus(user.status);
-    setShowAddForm(true);
-  };
-
-  const toggleUserStatus = (user: User) => {
-    // Regra de segurança: Impedir desativar o último administrador ativo
-    const activeAdmins = users.filter(u => u.role === "admin" && u.status === "active");
-    if (user.role === "admin" && user.status === "active" && activeAdmins.length <= 1) {
-      alert("Erro de Segurança: Tem de manter pelo menos um Administrador Ativo no sistema.");
-      return;
-    }
-
-    setUsers(prev => prev.map(u => u.id === user.id ? {
-      ...u,
-      status: u.status === "active" ? "inactive" : "active"
-    } : u));
-  };
-
-  const removeUserAccess = (id: string) => {
-    const userToRemove = users.find(u => u.id === id);
-    if (!userToRemove) return;
-    if (userToRemove.id === currentUser.id) {
-      alert("Não pode remover o acesso do utilizador com sessão ativa.");
-      return;
-    }
-    const activeAdmins = users.filter(u => u.role === "admin" && u.status === "active");
-    if (userToRemove.role === "admin" && userToRemove.status === "active" && activeAdmins.length <= 1) {
-      alert("Tem de manter pelo menos um Administrador ativo.");
-      return;
-    }
-    if (confirm(`Remover o acesso de "${userToRemove.name}"? O histórico será preservado.`)) {
-      setUsers(prev => prev.map(u => u.id === id ? { ...u, status: "inactive" } : u));
-    }
-  };
+  const badge = (bg: string, color: string): React.CSSProperties => ({ padding: "4px 8px", borderRadius: "12px", fontSize: "11px", fontWeight: "bold", background: bg, color });
+  const small: React.CSSProperties = { padding: "4px 8px", fontSize: "12px", borderRadius: "4px", border: "1px solid #ccc", background: "white", cursor: "pointer" };
+  const field: React.CSSProperties = { width: "100%", padding: "8px", marginTop: "4px", borderRadius: "4px", border: "1px solid #ccc" };
 
   return <>
-    <PageTitle eyebrow="SEGURANÇA E EQUIPA" title="Gestão de Utilizadores" action={
-      <button className="primary" onClick={() => { resetForm(); setShowAddForm(!showAddForm); }}>
-        {showAddForm ? "Fechar Formulário" : "＋ Novo Utilizador"}
-      </button>
-    }/>
+    <PageTitle eyebrow="SEGURANÇA E EQUIPA" title="Gestão de Utilizadores" />
+    <p className="subtitle">Cada pessoa entra com a sua conta Microsoft 365 da empresa. No primeiro acesso fica <strong>pendente</strong> até a aprovar aqui: escolha o perfil e ative a conta.</p>
 
-    {showAddForm && (
+    {notice && <p role={notice.kind === "error" ? "alert" : "status"} style={{ padding: "10px 14px", borderRadius: "8px", background: notice.kind === "error" ? "#fee2e2" : "#dcfce7", color: notice.kind === "error" ? "#b91c1c" : "#15803d" }}>{notice.text}</p>}
+
+    {pending.some(u => u.profileId) && <div className="card" style={{ marginBottom: "16px" }}>
+      <h2>A aguardar aprovação ou inativos ({pending.length})</h2>
+      <p>Estas contas não conseguem entrar no CRM. Ative-as para dar acesso.</p>
+    </div>}
+
+    {editing && (
       <div className="card" style={{ marginBottom: "24px" }}>
-        <h2>{editingUserId ? "Editar Utilizador" : "Criar Novo Utilizador"}</h2>
-        <form onSubmit={handleCreateOrUpdate} className="form-grid" style={{ display: "grid", gap: "16px", marginTop: "16px" }}>
+        <h2>Editar utilizador</h2>
+        <form onSubmit={submit} style={{ display: "grid", gap: "16px", marginTop: "16px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <label>Nome Completo *
-              <input style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "4px", border: "1px solid #ccc" }} type="text" value={name} onChange={e => setName(e.target.value)} required placeholder="Ex: Maria Ramos"/>
-            </label>
-            <label>Email Corporativo *
-              <input style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "4px", border: "1px solid #ccc" }} type="email" value={email} onChange={e => setEmail(e.target.value)} required placeholder="Ex: utilizador@representacoesfreixo.com"/>
-            </label>
+            <label>Nome *<input style={field} type="text" value={name} onChange={e => setName(e.target.value)} required /></label>
+            <label>Email (conta Microsoft 365)<input style={{ ...field, background: "#f3f4f6" }} type="email" value={editing.email} readOnly /></label>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px" }}>
-            <label>Perfil (Permissões)
-              <select style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "4px", border: "1px solid #ccc" }} value={role} onChange={e => setRole(e.target.value as "admin" | "commercial")}>
-                <option value="commercial">Comercial (Apenas dados próprios)</option>
-                <option value="admin">Administrador (Acesso total)</option>
+            <label>Perfil
+              <select style={field} value={role} onChange={e => setRole(e.target.value as "admin" | "commercial")} disabled={isSelf(editing)}>
+                <option value="commercial">Comercial (apenas dados próprios)</option>
+                <option value="admin">Administrador (acesso total)</option>
               </select>
             </label>
             <label>Estado
-              <select style={{ width: "100%", padding: "8px", marginTop: "4px", borderRadius: "4px", border: "1px solid #ccc" }} value={status} onChange={e => setStatus(e.target.value as "active" | "inactive")}>
-                <option value="active">Ativo (Acesso autorizado)</option>
-                <option value="inactive">Inativo (Acesso bloqueado)</option>
+              <select style={field} value={status} onChange={e => setStatus(e.target.value as "active" | "inactive")} disabled={isSelf(editing)}>
+                <option value="active">Ativo (pode entrar)</option>
+                <option value="inactive">Inativo (acesso bloqueado)</option>
               </select>
             </label>
           </div>
-          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px", marginTop: "12px" }}>
-            <button type="button" onClick={() => { resetForm(); setShowAddForm(false); }} style={{ padding: "8px 16px", borderRadius: "4px", border: "1px solid #ccc", background: "none" }}>Cancelar</button>
-            <button type="submit" className="primary" style={{ padding: "8px 16px" }}>
-              {editingUserId ? "Atualizar Utilizador" : "Criar Utilizador"}
-            </button>
+          <div style={{ display: "flex", justifyContent: "flex-end", gap: "8px" }}>
+            <button type="button" onClick={() => setEditing(null)} style={{ ...small, padding: "8px 16px" }}>Cancelar</button>
+            <button type="submit" className="primary" disabled={saving} style={{ padding: "8px 16px" }}>{saving ? "A guardar…" : "Guardar"}</button>
           </div>
         </form>
       </div>
@@ -1022,77 +995,32 @@ function UsersAdmin({
     <div className="table-card">
       <table>
         <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Email</th>
-            <th>Perfil</th>
-            <th>Estado</th>
-            <th style={{ textAlign: "right" }}>Ações</th>
-          </tr>
+          <tr><th>Nome</th><th>Email</th><th>Perfil</th><th>Estado</th><th style={{ textAlign: "right" }}>Ações</th></tr>
         </thead>
         <tbody>
           {users.map(u => (
-            <tr key={u.id}>
+            <tr key={u.profileId ?? u.id}>
               <td>
                 <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
                   <div className="avatar" style={{ margin: 0, width: "32px", height: "32px", fontSize: "12px" }}>{u.initials}</div>
-                  <strong>{u.name}</strong>
+                  <strong>{u.name}</strong>{isSelf(u) && <small style={{ color: "#6b7280" }}>(você)</small>}
                 </div>
               </td>
               <td>{u.email}</td>
+              <td><span style={u.role === "admin" ? badge("#e0f2fe", "#0369a1") : badge("#f3f4f6", "#374151")}>{u.role === "admin" ? "Administrador" : "Comercial"}</span></td>
               <td>
-                <span style={{ 
-                  padding: "4px 8px", 
-                  borderRadius: "12px", 
-                  fontSize: "11px", 
-                  fontWeight: "bold",
-                  background: u.role === "admin" ? "#e0f2fe" : "#f3f4f6", 
-                  color: u.role === "admin" ? "#0369a1" : "#374151" 
-                }}>
-                  {u.role === "admin" ? "Administrador" : "Comercial"}
-                </span>
-              </td>
-              <td>
-                <span style={{ 
-                  display: "inline-flex", 
-                  alignItems: "center", 
-                  gap: "4px",
-                  color: u.status === "active" ? "#16a34a" : "#dc2626",
-                  fontWeight: "bold"
-                }}>
-                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: u.status === "active" ? "#16a34a" : "#dc2626" }} />
-                  {u.status === "active" ? "Ativo" : "Inativo"}
+                <span style={{ display: "inline-flex", alignItems: "center", gap: "4px", color: u.status === "active" ? "#16a34a" : "#b45309", fontWeight: "bold" }}>
+                  <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: u.status === "active" ? "#16a34a" : "#f59e0b" }} />
+                  {u.status === "active" ? "Ativo" : "Pendente / inativo"}
                 </span>
               </td>
               <td style={{ textAlign: "right" }}>
                 <div style={{ display: "inline-flex", gap: "8px", justifyContent: "flex-end" }}>
-                  <button 
-                    onClick={() => startEdit(u)} 
-                    style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "4px", border: "1px solid #ccc", background: "white", cursor: "pointer" }}
-                  >
-                    Editar
-                  </button>
-                  <button 
-                    onClick={() => toggleUserStatus(u)} 
-                    style={{ 
-                      padding: "4px 8px", 
-                      fontSize: "12px", 
-                      borderRadius: "4px", 
-                      border: "none", 
-                      background: u.status === "active" ? "#fee2e2" : "#dcfce7", 
-                      color: u.status === "active" ? "#b91c1c" : "#15803d",
-                      cursor: "pointer" 
-                    }}
-                  >
-                    {u.status === "active" ? "Desativar" : "Ativar"}
-                  </button>
-                  <button 
-                    onClick={() => removeUserAccess(u.id)}
-                    disabled={u.status === "inactive" || u.id === currentUser.id}
-                    style={{ padding: "4px 8px", fontSize: "12px", borderRadius: "4px", border: "none", background: "#f3f4f6", color: "#b91c1c", cursor: "pointer" }}
-                  >
-                    Remover acesso
-                  </button>
+                  <button onClick={() => startEdit(u)} style={small}>Editar</button>
+                  {!isSelf(u) && <button disabled={saving} onClick={() => void save(u, { status: u.status === "active" ? "inactive" : "active" })}
+                    style={{ ...small, border: "none", background: u.status === "active" ? "#fee2e2" : "#dcfce7", color: u.status === "active" ? "#b91c1c" : "#15803d" }}>
+                    {u.status === "active" ? "Bloquear acesso" : "Aprovar acesso"}
+                  </button>}
                 </div>
               </td>
             </tr>
