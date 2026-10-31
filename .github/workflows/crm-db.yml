@@ -1,5 +1,5 @@
 # CRM Freixo: corre um ficheiro SQL de supabase/crm-sql/ na base de dados do CRM
-# (projeto Supabase ubkscstjgcrrxpudvoie) através da API de gestão do Supabase.
+# (projeto Supabase ubkscstjgcrrxpudvoie; com base=loja, a loja B2B xtpkqbxskqemoegeaktr) através da API de gestão do Supabase.
 # Usado para migrações e verificações; o log do GitHub é público, por isso as
 # consultas de verificação só devolvem totais e nomes de colunas, nunca dados pessoais.
 name: CRM base de dados
@@ -10,6 +10,10 @@ on:
       ficheiro:
         description: "Ficheiro em supabase/crm-sql/ (ex.: 001-verificar.sql)"
         required: true
+      base:
+        description: "Base de dados: crm (CRM) ou loja (loja B2B)"
+        required: false
+        default: crm
 
 jobs:
   sql:
@@ -20,13 +24,15 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           FICHEIRO: ${{ inputs.ficheiro }}
+          BASE: ${{ inputs.base }}
         run: |
           case "$FICHEIRO" in */*|*..*|"") echo "Nome de ficheiro inválido"; exit 1;; esac
           f="supabase/crm-sql/$FICHEIRO"
           [ -f "$f" ] || { echo "Não existe: $f"; exit 1; }
+          case "$BASE" in loja) ref=xtpkqbxskqemoegeaktr;; ""|crm) ref=ubkscstjgcrrxpudvoie;; *) echo "Base inválida"; exit 1;; esac
           body=$(jq -Rs '{query: .}' < "$f")
           code=$(curl -s -o out.json -w '%{http_code}' -X POST \
-            "https://api.supabase.com/v1/projects/ubkscstjgcrrxpudvoie/database/query" \
+            "https://api.supabase.com/v1/projects/$ref/database/query" \
             -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" -H "Content-Type: application/json" -d "$body")
           echo "HTTP $code"
           jq -c '.' out.json | head -c 20000

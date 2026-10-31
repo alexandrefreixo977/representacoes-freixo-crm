@@ -55,15 +55,28 @@ jobs:
           MICROSOFT_CLIENT_SECRET: ${{ secrets.CRM_MICROSOFT_CLIENT_SECRET }}
           GOOGLE_MAPS_SERVER_KEY: ${{ secrets.CRM_GOOGLE_MAPS_SERVER_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.CRM_ANTHROPIC_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          B2B_PROJECT_REF: xtpkqbxskqemoegeaktr
         run: |
           if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
             echo "::notice::Faltam segredos do CRM; compilado e testado, mas não publicado."
             echo "### CRM: não publicado (faltam segredos CRM_*)" >> "$GITHUB_STEP_SUMMARY"
             exit 0
           fi
+          # Ligação à loja B2B: a chave de serviço da loja é lida na hora pela API de gestão do Supabase (nunca fica no repositório).
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            keys=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$B2B_PROJECT_REF/api-keys?reveal=true") || keys="[]"
+            B2B_SERVICE_ROLE_KEY=$(echo "$keys" | jq -r '([.[] | select(.type == "secret")][0].api_key) // ([.[] | select(.name == "service_role")][0].api_key) // empty')
+            if [ -n "$B2B_SERVICE_ROLE_KEY" ]; then
+              echo "::add-mask::$B2B_SERVICE_ROLE_KEY"
+              export B2B_SERVICE_ROLE_KEY B2B_SUPABASE_URL="https://$B2B_PROJECT_REF.supabase.co"
+            else
+              echo "::warning::Não foi possível ler a chave da loja B2B; a ligação CRM↔loja fica desativada."
+            fi
+          fi
           # Só envia os segredos que existem.
           node -e '
-            const keys=["NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY","SUPABASE_URL","SUPABASE_ANON_KEY","SUPABASE_SERVICE_ROLE_KEY","MICROSOFT_TENANT_ID","MICROSOFT_CLIENT_ID","MICROSOFT_CLIENT_SECRET","GOOGLE_MAPS_BROWSER_KEY","GOOGLE_MAPS_SERVER_KEY","ANTHROPIC_API_KEY"];
+            const keys=["NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY","SUPABASE_URL","SUPABASE_ANON_KEY","SUPABASE_SERVICE_ROLE_KEY","MICROSOFT_TENANT_ID","MICROSOFT_CLIENT_ID","MICROSOFT_CLIENT_SECRET","GOOGLE_MAPS_BROWSER_KEY","GOOGLE_MAPS_SERVER_KEY","ANTHROPIC_API_KEY","B2B_SUPABASE_URL","B2B_SERVICE_ROLE_KEY"];
             const out={};for(const k of keys){if(process.env[k])out[k]=process.env[k];}
             require("fs").writeFileSync(process.env.RUNNER_TEMP+"/crm-secrets.json",JSON.stringify(out));'
           npx --yes wrangler@4 deploy --config dist/server/wrangler.json --name freixo-crm
