@@ -75,6 +75,15 @@ jobs:
           cp -r dist/client/. "$out/site/"
           cp -r dist/server/. "$out/site/_worker.js/"
           rm -f "$out/site/_worker.js/wrangler.json"
+          # No Pages o _worker.js recebe todos os pedidos; os ficheiros estáticos (CSS, JS, ícones)
+          # ficam de fora para o Cloudflare os servir diretamente, como faz o Worker.
+          node -e '
+            const fs=require("fs"),dir=process.argv[1];const ex=[];
+            for(const e of fs.readdirSync(dir,{withFileTypes:true})){
+              if(e.name.startsWith("_")&&e.name!=="_next")continue;
+              ex.push(e.isDirectory()?(e.name==="_next"?"/_next/static/*":"/"+e.name+"/*"):"/"+e.name);}
+            fs.writeFileSync(dir+"/_routes.json",JSON.stringify({version:1,include:["/*"],exclude:ex.slice(0,99)}));
+            console.log("_routes.json:",ex.length,"exclusões")' "$out/site"
           cat > "$out/wrangler.json" <<'JSON'
           {"name":"freixo-crm","pages_build_output_dir":"./site","compatibility_date":"2026-05-15","compatibility_flags":["nodejs_compat"]}
           JSON
