@@ -1,5 +1,5 @@
 import { needsVariant, normRef, normSearch, splitByManufacturer, variantLabel } from "../pricing";
-import type { AccessRequest, Catalog, Client, DiscountRule, Manufacturer, Order, Product, Quote, Session } from "../types";
+import type { AccessRequest, Campaign, Catalog, Client, DiscountRule, Manufacturer, Order, Product, Quote, Session } from "../types";
 import { slugify } from "../slug";
 import type { Api } from "./api";
 import { seedCampaigns, seedClients, seedFamilies, seedManufacturers, seedPrices, seedProducts, seedRules } from "./demo-seed";
@@ -18,6 +18,7 @@ type DemoDb = {
   requests: AccessRequest[];
   users: { email: string; password: string; role: "client" | "admin" | "comercial"; clientId?: string; name?: string }[];
   quotes?: Quote[];
+  campaigns?: Campaign[];
   session: string | null;
   seq: number;
 };
@@ -117,12 +118,12 @@ export const demoApi: Api = {
 
   async getCatalog(): Promise<Catalog> {
     const db = load();
-    const campaignProducts = new Set(seedCampaigns.map((c) => c.productId));
+    const campaignProducts = new Set((db.campaigns ?? seedCampaigns).map((c) => c.productId));
     return {
       manufacturers: (db.manufacturers ?? seedManufacturers).filter((m) => m.active !== false).sort((a, b) => a.sort - b.sort),
       families: db.families,
       products: db.products.filter((p) => campaignProducts.has(p.id)),
-      campaigns: seedCampaigns,
+      campaigns: (db.campaigns ?? seedCampaigns).filter((c) => c.active !== false),
     };
   },
   async searchProducts({ manufacturerId, familyId, q, onlyNew, offset, limit }) {
@@ -331,6 +332,23 @@ export const demoApi: Api = {
     const db = load();
     requireSession(db, "admin");
     return db.requests;
+  },
+  async listCampaigns() {
+    const db = load();
+    requireSession(db, "admin");
+    return db.campaigns ?? seedCampaigns;
+  },
+  async saveCampaign(c) {
+    const db = load();
+    requireSession(db, "admin");
+    const list = db.campaigns ?? seedCampaigns;
+    const saved = { ...c, id: c.id ?? uid() } as Campaign;
+    save({ ...db, campaigns: list.some((x) => x.id === saved.id) ? list.map((x) => (x.id === saved.id ? saved : x)) : [...list, saved] });
+  },
+  async deleteCampaign(id) {
+    const db = load();
+    requireSession(db, "admin");
+    save({ ...db, campaigns: (db.campaigns ?? seedCampaigns).filter((x) => x.id !== id) });
   },
   async listStaff() {
     const db = load();

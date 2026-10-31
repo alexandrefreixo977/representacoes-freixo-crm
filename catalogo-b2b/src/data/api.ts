@@ -1,5 +1,6 @@
 import type {
   AccessRequest,
+  Campaign,
   CartItem,
   Catalog,
   Client,
@@ -59,6 +60,9 @@ export interface Api {
   deleteRule(id: string): Promise<void>;
   importPriceList(manufacturerId: string, rows: PriceImportRow[]): Promise<ImportResult>;
   listAccessRequests(): Promise<AccessRequest[]>;
+  listCampaigns(): Promise<Campaign[]>;
+  saveCampaign(c: Omit<Campaign, "id"> & { id?: string }): Promise<void>;
+  deleteCampaign(id: string): Promise<void>;
   listStaff(): Promise<StaffUser[]>;
   inviteStaff(email: string, name: string): Promise<string>;
   removeStaff(userId: string): Promise<void>;

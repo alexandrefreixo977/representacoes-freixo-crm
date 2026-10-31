@@ -38,6 +38,11 @@ export type Campaign = {
   imageUrl?: string | null;
   manufacturerId?: string | null;
   productId?: string | null;
+  /** Só na gestão. */
+  startsOn?: string | null;
+  endsOn?: string | null;
+  active?: boolean;
+  sort?: number;
 };
 
 export type Catalog = {
