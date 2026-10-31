@@ -71,27 +71,30 @@ jobs:
       - name: Descobrir e verificar configuração
         run: ./scripts/resolve-config.sh
 
-      # 0) Domínio próprio: liga encomendas.representacoesfreixo.com ao site e escolhe o endereço da loja.
-      #    Enquanto o domínio não estiver ativo no Cloudflare, a loja continua em freixo-b2b.pages.dev.
-      - name: Ligar o domínio próprio
+      # 0) Domínio próprio: b2b.representacoesfreixo.com (novo) e encomendas.representacoesfreixo.com (antigo, continua a funcionar).
+      #    A loja usa o primeiro que estiver ativo no Cloudflare; sem nenhum ativo, fica em freixo-b2b.pages.dev.
+      - name: Ligar os domínios próprios
         env:
           APP_URL_VAR: ${{ vars.APP_URL }}
-          DOMAIN: encomendas.representacoesfreixo.com
+          DOMAINS: b2b.representacoesfreixo.com encomendas.representacoesfreixo.com
         run: |
           api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/freixo-b2b/domains"
           auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
-          curl -s -X POST "$api" "${auth[@]}" -H "Content-Type: application/json" -d "{\"name\":\"$DOMAIN\"}" > /dev/null || true
-          status=unknown
-          for i in $(seq 1 20); do
-            status=$(curl -s "$api/$DOMAIN" "${auth[@]}" | jq -r '.result.status // "unknown"')
-            [ "$status" = active ] && break
-            [ "$i" = 1 ] && curl -s -X PATCH "$api/$DOMAIN" "${auth[@]}" > /dev/null || true
-            sleep 15
+          url=""
+          for domain in $DOMAINS; do
+            curl -s -X POST "$api" "${auth[@]}" -H "Content-Type: application/json" -d "{\"name\":\"$domain\"}" > /dev/null || true
+            status=unknown
+            for i in $(seq 1 12); do
+              status=$(curl -s "$api/$domain" "${auth[@]}" | jq -r '.result.status // "unknown"')
+              [ "$status" = active ] && break
+              [ "$i" = 1 ] && curl -s -X PATCH "$api/$domain" "${auth[@]}" > /dev/null || true
+              sleep 10
+            done
+            echo "Estado do domínio $domain: $status" | tee -a "$GITHUB_STEP_SUMMARY"
+            if [ -z "$url" ] && [ "$status" = active ]; then url="https://$domain"; fi
           done
-          echo "Estado do domínio $DOMAIN: $status"
-          if [ -n "$APP_URL_VAR" ]; then url="$APP_URL_VAR"
-          elif [ "$status" = active ]; then url="https://$DOMAIN"
-          else url="https://freixo-b2b.pages.dev"; fi
+          [ -n "$APP_URL_VAR" ] && url="$APP_URL_VAR"
+          [ -z "$url" ] && url="https://freixo-b2b.pages.dev"
           echo "APP_URL=$url" >> "$GITHUB_ENV"
           echo "Endereço da loja: $url" | tee -a "$GITHUB_STEP_SUMMARY"
 

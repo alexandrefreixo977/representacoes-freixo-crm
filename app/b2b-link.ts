@@ -1,5 +1,5 @@
-// Regras da ligação entre o CRM e a loja B2B (encomendas.representacoesfreixo.com).
-export const B2B_SHOP_URL = "https://encomendas.representacoesfreixo.com";
+// Regras da ligação entre o CRM e a loja B2B (b2b.representacoesfreixo.com).
+export const B2B_SHOP_URL = "https://b2b.representacoesfreixo.com";
 
 /** NIF só com algarismos e letras, sem prefixo PT, para comparar clientes entre as duas bases. */
 export function normalizeNif(value: string | null | undefined): string {
