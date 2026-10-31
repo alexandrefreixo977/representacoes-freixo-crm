@@ -416,3 +416,4 @@ code { background: #e9eff3; padding: 1px 6px; border-radius: 4px; }
 .file-btn { text-align: center; cursor: pointer; }
 .product-editor textarea { width: 100%; font: inherit; }
 .btn.small { padding: 6px 10px; font-size: 13px; }
+.families-editor { margin: 12px 0; } .families-editor summary { cursor: pointer; color: var(--navy); font-weight: 600; }
