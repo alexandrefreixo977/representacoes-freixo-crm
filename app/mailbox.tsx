@@ -1,4 +1,5 @@
 "use client";
+import { askConfirm } from "./ui-feedback";
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import type { LiveMessage } from "./mail-matching";
@@ -36,7 +37,7 @@ export default function Mailbox({ session, emails, clients = [] }: { session: Se
     setSelected(previous => previous?.id === id ? { ...previous, isRead: true } : previous);
   }, []);
   const deleteMessage = async (message: LiveMessage) => {
-    if (deletingRef.current || !window.confirm("Mover para o lixo?")) return;
+    if (deletingRef.current || !(await askConfirm({title:"Mover para o lixo?",confirmLabel:"Mover",danger:true}))) return;
     deletingRef.current = true; setDeleting(message.id); setError("");
     try {
       await mailRequest("/api/mail/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messageId: message.id }) });

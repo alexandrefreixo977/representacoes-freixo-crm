@@ -28,7 +28,7 @@ export default function B2BShopSection({ clientId, clientEmail, session, canEdit
     const response = await fetch(`/api/b2b/client?id=${encodeURIComponent(clientId)}`, { headers: { Authorization: `Bearer ${token}` } });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) { setError(body.error ?? "Não foi possível ler a loja B2B."); return; }
-    setData(body);
+    setData({ ...body, orders: body.orders ?? [], quotes: body.quotes ?? [] });
   };
   useEffect(() => { void load(); }, [clientId, token]);
 
@@ -43,7 +43,7 @@ export default function B2BShopSection({ clientId, clientEmail, session, canEdit
   };
 
   if (!clientId) return null;
-  const totalOrders = data?.orders.filter(o => o.status !== "cancelled").reduce((sum, o) => sum + o.total, 0) ?? 0;
+  const totalOrders = (data?.orders ?? []).filter(o => o.status !== "cancelled").reduce((sum, o) => sum + o.total, 0) ?? 0;
   return <section className="client-detail-section b2b-shop">
     <div className="section-title"><h3>Loja B2B</h3>{data && <a href={data.shopUrl} target="_blank" rel="noreferrer">Abrir a loja ↗</a>}</div>
     {error && <p className="form-hint">{error}</p>}

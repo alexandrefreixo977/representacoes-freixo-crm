@@ -18,6 +18,9 @@ import { generateEmailSignature } from "./email-signature";
 import { NotificationProvider, NotificationBell, NotificationSettings, ReminderField, useNotifications, recordsChanged, disconnectPush } from './notifications';
 import { localDate, localTime, scheduleInstant, reminderOffsets } from './notification-time';
 import VoiceAssistant from "./voice-assistant";
+import { FeedbackHost, toast, askConfirm } from "./ui-feedback";
+import { daysFromToday, friendlyDay, timeAgo } from "./friendly-date";
+import { visitFrequencyDays } from "./visit-frequency";
 
 type Section = 
   | "Dashboard" 
@@ -428,6 +431,7 @@ export default function Home() {
             selectedClientId={routeClientId}
             onOpenClient={openClient}
             onCloseClient={() => window.history.back()}
+            onNavigate={navigate}
           />
         )} 
         {section === "Agenda" && <Agenda clients={clients} users={users} currentUser={currentUser} session={session} />}
@@ -445,6 +449,7 @@ export default function Home() {
     </section>
     {showLogout && <div className="confirm-backdrop" role="presentation"><section className="card confirm-dialog" role="dialog" aria-modal="true" aria-labelledby="logout-title"><h2 id="logout-title">Terminar sessão</h2><p>Pretende terminar a sessão?</p><div className="form-actions"><button onClick={() => setShowLogout(false)}>Cancelar</button><button className="logout-button" onClick={logout}>Terminar sessão</button></div></section></div>}
     {session && <VoiceAssistant session={session} />}
+    <FeedbackHost />
   </main></NotificationProvider>;
 }
 
@@ -584,7 +589,8 @@ function Clients({
   providerToken,
   selectedClientId,
   onOpenClient,
-  onCloseClient
+  onCloseClient,
+  onNavigate
 }: {
   rows: typeof initialClients;
   query: string;
@@ -598,6 +604,7 @@ function Clients({
   selectedClientId: string;
   onOpenClient: (client: ClientRecord) => void;
   onCloseClient: () => void;
+  onNavigate: (section: string, params?: Record<string,string>) => void;
 }) {
   const routeParams = browserParams();
   const withoutContactDays = Number(routeParams.get("withoutContact")||0);
@@ -628,10 +635,39 @@ function Clients({
     (!associationFilter || Boolean(client[associationFilter as keyof ClientRecord])) && (!statusFilter || client.status === statusFilter) && (!withoutContactIds||withoutContactIds.has(client.id??client.code))
   ).sort((a, b) => a.name.localeCompare(b.name, "pt", { sensitivity: "base" }));
 
+  const [filtersOpen,setFiltersOpen]=useState(false);
+  const [overdueOnly,setOverdueOnly]=useState(false);
+  type SortKey="name"|"city"|"owner"|"last"|"status"|"priority";
+  const [sortKey,setSortKey]=useState<SortKey>("name");
+  const [sortDir,setSortDir]=useState<1|-1>(1);
+  const toggleSort=(key:SortKey)=>{if(sortKey===key)setSortDir(sortDir===1?-1:1);else{setSortKey(key);setSortDir(key==="last"?-1:1);}};
+  // Último contacto real: a interação mais recente (visita, chamada, email…) de cada cliente.
+  const [lastContact,setLastContact]=useState<Map<string,string>>(new Map());
+  useEffect(()=>{if(!session)return;supabase.from("activities").select("client_id,occurred_at").neq("kind","task").lte("occurred_at",new Date().toISOString()).order("occurred_at",{ascending:false}).limit(10000).then(({data})=>{const map=new Map<string,string>();for(const row of (data??[]) as {client_id:string;occurred_at:string}[])if(!map.has(row.client_id))map.set(row.client_id,row.occurred_at);setLastContact(map);});},[session]);
+  const dueDays=(c:ClientRecord,contact?:string)=>{const freq=visitFrequencyDays(c.visitFrequency);if(!freq)return null;if(!contact)return -1;return freq-Math.floor((Date.now()-new Date(contact).getTime())/86400000);};
+  const activeFilters=[
+    manufacturerFilter&&{label:`Fabricante: ${manufacturerFilter}`,clear:()=>setManufacturerFilter("")},
+    commercialFilter&&{label:`Comercial: ${commercialFilter}`,clear:()=>setCommercialFilter("")},
+    segmentFilter&&{label:`Segmento: ${segmentFilter}`,clear:()=>setSegmentFilter("")},
+    potentialFilter&&{label:`Potencial: ${potentialFilter}`,clear:()=>setPotentialFilter("")},
+    priorityFilter&&{label:`Prioridade: ${priorityFilter}`,clear:()=>setPriorityFilter("")},
+    associationFilter&&{label:`Grupo: ${({cecofersa:"CECOFERSA",lasRias:"LAS RIAS",factorPro:"FACTOR PRO",bigMat:"BIG MAT",industrialPro:"INDUSTRIAL PRO"} as Record<string,string>)[associationFilter]??associationFilter}`,clear:()=>setAssociationFilter("")},
+    statusFilter&&{label:`Estado: ${statusFilter}`,clear:()=>setStatusFilter("")},
+    overdueOnly&&{label:"Visita em atraso",clear:()=>setOverdueOnly(false)},
+  ].filter(Boolean) as {label:string;clear:()=>void}[];
+  const priorityRank=(p:string)=>({A:1,B:2,C:3} as Record<string,number>)[p]??9;
+  const sortedRows=displayRows.filter(c=>{if(!overdueOnly)return true;const d=dueDays(c,lastContact.get(c.id??c.code));return d!==null&&d<0;}).sort((a,b)=>{
+    let r=0;
+    if(sortKey==="last"){const x=lastContact.get(a.id??a.code)??"",y=lastContact.get(b.id??b.code)??"";r=x.localeCompare(y);}
+    else if(sortKey==="priority")r=priorityRank(a.priority)-priorityRank(b.priority);
+    else r=String(a[sortKey]??"").localeCompare(String(b[sortKey]??""),"pt",{sensitivity:"base"});
+    return (r||a.name.localeCompare(b.name,"pt",{sensitivity:"base"}))*sortDir;
+  });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newClientName || !newClientCity) {
-      alert("Por favor preencha todos os campos obrigatórios.");
+      toast("Preencha o nome e a localidade do cliente.",{tone:"error"});
       return;
     }
     if (!session) { setNotice("A sessão terminou. Volte a entrar com a conta Microsoft 365."); return; }
@@ -709,41 +745,56 @@ function Clients({
     <div className="toolbar client-filters">
       <div className="search inner">
         <span>⌕</span>
-        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nome, código ou localidade do cliente..."/>
+        <input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Nome, código, NIF ou localidade…"/>
+        {query&&<button className="search-clear" aria-label="Limpar pesquisa" onClick={()=>setQuery("")}>×</button>}
       </div>
-      <select aria-label="Filtrar por fabricante" value={manufacturerFilter} onChange={e=>setManufacturerFilter(e.target.value)}><option value="">Fabricantes: Todos</option>{unique(rows.flatMap(c=>c.manufacturers?.map(m=>m.name) ?? [])).map(x=><option key={x}>{x}</option>)}</select>
-      <select aria-label="Filtrar por comercial" value={commercialFilter} onChange={e=>setCommercialFilter(e.target.value)}><option value="">Comerciais: Todos</option>{unique(rows.map(c=>c.owner)).map(x=><option key={x}>{x}</option>)}</select>
-      <select aria-label="Filtrar por segmento" value={segmentFilter} onChange={e=>setSegmentFilter(e.target.value)}><option value="">Segmentos: Todos</option>{unique(rows.map(c=>c.segment)).map(x=><option key={x}>{x}</option>)}</select>
-      <select aria-label="Filtrar por potencial" value={potentialFilter} onChange={e=>setPotentialFilter(e.target.value)}><option value="">Potencial: Todos</option>{unique(rows.map(c=>c.potential)).map(x=><option key={x}>{x}</option>)}</select>
-      <select aria-label="Filtrar por prioridade" value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="">Prioridade: Todas</option>{unique(rows.map(c=>c.priority)).map(x=><option key={x}>{x}</option>)}</select>
-      <select aria-label="Filtrar por associação ou grupo" value={associationFilter} onChange={e=>setAssociationFilter(e.target.value)}><option value="">Associação / Grupo: Todos</option><option value="cecofersa">CECOFERSA</option><option value="lasRias">LAS RIAS</option><option value="factorPro">FACTOR PRO / El Sábio</option><option value="bigMat">BIG MAT</option><option value="industrialPro">INDUSTRIAL PRO</option></select>
-      <select aria-label="Filtrar por estado" value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="">Estados: Todos</option>{unique(rows.map(c=>c.status)).map(x=><option key={x}>{x}</option>)}</select>
+      <button className={`filters-toggle ${filtersOpen||activeFilters.length?"on":""}`} aria-expanded={filtersOpen} onClick={()=>setFiltersOpen(!filtersOpen)}>⚙ Filtros{activeFilters.length?` · ${activeFilters.length}`:""}</button>
+      <div className="quick-filters" role="group" aria-label="Filtros rápidos">
+        <button aria-pressed={commercialFilter===currentUser.name} onClick={()=>setCommercialFilter(commercialFilter===currentUser.name?"":currentUser.name)}>Os meus</button>
+        <button aria-pressed={priorityFilter==="A"} onClick={()=>setPriorityFilter(priorityFilter==="A"?"":"A")}>Prioridade A</button>
+        <button aria-pressed={overdueOnly} onClick={()=>setOverdueOnly(!overdueOnly)}>Visita em atraso</button>
+      </div>
+    </div>
+    {filtersOpen&&<div className="filters-panel">
+      <label>Fabricante<select value={manufacturerFilter} onChange={e=>setManufacturerFilter(e.target.value)}><option value="">Todos</option>{unique(rows.flatMap(c=>c.manufacturers?.map(m=>m.name) ?? [])).map(x=><option key={x}>{x}</option>)}</select></label>
+      <label>Comercial<select value={commercialFilter} onChange={e=>setCommercialFilter(e.target.value)}><option value="">Todos</option>{unique(rows.map(c=>c.owner)).map(x=><option key={x}>{x}</option>)}</select></label>
+      <label>Segmento<select value={segmentFilter} onChange={e=>setSegmentFilter(e.target.value)}><option value="">Todos</option>{unique(rows.map(c=>c.segment)).map(x=><option key={x}>{x}</option>)}</select></label>
+      <label>Potencial<select value={potentialFilter} onChange={e=>setPotentialFilter(e.target.value)}><option value="">Todos</option>{unique(rows.map(c=>c.potential)).map(x=><option key={x}>{x}</option>)}</select></label>
+      <label>Prioridade<select value={priorityFilter} onChange={e=>setPriorityFilter(e.target.value)}><option value="">Todas</option>{unique(rows.map(c=>c.priority)).map(x=><option key={x}>{x}</option>)}</select></label>
+      <label>Associação / Grupo<select value={associationFilter} onChange={e=>setAssociationFilter(e.target.value)}><option value="">Todos</option><option value="cecofersa">CECOFERSA</option><option value="lasRias">LAS RIAS</option><option value="factorPro">FACTOR PRO / El Sábio</option><option value="bigMat">BIG MAT</option><option value="industrialPro">INDUSTRIAL PRO</option></select></label>
+      <label>Estado<select value={statusFilter} onChange={e=>setStatusFilter(e.target.value)}><option value="">Todos</option>{unique(rows.map(c=>c.status)).map(x=><option key={x}>{x}</option>)}</select></label>
+    </div>}
+    <div className="results-bar">
+      <strong>{sortedRows.length} {sortedRows.length===1?"cliente":"clientes"}</strong>
+      {activeFilters.map(f=><button key={f.label} className="filter-chip" onClick={f.clear}>{f.label} <span aria-hidden>×</span></button>)}
+      {activeFilters.length>1&&<button className="filter-clear" onClick={()=>activeFilters.forEach(f=>f.clear())}>Limpar filtros</button>}
     </div>
 
-    <div className="table-card">
+    <div className="table-card clients-table">
       <table>
         <thead>
           <tr>
-            <th>Cliente</th>
-            <th>Localização</th>
-            <th>Responsável</th>
-            <th>Último contacto</th>
-            <th>Estado</th>
-            <th>Prioridade</th>
+            {([["name","Cliente"],["city","Localização"],["owner","Responsável"],["last","Último contacto"],["status","Estado"],["priority","Prioridade"]] as const).map(([key,label])=><th key={key} aria-sort={sortKey===key?(sortDir===1?"ascending":"descending"):"none"}><button className="sort-header" onClick={()=>toggleSort(key)}>{label}<span>{sortKey===key?(sortDir===1?"▲":"▼"):"↕"}</span></button></th>)}
+            <th><span className="sr-only">Ações</span></th>
           </tr>
         </thead>
         <tbody>
-          {displayRows.map(c=><tr key={c.code} onClick={()=>onOpenClient(c)} className="client-row">
-            <td><strong>{c.name} <span className="association-badges">{[["cecofersa","CECOFERSA"],["lasRias","LAS RIAS"],["factorPro","FACTOR PRO"],["bigMat","BIG MAT"],["industrialPro","INDUSTRIAL PRO"]].filter(([key])=>Boolean(c[key as keyof ClientRecord])).map(([key,label])=><em className="cecofersa-badge" key={key}>{label}</em>)}</span></strong><span>{c.code}{c.taxId ? ` · ${c.taxId}` : ""}</span></td>
-            <td>{c.city}</td>
-            <td>{c.owner}</td>
-            <td>{c.last}</td>
-            <td><em className="status">{c.status}</em></td>
-            <td><em className={c.priority.toLowerCase()}>{c.priority}</em></td>
-          </tr>)}
+          {sortedRows.map(c=>{const key=c.id??c.code;const contact=lastContact.get(key);const due=dueDays(c,contact);return <tr key={c.code} onClick={()=>onOpenClient(c)} className="client-row">
+            <td data-label="Cliente"><strong>{c.name} <span className="association-badges">{[["cecofersa","CECOFERSA"],["lasRias","LAS RIAS"],["factorPro","FACTOR PRO"],["bigMat","BIG MAT"],["industrialPro","INDUSTRIAL PRO"]].filter(([key])=>Boolean(c[key as keyof ClientRecord])).map(([key,label])=><em className="cecofersa-badge" key={key}>{label}</em>)}</span></strong><span>{c.code}{c.taxId ? ` · ${c.taxId}` : ""}</span></td>
+            <td data-label="Localização">{c.city||"—"}</td>
+            <td data-label="Responsável">{c.owner}</td>
+            <td data-label="Último contacto"><span className={`last-contact ${due!==null&&due<0?"late":""}`} title={contact?new Date(contact).toLocaleDateString("pt-PT"):undefined}>{contact?timeAgo(contact):"Sem registo"}{due!==null&&due<0&&<small>Visita em atraso</small>}</span></td>
+            <td data-label="Estado"><em className="status">{c.status}</em></td>
+            <td data-label="Prioridade"><em className={c.priority.toLowerCase()}>{c.priority}</em></td>
+            <td className="row-quick" onClick={e=>e.stopPropagation()}>
+              {c.phone&&<a href={`tel:${c.phone.replace(/\s/g,"")}`} title={`Ligar ${c.phone}`} aria-label={`Ligar para ${c.name}`}>☎</a>}
+              {c.email&&<a href={`mailto:${c.email}`} title={`Email ${c.email}`} aria-label={`Enviar email a ${c.name}`}>✉</a>}
+              {c.id&&<button title="Agendar visita" aria-label={`Agendar visita a ${c.name}`} onClick={()=>onNavigate("Agenda",{new:"1",type:"Visita",client:c.id!,date:new Date().toISOString().slice(0,10)})}>📅</button>}
+            </td>
+          </tr>})}
         </tbody>
       </table>
-      {!displayRows.length && <div className="empty">Nenhum cliente corresponde à pesquisa e aos filtros selecionados.</div>}
+      {!sortedRows.length && <div className="empty">Nenhum cliente corresponde à pesquisa e aos filtros.{activeFilters.length>0&&<button className="filter-clear" onClick={()=>activeFilters.forEach(f=>f.clear())}>Limpar filtros</button>}</div>}
     </div>
     {selectedClient && <ClientDossier client={selectedClient} session={session} providerToken={providerToken} isAdmin={currentUser.role==="admin"} onClose={onCloseClient} onUpdate={(client)=>onUpdateClient(client as ClientRecord)}/>}
   </>;
@@ -767,13 +818,13 @@ function Agenda({ clients, users, currentUser, session }: { clients: ClientRecor
   const visible=activities.filter(item=>(!responsibleFilter||item.assignedId===responsibleFilter)&&(!typeFilter||item.type===typeFilter)&&(!brandFilter||item.brand===brandFilter)&&(!clientFilter||item.clientId===clientFilter));
   const openNew=()=>{setReminder("default");setEditing(null);setFormClientId("");setShowForm(true);setSelected(null)};
   const saveActivity=async(event:React.FormEvent<HTMLFormElement>)=>{event.preventDefault();if(!session)return;const form=new FormData(event.currentTarget);const clientId=String(form.get("client"));const type=String(form.get("type"));let start:string|null=null;let offsets:number[]|null=null;try{start=form.get("start")?scheduleInstant(String(form.get("date")),String(form.get("start")),preferences.timezone):null;offsets=reminderOffsets(reminder);}catch{setNotice("Verifique o lembrete e a hora; a mudança de horário pode tornar esta hora ambígua.");return;}const endValue=String(form.get("end")||"");const payload={client_id:clientId,contact_id:String(form.get("contact")||"")||null,manufacturer_id:String(form.get("brand")||"")||null,kind:type==="Visita"?"visit":type==="Chamada"?"call":type==="Reunião"?"meeting":type==="Tarefa"?"task":"note",interaction_type:type,title:String(form.get("title")),summary:String(form.get("title")),description:String(form.get("description")||"")||null,assigned_to:String(form.get("assigned")||session.user.id),actor_id:editing?.actorId??session.user.id,start_at:start,end_at:endValue?scheduleInstant(String(form.get("date")),endValue,preferences.timezone):null,has_time:!!start,due_date:String(form.get("date")),schedule_timezone:preferences.timezone,reminder_offsets:offsets,occurred_at:start??new Date().toISOString(),status:String(form.get("status")),source_module:editing?.source??"agenda",updated_at:new Date().toISOString()};const response=editing?await supabase.from("activities").update(payload).eq("id",editing.id):await supabase.from("activities").insert(payload);if(response.error){setNotice(response.error.message);return;}recordsChanged();setShowForm(false);setEditing(null);setNotice(editing?"Atividade atualizada em todos os módulos.":"Atividade adicionada à agenda global.");await loadAgenda();};
-  const removeActivity=async()=>{if(!selected||currentUser.role!=="admin"||!confirm("Apagar esta atividade da agenda e do módulo de origem?"))return;const {error}=await supabase.from("activities").delete().eq("id",selected.id);if(error){setNotice(error.message);return;}setSelected(null);setNotice("Atividade removida.");await loadAgenda();};
+  const removeActivity=async()=>{if(!selected||currentUser.role!=="admin"||!(await askConfirm({title:"Apagar esta atividade?",message:"É apagada da agenda e do módulo de origem.",confirmLabel:"Apagar",danger:true})))return;const {error}=await supabase.from("activities").delete().eq("id",selected.id);if(error){setNotice(error.message);return;}setSelected(null);setNotice("Atividade removida.");await loadAgenda();};
   const selectedClient=clients.find(client=>client.id===formClientId);
   return <>
     <PageTitle eyebrow="PLANEAMENTO GLOBAL" title="Agenda da equipa" action={<button className="primary" onClick={openNew}>＋ Agendar atividade</button>}/>
     {notice&&<div className="email-notice" role="status">{notice}</div>}
     <div className="toolbar agenda-filters"><select value={responsibleFilter} onChange={e=>setResponsibleFilter(e.target.value)}><option value="">Responsável: Todos</option>{profiles.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select><select value={typeFilter} onChange={e=>setTypeFilter(e.target.value)}><option value="">Tipos: Todos</option>{[...new Set(activities.map(x=>x.type))].map(x=><option key={x}>{x}</option>)}</select><select value={brandFilter} onChange={e=>setBrandFilter(e.target.value)}><option value="">Marcas: Todas</option>{[...new Set(activities.map(x=>x.brand).filter(Boolean))].map(x=><option key={x}>{x}</option>)}</select><select value={clientFilter} onChange={e=>setClientFilter(e.target.value)}><option value="">Clientes: Todos</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></div>
-    {showForm&&<form className="card agenda-form" onSubmit={saveActivity}><h2>{editing?"Editar atividade":"Agendar atividade"}</h2><div className="form-grid"><label>Tipo<select name="type" defaultValue={editing?.type??"Visita"}>{["Visita","Reunião","Chamada","Follow-up","Tarefa","Apresentação","Envio de proposta","Lembrete","Outro"].map(x=><option key={x}>{x}</option>)}</select></label><label>Cliente<select name="client" defaultValue={editing?.clientId} required><option value="">Selecionar…</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Contacto<select name="contact"><option value="">Sem contacto específico</option>{selectedClient?.contacts?.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Marca<select name="brand"><option value="">Sem marca específica</option>{selectedClient?.manufacturers?.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label>Data<input name="date" type="date" defaultValue={editing?(editing.hasTime?dayKey(editing.startAt):editing.dueDate):dayKey(day)} required/></label><label>Hora início<input name="start" type="time" defaultValue={editing?(editing.hasTime?localTime(editing.startAt,preferences.timezone):""):"09:00"}/></label><label>Hora fim<input name="end" type="time" defaultValue={editing?.endAt?localTime(editing.endAt,preferences.timezone):""}/></label><label>Responsável<select name="assigned" defaultValue={editing?.assignedId??profiles.find(p=>p.email.toLowerCase()===currentUser.email.toLowerCase())?.id??session?.user.id} disabled={currentUser.role!=="admin"}>{profiles.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Estado<select name="status" defaultValue={editing?.status??"scheduled"}><option value="scheduled">Agendada</option><option value="in_progress">Em curso</option><option value="completed">Concluída</option><option value="cancelled">Cancelada</option><option value="rescheduled">Reagendada</option></select></label><ReminderField value={reminder} onChange={setReminder}/><label className="full">Assunto<input name="title" defaultValue={editing?.title} required/></label><label className="full">Notas<textarea name="description" defaultValue={editing?.description}/></label></div><div className="form-actions"><button type="button" onClick={()=>{setShowForm(false);setEditing(null)}}>Cancelar</button><button className="primary">Guardar atividade</button></div></form>}
+    {showForm&&<form className="card agenda-form" onSubmit={saveActivity}><h2>{editing?"Editar atividade":"Agendar atividade"}</h2><div className="form-grid"><label>Tipo<select name="type" defaultValue={editing?.type??"Visita"}>{["Visita","Reunião","Chamada","Follow-up","Tarefa","Apresentação","Envio de proposta","Lembrete","Outro"].map(x=><option key={x}>{x}</option>)}</select></label><label>Cliente<select name="client" defaultValue={editing?.clientId??agendaParams.get("client")??undefined} required><option value="">Selecionar…</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Contacto<select name="contact"><option value="">Sem contacto específico</option>{selectedClient?.contacts?.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Marca<select name="brand"><option value="">Sem marca específica</option>{selectedClient?.manufacturers?.map(m=><option key={m.id} value={m.id}>{m.name}</option>)}</select></label><label>Data<input name="date" type="date" defaultValue={editing?(editing.hasTime?dayKey(editing.startAt):editing.dueDate):dayKey(day)} required/></label><label>Hora início<input name="start" type="time" defaultValue={editing?(editing.hasTime?localTime(editing.startAt,preferences.timezone):""):"09:00"}/></label><label>Hora fim<input name="end" type="time" defaultValue={editing?.endAt?localTime(editing.endAt,preferences.timezone):""}/></label><label>Responsável<select name="assigned" defaultValue={editing?.assignedId??profiles.find(p=>p.email.toLowerCase()===currentUser.email.toLowerCase())?.id??session?.user.id} disabled={currentUser.role!=="admin"}>{profiles.map(p=><option key={p.id} value={p.id}>{p.name}</option>)}</select></label><label>Estado<select name="status" defaultValue={editing?.status??"scheduled"}><option value="scheduled">Agendada</option><option value="in_progress">Em curso</option><option value="completed">Concluída</option><option value="cancelled">Cancelada</option><option value="rescheduled">Reagendada</option></select></label><ReminderField value={reminder} onChange={setReminder}/><label className="full">Assunto<input name="title" defaultValue={editing?.title} required/></label><label className="full">Notas<textarea name="description" defaultValue={editing?.description}/></label></div><div className="form-actions"><button type="button" onClick={()=>{setShowForm(false);setEditing(null)}}>Cancelar</button><button className="primary">Guardar atividade</button></div></form>}
     <AgendaCalendar day={dayKey(day)} timezone={preferences.timezone} items={visible} onDay={date=>setDay(new Date(scheduleInstant(date,"12:00",preferences.timezone)))} onSelect={setSelected}/>
     {selected&&<div className="agenda-detail-backdrop" onClick={()=>setSelected(null)}><article className="card agenda-detail" onClick={e=>e.stopPropagation()}><button className="client-detail-close" onClick={()=>setSelected(null)}>×</button><span>{selected.source.toUpperCase()}</span>{selected.opportunityId&&<p><a href={`/oportunidades?opportunity=${selected.opportunityId}`}>Ver oportunidade</a></p>}<h2>{selected.title}</h2><dl><dt>Cliente</dt><dd>{selected.client}</dd><dt>Contacto</dt><dd>{selected.contact||"—"}</dd><dt>Tipo</dt><dd>{selected.type}</dd><dt>Data e hora</dt><dd>{selected.hasTime?`${localDate(selected.startAt,preferences.timezone)} · ${localTime(selected.startAt,preferences.timezone)}`:`${selected.dueDate} · Sem hora`}</dd><dt>Responsável</dt><dd>{selected.assigned}</dd><dt>Marca</dt><dd>{selected.brand||"—"}</dd><dt>Notas</dt><dd>{selected.description||"—"}</dd><dt>Estado</dt><dd>{selected.status}</dd><dt>Criado por</dt><dd>{selected.createdBy}</dd></dl><div className="form-actions">{(currentUser.role==="admin"||selected.assignedId===session?.user.id)&&<button onClick={()=>{setReminder(selected.offsets===null?"default":selected.offsets.length?selected.offsets.join(","):"none");setEditing(selected);setShowForm(true);setSelected(null)}}>Editar</button>}{currentUser.role==="admin"&&<button className="danger" onClick={removeActivity}>Apagar</button>}</div></article></div>}
   </>;
@@ -865,7 +916,14 @@ function Tasks({
   const visible = tasks.filter(t => (tab === "all" || (tab === "done" ? completed.includes(t.id) : !completed.includes(t.id))) && (!taskParams.get("task")||t.id===taskParams.get("task")) && (!taskParams.get("date")||taskDay(t)===taskParams.get("date")) && (requestedStatus!=="overdue"||(!completed.includes(t.id)&&Boolean(t.dueAt)&&(taskDay(t)<today||(t.dueAt.includes("T")&&Date.parse(t.dueAt)<Date.now()))))).sort((a,b)=>{const aDone=completed.includes(a.id),bDone=completed.includes(b.id);if(aDone!==bDone)return aDone?1:-1;return (a.dueAt||"9999").localeCompare(b.dueAt||"9999")});
   const [dueDate,setDueDate]=useState(localDate(Date.now(),preferences.timezone));const [dueTime,setDueTime]=useState("");
   const createTask = async (event: React.FormEvent) => { event.preventDefault(); const client = clients.find(c => c.code === clientCode); if (!title || !client?.id||!session) return;let startAt:string|null=null;let offsets:number[]|null=null;try{startAt=dueTime?scheduleInstant(dueDate,dueTime,preferences.timezone):null;offsets=reminderOffsets(reminder);}catch{setTaskNotice("Verifique o lembrete e a hora. Esta hora pode ser ambígua devido à mudança de horário.");return;}const {data,error}=await supabase.from("activities").insert({client_id:client.id,kind:"task",interaction_type:"Tarefa",title,summary:title,actor_id:session.user.id,assigned_to:session.user.id,start_at:startAt,occurred_at:startAt??new Date().toISOString(),has_time:!!dueTime,due_date:dueDate,schedule_timezone:preferences.timezone,reminder_offsets:offsets,status:"scheduled",source_module:"tasks"}).select("id").single();if(error||!data){setTaskNotice(error?.message??"Não foi possível guardar.");return;} recordsChanged();onCreate({ id: data.id, title, client: client.name, clientCode: client.code, assignedUserId: currentUser.id, time: startAt?`${localDate(startAt,preferences.timezone)} · ${localTime(startAt,preferences.timezone)}`:`${dueDate} · Sem hora`, dueAt:startAt??dueDate, priority: "Média", source:"activities", origin:"Tarefa manual" }); setTitle(""); setClientCode(""); setShowForm(false); setTab("todo"); };
-  const toggleTask=async(task:TaskItem)=>{if(!session)return;const isDone=completed.includes(task.id);const now=new Date().toISOString();const table=task.source;const payload=table==="activities"?{status:isDone?"scheduled":"completed",completed_at:isDone?null:now,completed_by:isDone?null:session.user.id,updated_at:now}:{status:isDone?"open":"completed",completed_at:isDone?null:now,updated_at:now};const {error}=await supabase.from(table).update(payload).eq("id",task.id);if(error){setTaskNotice(error.message);return;}recordsChanged();setCompleted(isDone?completed.filter(id=>id!==task.id):[...completed,task.id]);};
+  const toggleTask=async(task:TaskItem,silent=false)=>{if(!session)return;const isDone=completed.includes(task.id);const now=new Date().toISOString();const table=task.source;const payload=table==="activities"?{status:isDone?"scheduled":"completed",completed_at:isDone?null:now,completed_by:isDone?null:session.user.id,updated_at:now}:{status:isDone?"open":"completed",completed_at:isDone?null:now,updated_at:now};const {error}=await supabase.from(table).update(payload).eq("id",task.id);if(error){toast(error.message,{tone:"error"});return;}recordsChanged();const next=isDone?completed.filter(id=>id!==task.id):[...completed,task.id];setCompleted(next);completedRef.current=next;if(!silent)toast(isDone?"Tarefa reaberta.":`Concluída: ${task.title}`,{action:{label:"Anular",run:()=>toggleTask({...task},true)}});};
+  const completedRef=useRef(completed);completedRef.current=completed;
+  // Reagendar num clique: hoje, amanhã ou daqui a uma semana, mantendo a hora se houver.
+  const reschedule=async(task:TaskItem,days:number)=>{if(!session)return;const newDate=localDate(Date.now()+days*86400000,preferences.timezone);const hasTime=task.dueAt.includes("T");let instant:string|null=null;try{instant=hasTime?scheduleInstant(newDate,localTime(task.dueAt,preferences.timezone),preferences.timezone):null;}catch{instant=null;}const payload=task.source==="activities"?{due_date:newDate,...(instant?{start_at:instant}:{}),updated_at:new Date().toISOString()}:{due_date:newDate,due_at:instant??`${newDate}T12:00:00Z`,updated_at:new Date().toISOString()};const {error}=await supabase.from(task.source).update(payload).eq("id",task.id);if(error){toast(error.message,{tone:"error"});return;}recordsChanged();toast(`Reagendada para ${friendlyDay(newDate).toLowerCase()==="amanhã"?"amanhã":friendlyDay(newDate)}.`);};
+  const dueLabel=(t:TaskItem)=>{const day=taskDay(t);if(!day)return "Sem prazo";const time=t.dueAt.includes("T")?` · ${localTime(t.dueAt,preferences.timezone)}`:"";return friendlyDay(day)+time;};
+  const groupOf=(t:TaskItem)=>{if(completed.includes(t.id))return "Concluídas";const day=taskDay(t);if(!day)return "Sem prazo";if(day<today||(t.dueAt.includes("T")&&Date.parse(t.dueAt)<Date.now()))return "Em atraso";if(day===today)return "Hoje";if(daysFromToday(day)===1)return "Amanhã";if((daysFromToday(day)??99)<=7)return "Próximos 7 dias";return "Mais tarde";};
+  const groupOrder=["Em atraso","Hoje","Amanhã","Próximos 7 dias","Mais tarde","Sem prazo","Concluídas"];
+  const grouped=groupOrder.map(name=>({name,items:visible.filter(t=>groupOf(t)===name)})).filter(g=>g.items.length);
   const periodLabel=(task:TaskItem)=>{if(completed.includes(task.id))return "Concluída";const day=taskDay(task);if(!day)return "Sem prazo";if(day<today||(task.dueAt.includes("T")&&Date.parse(task.dueAt)<Date.now()))return "Em atraso";if(day===today)return "Hoje";return "Próxima";};
   return <>
     <PageTitle eyebrow="FOLLOW-UP" title="Tarefas" action={<button className="primary" onClick={() => setShowForm(!showForm)}>＋ Nova tarefa</button>}/>
@@ -876,12 +934,14 @@ function Tasks({
       <button className={tab === "all" ? "active" : ""} onClick={()=>setTab("all")}>Todas</button>
     </div>
     <section className="card task-page">
-      {visible.map(t=><div className={`task-row ${completed.includes(t.id)?"done":""}`} key={t.id}>
-        <button aria-label={completed.includes(t.id)?"Reabrir tarefa":"Concluir tarefa"} onClick={()=>toggleTask(t)}>✓</button>
-        <div><strong>{t.title}</strong><button className="task-client-link" onClick={()=>{const client=clients.find(c=>c.code===t.clientCode);if(client)onOpenClient(client)}}>{t.client}</button><small>{t.origin} · {periodLabel(t)}</small></div>
-        <time>{t.time}</time>
+      {grouped.map(g=><div key={g.name} className={`task-group ${g.name==="Em atraso"?"late":""}`}><h3>{g.name} <span>{g.items.length}</span></h3>
+      {g.items.map(t=>{const done=completed.includes(t.id);return <div className={`task-row ${done?"done":""}`} key={t.id}>
+        <button className="task-check" aria-label={done?"Reabrir tarefa":"Concluir tarefa"} title={done?"Reabrir":"Concluir"} onClick={()=>toggleTask(t)}>✓</button>
+        <div><strong>{t.title}</strong><button className="task-client-link" onClick={()=>{const client=clients.find(c=>c.code===t.clientCode);if(client)onOpenClient(client)}}>{t.client}</button><small>{t.origin}</small></div>
+        <time className={g.name==="Em atraso"?"late":""}>{dueLabel(t)}</time>
+        {!done&&<span className="task-snooze" role="group" aria-label="Reagendar">{g.name!=="Hoje"&&<button onClick={()=>void reschedule(t,0)}>Hoje</button>}{g.name!=="Amanhã"&&<button onClick={()=>void reschedule(t,1)}>Amanhã</button>}<button onClick={()=>void reschedule(t,7)}>+1 semana</button></span>}
         <em className={t.priority.toLowerCase()}>{t.priority}</em>
-      </div>)}
+      </div>})}</div>)}
       {visible.length === 0 && <div className="empty" style={{ padding: "40px" }}>Não existem tarefas nesta lista.</div>}
     </section>
   </>;
