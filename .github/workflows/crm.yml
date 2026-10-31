@@ -2,7 +2,7 @@
 # Segredos no GitHub (Settings › Secrets and variables › Actions):
 #   CLOUDFLARE_API_TOKEN (já existe; precisa também da permissão "Workers Scripts: Edit")
 #   CRM_SUPABASE_URL, CRM_SUPABASE_ANON_KEY, CRM_SUPABASE_SERVICE_ROLE_KEY
-#   CRM_MICROSOFT_TENANT_ID, CRM_MICROSOFT_CLIENT_ID, CRM_MICROSOFT_CLIENT_SECRET
+#   CRM_MICROSOFT_CLIENT_SECRET (os IDs da app Entra "Representações Freixo CRM" já estão abaixo; não são secretos)
 #   opcionais: CRM_GOOGLE_MAPS_BROWSER_KEY, CRM_GOOGLE_MAPS_SERVER_KEY, CRM_ANTHROPIC_API_KEY
 # Sem os segredos do Supabase o workflow só compila e testa; não publica.
 name: CRM
@@ -50,8 +50,8 @@ jobs:
           SUPABASE_URL: ${{ secrets.CRM_SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.CRM_SUPABASE_ANON_KEY }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.CRM_SUPABASE_SERVICE_ROLE_KEY }}
-          MICROSOFT_TENANT_ID: ${{ secrets.CRM_MICROSOFT_TENANT_ID }}
-          MICROSOFT_CLIENT_ID: ${{ secrets.CRM_MICROSOFT_CLIENT_ID }}
+          MICROSOFT_TENANT_ID: ${{ secrets.CRM_MICROSOFT_TENANT_ID || '99b3454a-24f5-495b-b6fb-d71ff37223c2' }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.CRM_MICROSOFT_CLIENT_ID || '602d5276-4a67-46e0-a69c-8c8d488098e7' }}
           MICROSOFT_CLIENT_SECRET: ${{ secrets.CRM_MICROSOFT_CLIENT_SECRET }}
           GOOGLE_MAPS_SERVER_KEY: ${{ secrets.CRM_GOOGLE_MAPS_SERVER_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.CRM_ANTHROPIC_API_KEY }}
