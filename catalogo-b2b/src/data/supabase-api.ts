@@ -1,5 +1,5 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { AccessRequest, Campaign, CampaignImportResult, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, ProductEdit, Quote, Session, StaffUser } from "../types";
+import type { AccessRequest, Campaign, CrmClientHit, CampaignImportResult, Catalog, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, ProductEdit, Quote, Session, StaffUser } from "../types";
 import { normRef, normSearch } from "../pricing";
 import { slugify } from "../slug";
 import type { Api } from "./api";
@@ -125,6 +125,7 @@ const mapProduct = (r: Row): Product => ({
 });
 
 const IMAGES_BUCKET = "b2b-imagens";
+const CRM_URL = ((import.meta.env.VITE_CRM_URL as string | undefined) || "https://crm.representacoesfreixo.com").replace(/\/$/, "");
 
 /** Divide uma lista em blocos (para não fazer URLs gigantes). */
 const chunks = <T,>(list: T[], size = 150) => Array.from({ length: Math.ceil(list.length / size) }, (_, i) => list.slice(i * size, (i + 1) * size));
@@ -132,6 +133,26 @@ const quoted = (values: string[]) => values.map((v) => `"${v.replace(/["\\]/g, "
 
 export function createSupabaseApi(url: string, anonKey: string): Api {
   const sb: SupabaseClient = createClient(url, anonKey, { auth: { persistSession: true } });
+
+  /** Chamada ao CRM (clientes) com a sessão da loja; o CRM confirma que é da equipa Freixo. */
+  async function crmCall(path: string, body?: unknown) {
+    const { data } = await sb.auth.getSession();
+    const token = data.session?.access_token;
+    if (!token) throw new Error("Inicie sessão.");
+    let res: Response;
+    try {
+      res = await fetch(CRM_URL + path, {
+        method: body ? "POST" : "GET",
+        headers: { Authorization: `Bearer ${token}`, ...(body ? { "Content-Type": "application/json" } : {}) },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch {
+      throw new Error("Não consegui contactar o CRM.");
+    }
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json.error ?? `CRM respondeu ${res.status}`);
+    return json;
+  }
 
   async function session(): Promise<Session | null> {
     const { data } = await sb.auth.getSession();
@@ -253,14 +274,16 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
         weldPrices: Object.fromEntries(rows.filter((x) => x.weld_price != null).map((x) => [x.product_id, num(x.weld_price)])),
       };
     },
-    async submitOrder(items, customerRef, notes) {
-      const { data, error } = await sb.rpc("b2b_submit_order", { p_items: items, p_customer_ref: customerRef, p_notes: notes });
+    async submitOrder(items, customerRef, notes, forClient) {
+      const { data, error } = forClient
+        ? await sb.rpc("b2b_submit_order_for", { p_client: forClient.clientId, p_items: items, p_customer_ref: customerRef, p_notes: notes })
+        : await sb.rpc("b2b_submit_order", { p_items: items, p_customer_ref: customerRef, p_notes: notes });
       fail(error);
       const groupId = (data as Row).groupId;
       const { data: orders, error: e2 } = await sb.from("b2b_orders").select(ORDER_SELECT).eq("group_id", groupId).order("number");
       fail(e2);
       // Avisa a Freixo por email (falha no email não anula a encomenda).
-      sb.functions.invoke("notify-order", { body: { groupId } }).catch(() => undefined);
+      sb.functions.invoke("notify-order", { body: { groupId, notifyClient: forClient?.notifyClient ?? false } }).catch(() => undefined);
       return { groupNumber: (data as Row).groupNumber, orders: (orders ?? []).map(mapOrder) };
     },
     async listMyOrders() {
@@ -414,6 +437,14 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const { error } = await sb.from("b2b_families").update({ name: name.trim() }).eq("id", familyId);
       if (error?.code === "23505") throw new Error(`Já existe uma família "${name.trim()}" nesta marca.`);
       fail(error);
+    },
+    async searchCrmClients(q) {
+      const res = await crmCall(`/api/b2b/shop-clients?q=${encodeURIComponent(q)}`);
+      return (res.clients ?? []) as CrmClientHit[];
+    },
+    async clientFromCrm(crmId) {
+      const res = await crmCall("/api/b2b/shop-clients", { crmId });
+      return mapClient(res.client as Row);
     },
     async listAccessRequests() {
       const { data, error } = await sb.from("b2b_access_requests").select("*").order("created_at", { ascending: false });

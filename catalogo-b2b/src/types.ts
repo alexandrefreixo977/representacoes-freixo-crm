@@ -177,6 +177,19 @@ export type Order = {
   lines: OrderLine[];
 };
 
+/** Cliente da base de dados do CRM (pesquisa da equipa nas propostas e encomendas). */
+export type CrmClientHit = {
+  crmId: string;
+  name: string;
+  legalName?: string | null;
+  nif?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  address?: string | null;
+  /** Cliente da loja já ligado a este cliente do CRM (ou com o mesmo NIF). */
+  shopClientId?: string | null;
+};
+
 export type AccessRequest = {
   id: string;
   company: string;

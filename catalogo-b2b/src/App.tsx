@@ -11,6 +11,7 @@ import { CatalogPage } from "./pages/Catalog";
 import { OrdersPage } from "./pages/Orders";
 import { QuickOrderPage } from "./pages/QuickOrder";
 import { QuotesPage } from "./pages/Quotes";
+import { OrderForClientPage } from "./pages/OrderForClient";
 import { AppProvider, go, useApp } from "./state";
 
 export function App() {
@@ -42,6 +43,7 @@ function Shell() {
         {page === "pedir-acesso" && <AccessRequestPage />}
         {page === "gestao" && <AdminPage />}
         {page === "propostas" && <QuotesPage />}
+        {page === "encomendar" && <OrderForClientPage />}
         {page === "definir-senha" && <SetPasswordPage />}
       </main>
       <footer className="footer">
@@ -82,11 +84,12 @@ function Header() {
         <nav className="header-actions">
           {(!session || session.role === "client") && <a href="#/rapida" className="hide-sm"><Icon name="bolt" size={18} /> Encomenda rápida</a>}
           {session && session.role !== "client" && <a href="#/propostas" className="hide-sm"><Icon name="doc" size={18} /> Propostas</a>}
+          {session && session.role !== "client" && <a href="#/encomendar" className="hide-sm"><Icon name="cart" size={18} /> Encomendar</a>}
           {session?.role === "admin" && <a href="#/gestao" className="hide-sm"><Icon name="gear" size={18} /> Gestão</a>}
           <a href="#/entrar" className="hide-sm" title={session?.email}>
             <Icon name="user" size={18} /> {session ? session.client?.name.split(/[ ,]/)[0] ?? "Conta" : "Entrar"}
           </a>
-          <a href="#/carrinho" className="cart-btn" aria-label={`Carrinho, ${cartCount} artigos`}>
+          <a href={session && session.role !== "client" ? "#/encomendar" : "#/carrinho"} className="cart-btn" aria-label={`Carrinho, ${cartCount} artigos`}>
             <Icon name="cart" size={20} />
             {cartCount > 0 && <span className="badge">{cartCount}</span>}
           </a>
@@ -103,7 +106,7 @@ function BottomNav() {
   const items: [string, string, string][] = [
     ["", "home", "Catálogo"],
     staff ? ["propostas", "doc", "Propostas"] : ["rapida", "bolt", "Rápida"],
-    ["carrinho", "cart", "Carrinho"],
+    staff ? ["encomendar", "cart", "Encomendar"] : ["carrinho", "cart", "Carrinho"],
     ["encomendas", "list", "Encomendas"],
     [session?.role === "admin" ? "gestao" : "entrar", session?.role === "admin" ? "gear" : "user", session?.role === "admin" ? "Gestão" : "Conta"],
   ];
@@ -113,7 +116,7 @@ function BottomNav() {
         <a key={page} href={`#/${page}`} className={route.page === page ? "active" : ""}>
           <Icon name={icon} size={20} />
           <span>{label}</span>
-          {page === "carrinho" && cartCount > 0 && <i className="badge">{cartCount}</i>}
+          {(page === "carrinho" || page === "encomendar") && cartCount > 0 && <i className="badge">{cartCount}</i>}
         </a>
       ))}
     </nav>
