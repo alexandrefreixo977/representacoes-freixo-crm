@@ -31,7 +31,7 @@ const mapRule = (r: Row): DiscountRule => ({
 const ORDER_SELECT =
   "id, number, client_id, manufacturer_id, status, subtotal, internal_note, created_at, " +
   "b2b_order_groups(number, customer_ref, notes), b2b_clients(name), " +
-  "b2b_order_lines(product_id, variant, reference, designation, sales_unit, qty, list_price, discounts, net_price, line_total)";
+  "b2b_order_lines(id, product_id, variant, reference, designation, sales_unit, qty, list_price, discounts, net_price, line_total, price_edited)";
 
 const mapOrder = (o: Row): Order => ({
   id: o.id,
@@ -48,6 +48,7 @@ const mapOrder = (o: Row): Order => ({
   createdAt: o.created_at,
   lines: (o.b2b_order_lines ?? []).map(
     (l: Row): OrderLine => ({
+      id: l.id,
       productId: l.product_id,
       variant: l.variant,
       reference: l.reference,
@@ -58,8 +59,9 @@ const mapOrder = (o: Row): Order => ({
       discounts: nums(l.discounts),
       netPrice: num(l.net_price),
       lineTotal: num(l.line_total),
+      priceEdited: !!l.price_edited,
     })
-  ),
+  ).sort((a: OrderLine, b: OrderLine) => a.reference.localeCompare(b.reference) || a.designation.localeCompare(b.designation)),
 });
 
 const mapQuote = (q: Row): Quote => ({
@@ -278,6 +280,14 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       if (internalNote !== undefined) patch.internal_note = internalNote;
       const { error } = await sb.from("b2b_orders").update(patch).eq("id", orderId);
       fail(error);
+    },
+    async setOrderLinePrice(lineId, discounts, netPrice) {
+      const { error } = await sb.rpc("b2b_admin_set_line_price", { p_line: lineId, p_discounts: discounts, p_net: netPrice });
+      fail(error);
+    },
+    async notifyOrderValidated(orderId) {
+      const { data, error } = await sb.functions.invoke("notify-order", { body: { orderId, event: "validated" } });
+      return !error && (data as Row)?.ok === true;
     },
     async listManufacturers() {
       const { data, error } = await sb.from("b2b_manufacturers").select("*").order("sort");

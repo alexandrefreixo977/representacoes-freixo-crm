@@ -1,0 +1,216 @@
+/* Representações Freixo — calm, logo-led application palette */
+:root {
+  --navy: #24272d;
+  --ink: #2d3035;
+  --muted: #70737a;
+  --line: #e3dfd4;
+  --bg: #f6f4ee;
+  --blue: #ad7c18;
+  --green: #66846e;
+  --amber: #c9952c;
+  --red: #bd625f;
+  --rf-gold: #c99b2d;
+  --rf-gold-dark: #92660f;
+  --rf-gold-soft: #f6edda;
+  --rf-charcoal: #24272d;
+  --rf-surface: #fffefb;
+  --rf-surface-soft: #f0ede5;
+}
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.sidebar {
+  background: linear-gradient(180deg, #1f2227 0%, #2d3036 62%, #24272d 100%);
+  border-right: 1px solid #c99b2d33;
+  box-shadow: 8px 0 28px #181a1e14;
+}
+
+.brand {
+  border-bottom-color: #d7ad4d33 !important;
+}
+
+.brand-mark {
+  color: #f4cf6d;
+  border-color: #d7ad4d70;
+  background: linear-gradient(145deg, #ffffff0f, #c99b2d18);
+}
+
+.brand span,
+.profile span {
+  color: #c8c4b9 !important;
+}
+
+.sidebar button {
+  color: #dedbd2;
+}
+
+.sidebar button:hover:not(.active) {
+  background: #ffffff0d;
+  color: #fff;
+}
+
+.sidebar button.active {
+  background: linear-gradient(135deg, #fffdf7, #f5eddb);
+  color: #2b2e33;
+  box-shadow: inset 3px 0 0 var(--rf-gold), 0 6px 18px #00000024;
+}
+
+.sidebar button b {
+  background: var(--rf-gold);
+  color: #24272d;
+}
+
+.workspace > header {
+  background: #fffefbea;
+  border-bottom-color: var(--line);
+  box-shadow: 0 5px 18px #38312608;
+}
+
+.search,
+.period,
+.kanban > section {
+  background: var(--rf-surface-soft);
+}
+
+.search:focus-within {
+  border-color: #c99b2d99;
+  box-shadow: 0 0 0 3px #c99b2d1c;
+}
+
+.primary,
+.manufacturer-title-actions .primary,
+.cover-panel button {
+  background: linear-gradient(135deg, #986b12, #c99b2d);
+  color: #fff;
+  border-color: #986b12;
+  box-shadow: 0 7px 18px #9b6d1830;
+}
+
+.primary:hover,
+.manufacturer-title-actions .primary:hover,
+.cover-panel button:hover {
+  background: linear-gradient(135deg, #8a5f0e, #b98921);
+  filter: none;
+}
+
+.card,
+.table-card,
+.stat,
+.toolbar button,
+.search.inner,
+.kanban article,
+.form-actions > button:not(.primary),
+.integration button,
+.today-list button,
+.dashboard-line,
+.attention-list button,
+.manufacturer-summary,
+.quick-actions button,
+.useful-empty button,
+.permissions-grid article,
+.global-results {
+  background: var(--rf-surface);
+  border-color: var(--line);
+  box-shadow: 0 7px 24px #3a33230a;
+}
+
+.stat::before,
+.bars i,
+.real-chart .bars button,
+.visit > i,
+.progress i {
+  background: var(--rf-gold);
+}
+
+.bars i + i,
+.real-chart .bars button + button {
+  background: var(--green);
+}
+
+.page-title span,
+.card-head button,
+.tabs button.active,
+.task-row .task-client-link,
+.manufacturer-summary strong,
+.quick-actions button,
+.useful-empty button,
+.today-list b {
+  color: var(--rf-gold-dark);
+}
+
+.tabs button.active {
+  border-bottom-color: var(--rf-gold);
+}
+
+th {
+  background: #f0ede5;
+  color: #65625c;
+}
+
+tr:hover td {
+  background: #faf7ef;
+}
+
+.pipeline-total,
+.permissions-card {
+  background: linear-gradient(135deg, #f7f1e3, #f3f0e9);
+}
+
+.event {
+  border-left-color: var(--rf-gold);
+  background: #f9f1df;
+}
+
+.period button.selected {
+  background: var(--rf-surface);
+  color: var(--ink);
+  box-shadow: 0 2px 8px #42391f12;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.dashboard-controls select,
+input,
+select,
+textarea {
+  border-color: #d8d2c5;
+  background-color: #fffefb;
+  color: var(--ink);
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+button:focus-visible {
+  outline: 2px solid #c99b2d8c;
+  outline-offset: 2px;
+}
+
+.global-results button:hover,
+.quick-menu button:hover {
+  background: #f7f0e1;
+}
+
+.dashboard-loading {
+  background: var(--rf-charcoal);
+  border: 1px solid #c99b2d66;
+}
+
+.cover-panel {
+  background: #17191dd9;
+  border-color: #d7ad4d42;
+}
+
+.cover-panel > span {
+  color: #efc85d;
+}
+
+@media (max-width: 650px) {
+  .workspace > header {
+    background: #fffefbf2;
+  }
+}

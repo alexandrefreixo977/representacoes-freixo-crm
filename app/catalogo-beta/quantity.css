@@ -16,6 +16,11 @@
   text-align: center;
 }
 
+.pack-note {
+  color: #6e7680;
+  font-size: 12px;
+}
+
 .product-card .product-image {
   height: 260px;
 }
@@ -124,3 +129,7 @@
   .product-lightbox img { height: 72vh; }
 }
 
+.product-card .product-image img { background: white; padding: 5px; }
+.product-lightbox section { overflow-y: auto; }
+.product-lightbox small { text-align: center; color: #62666c; }
+.product-lightbox a { color: #805e22; font-weight: 600; }

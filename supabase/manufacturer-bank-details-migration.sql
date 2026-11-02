@@ -7,4 +7,3 @@ alter table public.manufacturer_commercial_terms add column if not exists swift_
 alter table public.manufacturer_commercial_terms add column if not exists bank_instructions text;
 
 commit;
-

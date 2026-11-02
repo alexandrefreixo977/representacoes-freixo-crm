@@ -1,0 +1,7 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+import { liveMail, buildMailIndex } from "../app/mail-matching.ts";
+const msg={id:"1",from:{emailAddress:{address:" PERSON@EXAMPLE.COM "}},toRecipients:[{emailAddress:{address:"factory@example.com"}},{emailAddress:{address:"person@example.com"}}],isRead:false};
+test("matching normalizado atribui nome do cliente ao contacto",()=>{const m=liveMail(msg,"in",buildMailIndex([{email:"person@example.com",client_id:"c",contact_id:"p",name:"Cliente"}]));assert.deepEqual(m.entidade,{tipo:"cliente",id:"c",nome:"Cliente"});assert.equal(m.lead,false);assert.equal(m.isRead,false);});
+test("enviados correspondem só ao primeiro destinatário e fabricantes",()=>{const index=buildMailIndex([{email:"factory@example.com",manufacturer_id:"f",name:"Fábrica"},{email:"person@example.com",client_id:"c",name:"Cliente"}]);assert.equal(liveMail(msg,"out",index).entidade.tipo,"fabricante");assert.equal(liveMail({...msg,toRecipients:msg.toRecipients.slice(0,1)},"out",buildMailIndex([{email:"person@example.com",client_id:"c"}])).entidade.id,null);});
+test("desconhecidos só são lead na entrada; endereço partilhado nunca atribui ficha arbitrária",()=>{assert.equal(liveMail(msg,"in",new Map()).lead,true);assert.equal(liveMail(msg,"out",new Map()).lead,false);const m=liveMail(msg,"in",buildMailIndex([{email:"person@example.com",client_id:"a"},{email:"person@example.com",client_id:"b"}]));assert.equal(m.lead,false);assert.equal(m.entidade.id,null);});

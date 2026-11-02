@@ -42,3 +42,9 @@ yarn-error.log*
 /.deps/
 /.pnpm-store/
 *.tsbuildinfo
+/tmp/
+/*-dist.tar.gz
+/.sites-runtime/
+
+/output/
+/supabase/.temp/

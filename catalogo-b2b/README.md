@@ -48,7 +48,7 @@ Tudo é publicado automaticamente pelo GitHub Actions (`.github/workflows/catalo
 no ramo `main`: testes → base de dados (migrações) → funções de email → site. As contas ficam em nome da
 Representações Freixo; o Claude gere o código e as publicações através do repositório.
 
-Endereço previsto: **https://encomendas.representacoesfreixo.com** (subdomínio; o site institucional em www fica como está).
+Endereço: **https://b2b.representacoesfreixo.com** (o antigo encomendas.representacoesfreixo.com continua a funcionar) (subdomínio; o site institucional em www fica como está).
 
 ### Configuração inicial (uma vez)
 1. **Supabase** (base de dados e logins): criar conta e um projeto novo, região Europa (ex.: Frankfurt).
@@ -59,7 +59,7 @@ Endereço previsto: **https://encomendas.representacoesfreixo.com** (subdomínio
    que também verifica as chaves em cada PR (resultado no resumo da execução "Catálogo B2B").
    Para o email (passo posterior): segredos `MS_TENANT_ID`, `MS_CLIENT_ID`, `MS_CLIENT_SECRET` (aplicação Microsoft 365
    com permissão `Mail.Send`) e variáveis `MAIL_FROM`, `NOTIFY_TO`.
-4. **Domínio**: no Cloudflare Pages → projeto `freixo-b2b` → Custom domains, juntar `encomendas.representacoesfreixo.com`
+4. **Domínio**: no Cloudflare Pages → projeto `freixo-b2b` → Custom domains, juntar `b2b.representacoesfreixo.com`
    e criar o registo CNAME indicado no fornecedor do domínio.
 5. **Supabase → Authentication → URL Configuration**: Site URL = endereço da loja.
 6. **Primeiro administrador**: criar o utilizador em Authentication → Users e correr no SQL Editor o `insert` que está no fim

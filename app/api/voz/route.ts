@@ -103,4 +103,3 @@ export async function POST(request: Request): Promise<Response> {
     return json(500, { error: error instanceof Error ? error.message : "Nao foi possivel interpretar o comando." });
   }
 }
-

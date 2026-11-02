@@ -1,0 +1,11 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {manufacturerTerms} from '../app/catalog-manufacturer-terms.ts';
+const product={id:'p',manufacturer_id:'m',family_id:'f',source_metadata:{manufacturer_discount_family_code:'BLUE-ROSA'}};
+const group={manufacturer_id:'m',family_code:'BLUE-ROSA',discount:55,extra_discount:null,cumulative:false,special_price:null,minimum_quantity:null,valid_from:null,valid_until:null};
+const rule=(fields)=>({id:'r',manufacturer_id:'m',discount_percentages:[10],priority:100,...fields});
+test('manufacturer colour is consulted dynamically',()=>{assert.deepEqual(manufacturerTerms(product,'c',undefined,1,[],[group]).discounts,[55]);assert.deepEqual(manufacturerTerms(product,'c',undefined,1,[],[{...group,discount:60}]).discounts,[60]);});
+test('client product overrides colour, colour overrides client manufacturer',()=>{assert.deepEqual(manufacturerTerms(product,'c',undefined,1,[rule({client_id:'c'})],[group]).discounts,[55]);assert.deepEqual(manufacturerTerms(product,'c',undefined,1,[rule({client_id:'c',product_id:'p'})],[group]).discounts,[10]);});
+test('specific family overrides colour and special prices survive',()=>{const r=manufacturerTerms(product,'c',undefined,1,[rule({family_id:'f',special_price:12})],[group]);assert.equal(r.specialPrice,12);assert.deepEqual(r.discounts,[10]);});
+test('expiry, other manufacturers and minimum quantities do not leak',()=>{assert.deepEqual(manufacturerTerms(product,'c',undefined,1,[],[{...group,minimum_quantity:10}]).discounts,[]);assert.deepEqual(manufacturerTerms(product,'c',undefined,1,[],[{...group,manufacturer_id:'other'}]).discounts,[]);assert.deepEqual(manufacturerTerms(product,'c',undefined,1,[],[{...group,valid_until:'2020-01-01'}],'2026-10-12').discounts,[]);});
+test('successive discounts are kept separate',()=>assert.deepEqual(manufacturerTerms(product,'c',undefined,1,[],[{...group,cumulative:true,extra_discount:5}]).discounts,[55,5]));

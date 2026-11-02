@@ -1,4 +1,4 @@
-import { needsVariant, normRef, normSearch, splitByManufacturer, variantLabel } from "../pricing";
+import { applyDiscounts, cleanDiscounts, needsVariant, normRef, normSearch, splitByManufacturer, variantLabel } from "../pricing";
 import type { AccessRequest, Campaign, Catalog, Client, DiscountRule, Manufacturer, Order, Product, Quote, Session } from "../types";
 import { slugify } from "../slug";
 import type { Api } from "./api";
@@ -194,6 +194,7 @@ export const demoApi: Api = {
       subtotal: g.subtotal,
       createdAt,
       lines: g.items.map(({ product, qty, variant, price, total }) => ({
+        id: uid(),
         productId: product.id,
         variant: variant ?? null,
         reference: product.reference,
@@ -227,6 +228,27 @@ export const demoApi: Api = {
       ...db,
       orders: db.orders.map((o) => (o.id === orderId ? { ...o, status, internalNote: internalNote ?? o.internalNote } : o)),
     });
+  },
+  async setOrderLinePrice(lineId, discounts, netPrice) {
+    const db = load();
+    requireSession(db, "admin");
+    save({
+      ...db,
+      orders: db.orders.map((o) => {
+        if (!o.lines.some((l) => l.id === lineId)) return o;
+        if (o.status !== "pending" && o.status !== "validated") throw new Error("Só é possível alterar preços antes de enviar a encomenda ao fabricante");
+        const lines = o.lines.map((l) => {
+          if (l.id !== lineId) return l;
+          const disc = netPrice != null ? [] : cleanDiscounts(discounts);
+          const net = netPrice != null ? Math.round(netPrice * 10000) / 10000 : applyDiscounts(l.listPrice, disc);
+          return { ...l, discounts: disc, netPrice: net, lineTotal: Math.round(net * l.qty * 100) / 100, priceEdited: true };
+        });
+        return { ...o, lines, subtotal: Math.round(lines.reduce((t, l) => t + l.lineTotal, 0) * 100) / 100 };
+      }),
+    });
+  },
+  async notifyOrderValidated() {
+    return true;
   },
   async listManufacturers() {
     const db = load();

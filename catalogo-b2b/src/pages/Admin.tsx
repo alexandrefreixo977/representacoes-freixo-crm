@@ -2,9 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { StatusBadge, formatDate, statusLabel } from "../components";
 import { api } from "../data";
 import { detectColumns, mapRows, readSpreadsheet, type ColumnMap } from "../importer";
-import { formatDiscounts, formatEur, normRef, parseDiscounts } from "../pricing";
+import { clientTerms, effectiveDiscount, formatDiscounts, formatEur, normRef, parseDiscounts, ruleText } from "../pricing";
 import { go, useApp } from "../state";
-import type { AccessRequest, Campaign, Client, DiscountRule, Manufacturer, Order, OrderStatus, PriceImportRow, StaffUser } from "../types";
+import type { AccessRequest, Campaign, Client, DiscountRule, Manufacturer, Order, OrderLine, OrderStatus, PriceImportRow, StaffUser } from "../types";
 import { OrderLinesTable } from "./Orders";
 import { CampaignImport } from "./CampaignImport";
 import { ProductsAdmin } from "./ProductsAdmin";
@@ -56,7 +56,7 @@ export function AdminPage() {
 
 const NEXT: Partial<Record<OrderStatus, OrderStatus>> = { pending: "validated", validated: "sent", sent: "confirmed", confirmed: "delivered" };
 const NEXT_LABEL: Partial<Record<OrderStatus, string>> = {
-  pending: "Validar",
+  pending: "Validar e avisar o cliente",
   validated: "Marcar como enviada ao fabricante",
   sent: "Fabricante confirmou",
   confirmed: "Marcar como entregue",
@@ -68,9 +68,12 @@ function OrdersAdmin() {
   const [filter, setFilter] = useState<string>("pending");
   const [open, setOpen] = useState<string | null>(null);
   const [clients, setClients] = useState<Client[]>([]);
+  const [rules, setRules] = useState<DiscountRule[]>([]);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const load = useCallback(() => {
     api.listOrders().then(setOrders);
     api.listClients().then(setClients);
+    api.listRules().then(setRules).catch(() => setRules([]));
   }, []);
   useEffect(load, [load]);
   if (!orders || !catalog) return <div className="empty">A carregar…</div>;
@@ -80,8 +83,22 @@ function OrdersAdmin() {
   const list = filter === "all" ? orders : orders.filter((o) => o.status === filter);
 
   async function move(o: Order, status: OrderStatus, note?: string) {
-    await api.setOrderStatus(o.id, status, note);
+    setMsg(null);
+    try {
+      await api.setOrderStatus(o.id, status, note);
+    } catch (e) {
+      setMsg({ ok: false, text: (e as Error).message });
+      return;
+    }
     load();
+    if (status === "validated" && o.status === "pending") {
+      const sent = await api.notifyOrderValidated(o.id).catch(() => false);
+      setMsg(
+        sent
+          ? { ok: true, text: `Encomenda ${o.number} validada. O cliente recebeu um email com o aviso.` }
+          : { ok: false, text: `Encomenda ${o.number} validada, mas o email ao cliente não seguiu. Avise-o por outra via.` }
+      );
+    }
   }
 
   return (
@@ -93,6 +110,7 @@ function OrdersAdmin() {
           </button>
         ))}
       </div>
+      {msg && <p className={msg.ok ? "ok" : "error"}>{msg.text}</p>}
       {list.length === 0 && <p className="muted">Sem encomendas neste estado.</p>}
       <div className="order-list">
         {list.map((o) => {
@@ -110,7 +128,12 @@ function OrdersAdmin() {
               </button>
               {open === o.id && (
                 <div className="order-body">
-                  <OrderLinesTable order={o} />
+                  <ClientTermsLine terms={clientTerms(rules, o.clientId, o.manufacturerId)} manufacturer={m?.name ?? "este fabricante"} />
+                  {o.status === "pending" || o.status === "validated" ? (
+                    <EditableOrderLines order={o} onChanged={load} />
+                  ) : (
+                    <OrderLinesTable order={o} />
+                  )}
                   <NoteEditor order={o} onSave={(note) => move(o, o.status, note)} />
                   <div className="row wrap">
                     {NEXT[o.status] && (
@@ -131,6 +154,172 @@ function OrdersAdmin() {
         })}
       </div>
     </>
+  );
+}
+
+function ClientTermsLine({ terms, manufacturer }: { terms: ReturnType<typeof clientTerms>; manufacturer: string }) {
+  const text = terms.source === "client"
+    ? `Desconto do cliente em ${manufacturer}: ${ruleText(terms.rule)}`
+    : terms.source === "general"
+      ? `Cliente sem desconto próprio em ${manufacturer}; aplica-se a condição geral: ${ruleText(terms.rule)}`
+      : `Cliente sem desconto atribuído em ${manufacturer}.`;
+  return (
+    <p className="terms-line">
+      <strong>{text}</strong>
+      {terms.specific > 0 && <span> · mais {terms.specific} {terms.specific === 1 ? "condição especial" : "condições especiais"} por artigo ou família</span>}
+      <a href="#/gestao?t=clientes"> Alterar condições do cliente</a>
+    </p>
+  );
+}
+
+/** Desconto de uma linha como aparece na tabela. */
+function lineDiscountText(l: OrderLine) {
+  if (l.discounts.length) return formatDiscounts(l.discounts);
+  if (l.netPrice < l.listPrice) return `Preço líquido (−${formatPct(effectiveDiscount(l.listPrice, l.netPrice))})`;
+  return "—";
+}
+const formatPct = (n: number) => `${new Intl.NumberFormat("pt-PT", { maximumFractionDigits: 2 }).format(n)}%`;
+
+/** Linhas de uma encomenda por enviar: o preço de cada linha pode ser alterado (desconto ou preço líquido). */
+function EditableOrderLines({ order, onChanged }: { order: Order; onChanged: () => void }) {
+  const [editing, setEditing] = useState<string | null>(null);
+  const [bulk, setBulk] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const editable = order.lines.filter((l) => l.id);
+
+  async function save(lineId: string, discounts: number[], net: number | null) {
+    setBusy(true);
+    setError(null);
+    try {
+      await api.setOrderLinePrice(lineId, discounts, net);
+      setEditing(null);
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function applyAll() {
+    const discounts = parseDiscounts(bulk);
+    if (!discounts.length) return setError("Indique o desconto, ex.: 40 + 5");
+    setBusy(true);
+    setError(null);
+    try {
+      for (const l of editable) await api.setOrderLinePrice(l.id!, discounts, null);
+      setBulk("");
+      onChanged();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="table-wrap">
+      <table className="table">
+        <thead>
+          <tr>
+            <th>Referência</th>
+            <th>Designação</th>
+            <th className="num">Qtd.</th>
+            <th className="num">P. tabela</th>
+            <th>Desconto</th>
+            <th className="num">P. líquido</th>
+            <th className="num">Total</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          {order.lines.map((l, i) =>
+            editing && editing === l.id ? (
+              <LinePriceEditor key={l.id} line={l} busy={busy} onCancel={() => setEditing(null)} onSave={(d, n) => save(l.id!, d, n)} />
+            ) : (
+              <tr key={l.id ?? i}>
+                <td>{l.reference}</td>
+                <td>{l.designation}</td>
+                <td className="num">{l.qty} {l.salesUnit}</td>
+                <td className="num">{formatEur(l.listPrice)}</td>
+                <td>
+                  {lineDiscountText(l)}
+                  {l.priceEdited && <span className="edited-tag">alterado</span>}
+                </td>
+                <td className="num">{formatEur(l.netPrice)}</td>
+                <td className="num">{formatEur(l.lineTotal)}</td>
+                <td>{l.id && <button className="btn ghost small" disabled={busy} onClick={() => { setError(null); setEditing(l.id!); }}>Alterar</button>}</td>
+              </tr>
+            )
+          )}
+        </tbody>
+        <tfoot>
+          <tr>
+            <td colSpan={6}>Total s/ IVA</td>
+            <td className="num"><strong>{formatEur(order.subtotal)}</strong></td>
+            <td></td>
+          </tr>
+        </tfoot>
+      </table>
+      {order.notes && <p className="muted">Observações: {order.notes}</p>}
+      {error && <p className="error">{error}</p>}
+      {editable.length > 1 && (
+        <div className="row wrap bulk-discount">
+          <span className="hint">Aplicar o mesmo desconto a todas as linhas:</span>
+          <input value={bulk} onChange={(e) => setBulk(e.target.value)} placeholder="Ex.: 40 + 5" onKeyDown={(e) => e.key === "Enter" && applyAll()} />
+          <button className="btn ghost small" disabled={busy || !bulk.trim()} onClick={applyAll}>{busy ? "A aplicar…" : "Aplicar"}</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function LinePriceEditor({ line, busy, onSave, onCancel }: { line: OrderLine; busy: boolean; onSave: (d: number[], net: number | null) => void; onCancel: () => void }) {
+  const special = !line.discounts.length && line.netPrice < line.listPrice;
+  const [mode, setMode] = useState<"disc" | "net">(special ? "net" : "disc");
+  const [value, setValue] = useState(
+    mode === "net" ? String(line.netPrice).replace(".", ",") : formatDiscounts(line.discounts).replace(/%/g, "")
+  );
+  const discounts = parseDiscounts(value);
+  const typedNet = Number(value.replace(/\s|€/g, "").replace(",", "."));
+  const net = mode === "net" ? (value.trim() && Number.isFinite(typedNet) && typedNet >= 0 ? typedNet : null) : discounts.reduce((v, d) => v * (1 - d / 100), line.listPrice);
+  const invalid = mode === "net" ? net == null : value.trim() !== "" && !discounts.length;
+  const submit = () => !invalid && !busy && onSave(mode === "disc" ? discounts : [], mode === "net" ? net : null);
+  return (
+    <tr className="line-editor">
+      <td>{line.reference}</td>
+      <td>{line.designation}</td>
+      <td className="num">{line.qty} {line.salesUnit}</td>
+      <td className="num">{formatEur(line.listPrice)}</td>
+      <td colSpan={3}>
+        <div className="row wrap" style={{ marginTop: 0 }}>
+          <select value={mode} onChange={(e) => { setMode(e.target.value as "disc" | "net"); setValue(""); }}>
+            <option value="disc">Desconto %</option>
+            <option value="net">Preço líquido €</option>
+          </select>
+          <input
+            autoFocus
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); if (e.key === "Escape") onCancel(); }}
+            placeholder={mode === "disc" ? "Ex.: 40 + 5 (vazio = sem desconto)" : "Ex.: 12,50"}
+          />
+          {net != null && !invalid && (
+            <span className="hint">
+              {formatEur(net)} × {line.qty} = <strong>{formatEur(Math.round(net * line.qty * 100) / 100)}</strong>
+              {mode === "net" && line.listPrice > 0 && ` (−${formatPct(effectiveDiscount(line.listPrice, net))})`}
+            </span>
+          )}
+        </div>
+      </td>
+      <td>
+        <div className="row" style={{ marginTop: 0 }}>
+          <button className="btn primary small" disabled={invalid || busy} onClick={submit}>{busy ? "…" : "Guardar"}</button>
+          <button className="btn ghost small" onClick={onCancel}>Cancelar</button>
+        </div>
+      </td>
+    </tr>
   );
 }
 

@@ -1,0 +1,122 @@
+# CRM Freixo: testa em cada PR e publica no Cloudflare (Worker "freixo-crm") a cada alteração no main.
+# Segredos no GitHub (Settings › Secrets and variables › Actions):
+#   CLOUDFLARE_API_TOKEN (já existe; precisa também da permissão "Workers Scripts: Edit")
+#   CRM_SUPABASE_URL, CRM_SUPABASE_ANON_KEY, CRM_SUPABASE_SERVICE_ROLE_KEY
+#   CRM_MICROSOFT_CLIENT_SECRET (os IDs da app Entra "Representações Freixo CRM" já estão abaixo; não são secretos)
+#   opcionais: CRM_GOOGLE_MAPS_BROWSER_KEY, CRM_GOOGLE_MAPS_SERVER_KEY, CRM_ANTHROPIC_API_KEY
+# Sem os segredos do Supabase o workflow só compila e testa; não publica.
+name: CRM
+
+on:
+  pull_request:
+    paths-ignore: ["catalogo-b2b/**", ".github/workflows/catalogo-b2b.yml", ".github/workflows/catalogo-b2b-fotos-acha.yml"]
+  push:
+    branches: [main]
+    paths-ignore: ["catalogo-b2b/**", ".github/workflows/catalogo-b2b.yml", ".github/workflows/catalogo-b2b-fotos-acha.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: crm-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+  CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID || '28b6ca9edbc3e5a4864f111ae12f2130' }}
+  NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.CRM_SUPABASE_URL }}
+  NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.CRM_SUPABASE_ANON_KEY }}
+  GOOGLE_MAPS_BROWSER_KEY: ${{ secrets.CRM_GOOGLE_MAPS_BROWSER_KEY }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Compilar
+        run: npm run build
+      - name: Testes
+        # Ficam de fora os testes do modelo inicial (pré-visualização do Codex), que não se aplicam a este alojamento.
+        run: node --test $(ls tests/*.test.mjs | grep -v rendered-html)
+      - name: Publicar no Cloudflare
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        env:
+          SUPABASE_URL: ${{ secrets.CRM_SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.CRM_SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.CRM_SUPABASE_SERVICE_ROLE_KEY }}
+          MICROSOFT_TENANT_ID: ${{ secrets.CRM_MICROSOFT_TENANT_ID || '99b3454a-24f5-495b-b6fb-d71ff37223c2' }}
+          MICROSOFT_CLIENT_ID: ${{ secrets.CRM_MICROSOFT_CLIENT_ID || '602d5276-4a67-46e0-a69c-8c8d488098e7' }}
+          MICROSOFT_CLIENT_SECRET: ${{ secrets.CRM_MICROSOFT_CLIENT_SECRET }}
+          GOOGLE_MAPS_SERVER_KEY: ${{ secrets.CRM_GOOGLE_MAPS_SERVER_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.CRM_ANTHROPIC_API_KEY }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          B2B_PROJECT_REF: xtpkqbxskqemoegeaktr
+        run: |
+          if [ -z "$NEXT_PUBLIC_SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ] || [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::notice::Faltam segredos do CRM; compilado e testado, mas não publicado."
+            echo "### CRM: não publicado (faltam segredos CRM_*)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          # Ligação à loja B2B: a chave de serviço da loja é lida na hora pela API de gestão do Supabase (nunca fica no repositório).
+          if [ -n "$SUPABASE_ACCESS_TOKEN" ]; then
+            keys=$(curl -sf -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" "https://api.supabase.com/v1/projects/$B2B_PROJECT_REF/api-keys?reveal=true") || keys="[]"
+            B2B_SERVICE_ROLE_KEY=$(echo "$keys" | jq -r '([.[] | select(.type == "secret")][0].api_key) // ([.[] | select(.name == "service_role")][0].api_key) // empty')
+            if [ -n "$B2B_SERVICE_ROLE_KEY" ]; then
+              echo "::add-mask::$B2B_SERVICE_ROLE_KEY"
+              export B2B_SERVICE_ROLE_KEY B2B_SUPABASE_URL="https://$B2B_PROJECT_REF.supabase.co"
+            else
+              echo "::warning::Não foi possível ler a chave da loja B2B; a ligação CRM↔loja fica desativada."
+            fi
+          fi
+          # Só envia os segredos que existem.
+          node -e '
+            const keys=["NEXT_PUBLIC_SUPABASE_URL","NEXT_PUBLIC_SUPABASE_ANON_KEY","SUPABASE_URL","SUPABASE_ANON_KEY","SUPABASE_SERVICE_ROLE_KEY","MICROSOFT_TENANT_ID","MICROSOFT_CLIENT_ID","MICROSOFT_CLIENT_SECRET","GOOGLE_MAPS_BROWSER_KEY","GOOGLE_MAPS_SERVER_KEY","ANTHROPIC_API_KEY","B2B_SUPABASE_URL","B2B_SERVICE_ROLE_KEY"];
+            const out={};for(const k of keys){if(process.env[k])out[k]=process.env[k];}
+            require("fs").writeFileSync(process.env.RUNNER_TEMP+"/crm-secrets.json",JSON.stringify(out));'
+          npx --yes wrangler@4 deploy --config dist/server/wrangler.json --name freixo-crm
+          npx --yes wrangler@4 secret bulk "$RUNNER_TEMP/crm-secrets.json" --name freixo-crm
+          # Cloudflare Pages (modo _worker.js): permite ligar crm.representacoesfreixo.com por CNAME,
+          # porque o DNS do domínio está no Microsoft 365 e não no Cloudflare.
+          out="$RUNNER_TEMP/crm-pages"
+          rm -rf "$out" && mkdir -p "$out/site/_worker.js"
+          cp -r dist/client/. "$out/site/"
+          cp -r dist/server/. "$out/site/_worker.js/"
+          rm -f "$out/site/_worker.js/wrangler.json"
+          # No Pages o _worker.js recebe todos os pedidos; os ficheiros estáticos (CSS, JS, ícones)
+          # ficam de fora para o Cloudflare os servir diretamente, como faz o Worker.
+          node -e '
+            const fs=require("fs"),dir=process.argv[1];const ex=[];
+            for(const e of fs.readdirSync(dir,{withFileTypes:true})){
+              if(e.name.startsWith("_")&&e.name!=="_next")continue;
+              ex.push(e.isDirectory()?(e.name==="_next"?"/_next/static/*":"/"+e.name+"/*"):"/"+e.name);}
+            fs.writeFileSync(dir+"/_routes.json",JSON.stringify({version:1,include:["/*"],exclude:ex.slice(0,99)}));
+            console.log("_routes.json:",ex.length,"exclusões")' "$out/site"
+          cat > "$out/wrangler.json" <<'JSON'
+          {"name":"freixo-crm","pages_build_output_dir":"./site","compatibility_date":"2026-05-15","compatibility_flags":["nodejs_compat"]}
+          JSON
+          (cd "$out" && npx --yes wrangler@4 pages project create freixo-crm --production-branch main) || true
+          (cd "$out" && npx --yes wrangler@4 pages secret bulk "$RUNNER_TEMP/crm-secrets.json" --project-name freixo-crm)
+          (cd "$out" && npx --yes wrangler@4 pages deploy --branch main --commit-dirty=true --no-bundle)
+          rm -f "$RUNNER_TEMP/crm-secrets.json"
+          api="https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/pages/projects/freixo-crm"
+          auth=(-H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          curl -s -X POST "$api/domains" "${auth[@]}" -H "Content-Type: application/json" -d '{"name":"crm.representacoesfreixo.com"}' > /dev/null || true
+          sub=$(curl -s "$api" "${auth[@]}" | jq -r '.result.subdomain // "?"')
+          # Pede nova validação e espera até 5 minutos que o domínio fique ativo.
+          dom=unknown
+          for i in $(seq 1 20); do
+            r=$(curl -s "$api/domains/crm.representacoesfreixo.com" "${auth[@]}")
+            dom=$(echo "$r" | jq -r '.result.status // "?"')
+            [ "$dom" = active ] && break
+            [ "$i" = 1 ] && { echo "$r" | jq -c '.result | {status, verification_data, validation_data}'; curl -s -X PATCH "$api/domains/crm.representacoesfreixo.com" "${auth[@]}" > /dev/null || true; }
+            sleep 15
+          done
+          echo "### CRM publicado (Worker freixo-crm e Pages https://$sub)" >> "$GITHUB_STEP_SUMMARY"
+          echo "CNAME crm → $sub · estado do domínio: $dom" >> "$GITHUB_STEP_SUMMARY"
+          echo "Pages: $sub · domínio crm: $dom"

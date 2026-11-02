@@ -1,0 +1,510 @@
+/* Mobile application layout — touch-first, no desktop-width scaling */
+html {
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body,
+.app-shell,
+.workspace,
+.content {
+  min-width: 0;
+  max-width: 100%;
+}
+
+img,
+svg,
+canvas {
+  max-width: 100%;
+}
+
+@media (max-width: 760px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  .workspace {
+    margin-left: 0;
+    width: 100%;
+    overflow-x: clip;
+  }
+
+  .workspace > header {
+    width: 100%;
+    height: auto;
+    min-height: 64px;
+    padding: max(10px, env(safe-area-inset-top)) 12px 10px;
+    gap: 8px;
+  }
+
+  .mobile-menu,
+  .icon-button {
+    display: grid;
+    place-items: center;
+    flex: 0 0 42px;
+    width: 42px;
+    height: 42px;
+    padding: 0;
+    border-radius: 10px;
+    font-size: 22px;
+  }
+
+  .workspace > header .search {
+    min-width: 0;
+    width: auto;
+    height: 44px;
+    padding: 0 10px;
+  }
+
+  .workspace > header .search input {
+    min-width: 0;
+    width: 100%;
+    padding: 0 6px;
+    font-size: 16px;
+  }
+
+  .workspace > header .search input::placeholder {
+    font-size: 14px;
+  }
+
+  .icon-button {
+    margin-left: 0 !important;
+  }
+
+  .icon-button em {
+    top: 2px;
+    right: 1px;
+    min-width: 18px;
+    min-height: 18px;
+    display: grid;
+    place-items: center;
+    font-size: 10px;
+  }
+
+  .content {
+    width: 100%;
+    padding: 18px 12px calc(32px + env(safe-area-inset-bottom));
+    overflow-x: hidden;
+  }
+
+  .page-title,
+  .manufacturer-title,
+  .section-title {
+    width: 100%;
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .page-title > div,
+  .manufacturer-title > div,
+  .section-title > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+
+  .page-title h1,
+  .manufacturer-title h1 {
+    font-size: clamp(24px, 7vw, 30px);
+    line-height: 1.15;
+    overflow-wrap: anywhere;
+  }
+
+  .subtitle {
+    margin-bottom: 18px;
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .dashboard-controls,
+  .dashboard-controls select,
+  .agenda-filters,
+  .client-filters,
+  .manufacturer-filters {
+    width: 100%;
+  }
+
+  .dashboard-controls select,
+  .agenda-filters select,
+  .client-filters select,
+  .manufacturer-filters select {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .stats,
+  .feature-grid,
+  .dashboard-grid,
+  .email-layout,
+  .permissions-grid,
+  .manufacturer-details,
+  .dossier-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .stats,
+  .feature-grid {
+    gap: 10px;
+    margin: 18px 0;
+  }
+
+  .dashboard-grid {
+    display: grid;
+    gap: 12px;
+  }
+
+  .dashboard-grid > *,
+  .stats > *,
+  .feature-grid > *,
+  .email-layout > * {
+    width: 100%;
+    min-width: 0;
+    margin: 0 !important;
+  }
+
+  .stat {
+    min-height: 112px;
+    padding: 17px 18px;
+  }
+
+  .stat span,
+  .stat small,
+  .dashboard-line span,
+  .dashboard-line time,
+  .today-list time,
+  .today-list b {
+    font-size: 12px;
+  }
+
+  .card,
+  .table-card,
+  .manufacturer-panel,
+  .conditions-email,
+  .personal-area,
+  .confirm-dialog {
+    width: 100%;
+    min-width: 0;
+    padding: 16px;
+    border-radius: 12px;
+  }
+
+  .table-card {
+    padding: 0;
+  }
+
+  .card-head {
+    min-width: 0;
+    align-items: flex-start;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .card-head h2,
+  .card h2 {
+    font-size: 20px;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .card-head button {
+    flex: 0 0 auto;
+    min-height: 36px;
+    padding: 7px 0;
+    font-size: 13px;
+  }
+
+  .today-list,
+  .attention-list,
+  .quick-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .today-list button {
+    grid-template-columns: auto 1fr;
+    min-height: 58px;
+    font-size: 14px;
+  }
+
+  .today-list button span {
+    grid-column: 1 / -1;
+  }
+
+  .dashboard-line {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 5px;
+    min-height: 66px;
+    padding: 12px;
+  }
+
+  .dashboard-line span,
+  .dashboard-line em {
+    grid-column: 1;
+  }
+
+  .dashboard-line strong {
+    font-size: 14px;
+  }
+
+  .useful-empty {
+    min-height: 110px;
+    padding: 18px 0;
+    align-items: stretch;
+    flex-direction: column;
+    justify-content: center;
+    gap: 14px;
+    font-size: 15px;
+    line-height: 1.45;
+  }
+
+  .useful-empty button,
+  .quick-actions button,
+  .attention-list button {
+    width: 100%;
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .real-chart {
+    width: 100%;
+    max-width: 100%;
+    height: 185px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .real-chart .bar-day {
+    min-width: 36px;
+  }
+
+  .dashboard-legend {
+    flex-wrap: wrap;
+    gap: 8px 16px;
+  }
+
+  .dashboard-legend button {
+    min-height: 36px;
+    font-size: 12px;
+  }
+
+  .pipeline-total {
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .pipeline-total strong {
+    font-size: 22px;
+  }
+
+  .toolbar {
+    width: 100%;
+    overflow: visible;
+    flex-wrap: wrap;
+  }
+
+  .toolbar .inner,
+  .manufacturer-filters .inner,
+  .search.inner {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .toolbar button,
+  .toolbar select,
+  .form-actions button,
+  .manufacturer-title-actions button,
+  .dossier-actions button {
+    min-height: 44px;
+    font-size: 14px;
+  }
+
+  .form-grid,
+  .agenda-form .form-grid,
+  .manufacturer-form .form-grid,
+  .conditions-email .form-grid,
+  .condition-options,
+  .history-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .form-grid input,
+  .form-grid select,
+  .form-grid textarea,
+  .agenda-form input,
+  .agenda-form select,
+  .agenda-form textarea,
+  .manufacturer-form input,
+  .manufacturer-form select,
+  .manufacturer-form textarea,
+  .conditions-email input,
+  .conditions-email select,
+  .conditions-email textarea {
+    width: 100%;
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  .form-actions,
+  .manufacturer-title-actions,
+  .dossier-actions {
+    width: 100%;
+    justify-content: stretch;
+    flex-direction: column-reverse;
+  }
+
+  .form-actions button,
+  .manufacturer-title-actions button,
+  .dossier-actions button {
+    width: 100%;
+  }
+
+  .tabs,
+  .manufacturer-tabs {
+    width: calc(100% + 24px);
+    margin-left: -12px;
+    padding: 0 12px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .tabs button,
+  .manufacturer-tabs button {
+    min-height: 44px;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  .table-card,
+  .manufacturer-table,
+  .detail-table,
+  .signature-preview-box {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .client-detail-backdrop {
+    align-items: stretch;
+  }
+
+  .client-detail,
+  .client-detail.dossier {
+    width: 100vw;
+    max-width: 100vw;
+    height: 100dvh;
+    padding: calc(22px + env(safe-area-inset-top)) 14px calc(22px + env(safe-area-inset-bottom));
+  }
+
+  .client-detail-close {
+    position: sticky;
+    z-index: 2;
+    top: 0;
+    float: right;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: #fffefb;
+  }
+
+  .agenda-detail-backdrop,
+  .confirm-backdrop {
+    padding: 12px;
+  }
+
+  .agenda-detail,
+  .confirm-dialog {
+    width: 100%;
+    max-height: calc(100dvh - 24px);
+  }
+
+  .quick-menu {
+    top: 66px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+
+  .global-results {
+    position: fixed;
+    top: 66px;
+    left: 8px;
+    right: 8px;
+    width: auto;
+    max-height: calc(100dvh - 82px);
+  }
+
+  .mobile-open .sidebar {
+    width: min(86vw, 320px);
+    height: 100dvh;
+    padding-top: max(20px, env(safe-area-inset-top));
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    overflow-y: auto;
+  }
+
+  .mobile-open .sidebar nav {
+    padding-top: 14px;
+  }
+
+  .mobile-open .sidebar button {
+    min-height: 44px;
+  }
+
+  .manufacturer-kpis {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .manufacturer-details > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .communication-list article,
+  .timeline article,
+  .report-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .kanban {
+    width: calc(100% + 12px);
+    grid-template-columns: repeat(4, minmax(82vw, 320px));
+    padding-bottom: 8px;
+    scroll-snap-type: x proximity;
+  }
+
+  .kanban > section {
+    scroll-snap-align: start;
+  }
+}
+
+@media (max-width: 420px) {
+  .content {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .workspace > header {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .workspace > header .search input::placeholder {
+    color: transparent;
+  }
+
+  .manufacturer-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card,
+  .manufacturer-panel,
+  .conditions-email,
+  .personal-area {
+    padding: 14px;
+  }
+}

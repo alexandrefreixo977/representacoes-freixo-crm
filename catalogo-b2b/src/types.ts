@@ -145,6 +145,8 @@ export type CartItem = { productId: string; qty: number; variant?: string };
 export type OrderStatus = "pending" | "validated" | "sent" | "confirmed" | "delivered" | "cancelled";
 
 export type OrderLine = {
+  /** Id da linha (para a gestão alterar o preço). */
+  id?: string;
   productId: string;
   variant?: string | null;
   reference: string;
@@ -155,6 +157,8 @@ export type OrderLine = {
   discounts: number[];
   netPrice: number;
   lineTotal: number;
+  /** Preço alterado pela gestão na validação. */
+  priceEdited?: boolean;
 };
 
 export type Order = {

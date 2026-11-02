@@ -25,5 +25,5 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "catalogo-b2b"]
+  "exclude": ["node_modules", "supabase/functions"]
 }

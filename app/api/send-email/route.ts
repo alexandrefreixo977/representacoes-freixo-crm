@@ -1,3 +1,7 @@
+import { mailSession, MailError } from "../mail/server";
+import { userSignature } from "../mail/signature";
+import { signedMailBody } from "../../mail-signature-body";
+import { validateRecipients } from "../../mail-recipients";
 const GRAPH = "https://graph.microsoft.com/v1.0";
 const DIRECT_ATTACHMENT_LIMIT = 3 * 1024 * 1024;
 const CHUNK_SIZE = 10 * 320 * 1024;
@@ -13,15 +17,6 @@ function env(name: string): string {
   const value = (process.env as Record<string, string | undefined>)[name];
   if (!value) throw new Error(`Configuração em falta no servidor: ${name}`);
   return value;
-}
-
-async function authenticatedSender(jwt: string): Promise<string | null> {
-  const res = await fetch(`${env("NEXT_PUBLIC_SUPABASE_URL")}/auth/v1/user`, {
-    headers: { Authorization: `Bearer ${jwt}`, apikey: env("NEXT_PUBLIC_SUPABASE_ANON_KEY") },
-  });
-  if (!res.ok) return null;
-  const user = (await res.json()) as { email?: string };
-  return user?.email ?? null;
 }
 
 async function appToken(): Promise<string> {
@@ -47,7 +42,7 @@ async function graph(token: string, path: string, init: RequestInit = {}) {
   });
   const raw = await res.text();
   const detail = raw ? JSON.parse(raw) : null;
-  if (!res.ok) throw new Error(detail?.error?.message || "A Microsoft recusou o envio.");
+  if (!res.ok) throw Object.assign(new Error(detail?.error?.message || "A Microsoft recusou o envio."),{graphStatus:res.status});
   return detail;
 }
 
@@ -58,17 +53,59 @@ function base64ToBytes(b64: string): Uint8Array {
   return bytes;
 }
 
+// Shared application-token transport for approved commercial PDFs.
+export async function sendApprovedCommercialMail(sender:string,message:{subject:string;body:{contentType:string;content:string};toRecipients:unknown[];ccRecipients:unknown[];bccRecipients:unknown[]},attachment:Attachment){
+ if(attachment.size>=DIRECT_ATTACHMENT_LIMIT)throw new MailError(400,'O PDF ultrapassa o limite de 3 MB para envio comercial.');
+ const token=await appToken(),box=`/users/${encodeURIComponent(sender)}`;
+ await graph(token,`${box}/sendMail`,{method:'POST',body:JSON.stringify({message:{...message,attachments:[{'@odata.type':'#microsoft.graph.fileAttachment',name:attachment.name,contentType:attachment.contentType,contentBytes:attachment.contentBytes}]},saveToSentItems:true})});
+}
+
 export async function POST(request: Request): Promise<Response> {
   try {
     const auth = request.headers.get("authorization") || "";
     const jwt = auth.replace(/^Bearer\s+/i, "").trim();
     if (!jwt) return json(401, { error: "Sem sessão. Volte a iniciar sessão." });
 
-    const sender = await authenticatedSender(jwt);
+    const {user,db}=await mailSession(request);
+    const sender=user.email;
     if (!sender) return json(401, { error: "Sessão inválida. Volte a iniciar sessão." });
 
     const body = (await request.json()) as {
-      to: string; cc?: string[]; bcc?: string[]; subject: string; bodyHtml: string; attachments?: Attachment[];
+      conditions?:{clientId:string;manufacturerId:string;selected:Record<string,unknown>}; opportunityId?:string; proposalId?:string; to: string|string[]; signatureVersion?:string; unsignedBodyText?:string; cc?: string[]; bcc?: string[]; subject: string; bodyHtml: string; attachments?: Attachment[];
+    };
+    if(body.proposalId)return json(409,{error:"Envie a proposta na área Catálogo > Orçamentos, com o PDF aprovado."});
+    const permission=await db.rpc('has_crm_permission',{permission_name:'emails.own'});
+    if(permission.error||permission.data!==true)return json(403,{error:'O seu perfil não permite enviar emails. Contacte a Administração.'});
+    if(body.conditions){
+      if(body.opportunityId)return json(400,{error:'Escolha apenas uma origem para este envio.'});
+      const [client,manufacturer]=await Promise.all([
+        db.from('clients').select('id').eq('id',body.conditions.clientId).is('archived_at',null).single(),
+        db.from('manufacturers').select('id').eq('id',body.conditions.manufacturerId).eq('active',true).is('deleted_at',null).single(),
+      ]);
+      if(client.error||manufacturer.error)return json(403,{error:'Cliente, Lead ou fabricante não autorizado.'});
+    }
+    let recipients;
+    try{recipients=validateRecipients({to:typeof body.to==="string"?[body.to]:body.to,cc:body.cc,bcc:body.bcc});}catch(error){return json(400,{error:(error as Error).message});}
+    if(typeof body.signatureVersion!=="string" || !body.signatureVersion)return json(409,{error:"Carregue a assinatura antes de enviar. Feche e volte a abrir o compositor."});
+    {
+      const signature=await userSignature(db,user,new URL(request.url).origin);
+      if(signature.version!==body.signatureVersion)return json(409,{error:"A assinatura foi atualizada. Volte a abrir o compositor antes de enviar."});
+      if(typeof body.unsignedBodyText!=="string")return json(400,{error:"Texto da mensagem em falta."});
+      body.bodyHtml=signedMailBody(body.unsignedBodyText,signature.html);
+    }
+    if(body.proposalId&&!body.opportunityId)return json(400,{error:"Oportunidade em falta."});
+    if(body.opportunityId){
+      const opportunity=await db.from("opportunities").select("id,client_id").eq("id",body.opportunityId).single();
+      if(opportunity.error||!opportunity.data)return json(403,{error:"Oportunidade não autorizada."});
+      if(body.proposalId){const proposal=await db.from("catalog_orders").select("id").eq("id",body.proposalId).eq("opportunity_id",body.opportunityId).eq("document_type","proposal").single();if(proposal.error||!proposal.data)return json(403,{error:"Proposta não autorizada."});}
+    }
+    const sentResponse=async()=>{
+      if(body.conditions){
+        const result=await db.rpc('record_manufacturer_conditions',{cid:body.conditions.clientId,mid:body.conditions.manufacturerId,mail_subject:body.subject,html:body.bodyHtml,plain:body.unsignedBodyText||'',recipients,conditions:body.conditions.selected});
+        if(result.error)return json(200,{ok:true,deliveryWarning:'A Microsoft aceitou o email, mas não foi possível registar o histórico. Não repita o envio; contacte a Administração.'});
+      }
+      if(body.opportunityId){try{const result=await db.rpc("opportunity_record_email",{oid:body.opportunityId,proposal:body.proposalId||null,mail_subject:body.subject,html:body.bodyHtml,plain:body.unsignedBodyText||body.subject,recipients});if(result.error)throw result.error;}catch{return json(200,{ok:true,deliveryWarning:"Email enviado. Não foi possível atualizar o histórico comercial; não repita o envio."});}}
+      return json(200,{ok:true});
     };
     const attachments = body.attachments || [];
     const total = attachments.reduce((sum, attachment) => sum + (attachment.size || 0), 0);
@@ -79,9 +116,9 @@ export async function POST(request: Request): Promise<Response> {
     const message = {
       subject: body.subject,
       body: { contentType: "HTML", content: body.bodyHtml },
-      toRecipients: [{ emailAddress: { address: body.to } }],
-      ccRecipients: (body.cc || []).map((address) => ({ emailAddress: { address } })),
-      bccRecipients: (body.bcc || []).map((address) => ({ emailAddress: { address } })),
+      toRecipients: recipients.to.map(address=>({emailAddress:{address}})),
+      ccRecipients: recipients.cc.map((address) => ({ emailAddress: { address } })),
+      bccRecipients: recipients.bcc.map((address) => ({ emailAddress: { address } })),
     };
 
     const hasLarge = attachments.some((attachment) => attachment.size >= DIRECT_ATTACHMENT_LIMIT);
@@ -101,7 +138,7 @@ export async function POST(request: Request): Promise<Response> {
           saveToSentItems: true,
         }),
       });
-      return json(200, { ok: true });
+      return await sentResponse();
     }
 
     const draft = await graph(token, `${box}/messages`, { method: "POST", body: JSON.stringify(message) });
@@ -129,16 +166,16 @@ export async function POST(request: Request): Promise<Response> {
         const put = await fetch(session.uploadUrl, {
           method: "PUT",
           headers: { "Content-Length": String(end - start), "Content-Range": `bytes ${start}-${end - 1}/${bytes.length}` },
-          body: bytes.subarray(start, end),
+          body: new Uint8Array(bytes.subarray(start, end)).buffer,
         });
         if (!put.ok) throw new Error(`Não foi possível carregar o anexo ${file.name}.`);
       }
     }
 
     await graph(token, `${box}/messages/${draft.id}/send`, { method: "POST" });
-    return json(200, { ok: true });
+    return await sentResponse();
   } catch (error) {
     const message = error instanceof Error ? error.message : "Não foi possível enviar o email.";
-    return json(500, { error: message });
+    return json(error instanceof MailError?error.status:500, { error: message });
   }
 }
