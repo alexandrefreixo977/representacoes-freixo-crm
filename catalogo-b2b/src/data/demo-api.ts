@@ -249,7 +249,11 @@ export const demoApi: Api = {
       }),
     });
   },
-  async notifyOrderValidated() {
+  async notifyOrderValidated(orderId, to) {
+    if (to === "client") {
+      const db = load();
+      save({ ...db, orders: db.orders.map((o) => (o.id === orderId ? { ...o, clientNotifiedAt: new Date().toISOString() } : o)) });
+    }
     return true;
   },
   async listManufacturers() {
