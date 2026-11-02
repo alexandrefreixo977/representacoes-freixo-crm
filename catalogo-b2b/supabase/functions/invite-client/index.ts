@@ -26,10 +26,13 @@ Deno.serve(async (req) => {
   const admin = createClient(env("SUPABASE_URL"), serviceKey());
   const { data, error } = await admin.auth.admin.inviteUserByEmail(email, { redirectTo: env("APP_URL") });
   if (error || !data.user) return json({ message: error?.message ?? "Erro ao convidar." }, 400);
+  // A gestão (b2b_admin_emails, ex. Alexandre e Tina) continua administradora mesmo que seja convidada como comercial ou cliente.
+  const { data: adminEmail } = await admin.from("b2b_admin_emails").select("email").eq("email", email).maybeSingle();
+  const finalRole = adminEmail ? "admin" : role;
   const { error: e2 } = await admin.from("b2b_users").upsert({
     user_id: data.user.id,
-    client_id: role === "client" ? body.clientId : null,
-    role,
+    client_id: finalRole === "client" ? body.clientId : null,
+    role: finalRole,
     email,
     name: body.name ? String(body.name).slice(0, 120) : null,
   });
