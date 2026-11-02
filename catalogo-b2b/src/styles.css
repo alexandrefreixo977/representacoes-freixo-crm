@@ -428,3 +428,11 @@ code { background: #e9eff3; padding: 1px 6px; border-radius: 4px; }
 .line-editor input { width: auto; min-width: 150px; flex: 1; }
 .bulk-discount { align-items: center; margin-top: 8px; }
 .bulk-discount input { max-width: 160px; }
+
+/* Pesquisa de clientes (CRM) e encomendas em nome de clientes */
+.client-search { display: flex; flex-direction: column; gap: 6px; }
+.client-pick { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 6px; }
+.client-pick button { width: 100%; text-align: left; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; cursor: pointer; display: flex; flex-direction: column; gap: 2px; color: var(--navy); }
+.client-pick button:hover { border-color: var(--accent); }
+.client-pick small { color: var(--muted); }
+.acting-client { border-left: 4px solid var(--accent); margin-bottom: 16px; }

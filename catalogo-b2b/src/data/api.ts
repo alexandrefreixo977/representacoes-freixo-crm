@@ -5,6 +5,7 @@ import type {
   CartItem,
   Catalog,
   Client,
+  CrmClientHit,
   DiscountRule,
   ImportResult,
   Manufacturer,
@@ -45,7 +46,8 @@ export interface Api {
   /** Só com sessão iniciada. getPricing traz as regras; os preços de tabela pedem-se com getPrices. */
   getPricing(): Promise<Pricing>;
   getPrices(productIds: string[]): Promise<{ listPrices: Record<string, number>; weldPrices: Record<string, number> }>;
-  submitOrder(items: CartItem[], customerRef: string, notes: string): Promise<SubmitResult>;
+  /** forClient: a equipa Freixo encomenda em nome deste cliente (notifyClient = enviar a confirmação ao cliente). */
+  submitOrder(items: CartItem[], customerRef: string, notes: string, forClient?: { clientId: string; notifyClient: boolean }): Promise<SubmitResult>;
   listMyOrders(): Promise<Order[]>;
 
   /** Só gestão (Freixo). */
@@ -58,6 +60,10 @@ export interface Api {
   listManufacturers(): Promise<Manufacturer[]>;
   saveManufacturer(m: Omit<Manufacturer, "id" | "slug"> & { id?: string }): Promise<void>;
   listClients(): Promise<Client[]>;
+  /** Equipa: procura clientes na base de dados do CRM. */
+  searchCrmClients(q: string): Promise<CrmClientHit[]>;
+  /** Equipa: cliente da loja ligado a este cliente do CRM (cria-o na loja se ainda não existir; não envia convites). */
+  clientFromCrm(crmId: string): Promise<Client>;
   saveClient(client: Omit<Client, "id"> & { id?: string }): Promise<Client>;
   inviteClientUser(clientId: string, email: string): Promise<string>;
   listRules(): Promise<DiscountRule[]>;

@@ -5,8 +5,11 @@ import type { SubmitResult } from "../data/api";
 import { formatEur, splitByManufacturer, variantLabel } from "../pricing";
 import { go, useApp } from "../state";
 
-export function CartPage() {
-  const { cart, catalog, pricing, session, setQty, clearCart, refreshSession, productsById } = useApp();
+/** embedded: dentro da página "Encomendar para cliente" (equipa Freixo). */
+export function CartPage({ embedded }: { embedded?: boolean } = {}) {
+  const { cart, catalog, pricing, session, setQty, clearCart, refreshSession, productsById, actingClient, setActingClient, priceClientId } = useApp();
+  const staff = !!session && session.role !== "client";
+  const [notifyClient, setNotifyClient] = useState(true);
   const [customerRef, setCustomerRef] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -15,6 +18,30 @@ export function CartPage() {
 
   if (!catalog) return <div className="empty">A carregar…</div>;
   const mfrName = (id: string) => catalog.manufacturers.find((m) => m.id === id)?.name ?? "";
+
+  if (done && staff) {
+    return (
+      <div className="panel success">
+        <h1>Encomenda registada</h1>
+        <p>
+          A encomenda <strong>{done.groupNumber}</strong> foi registada em nome de <strong>{done.orders[0]?.clientName}</strong> e fica a aguardar
+          validação, como as encomendas feitas pelos clientes.
+        </p>
+        <ul className="split-list">
+          {done.orders.map((o) => (
+            <li key={o.id}>
+              <span>{o.number} · {mfrName(o.manufacturerId)}</span>
+              <strong>{formatEur(o.subtotal)}</strong>
+            </li>
+          ))}
+        </ul>
+        <div className="row">
+          <button className="btn primary" onClick={() => { setDone(null); setActingClient(null); go("encomendar"); }}>Nova encomenda</button>
+          <button className="btn ghost" onClick={() => go(session?.role === "admin" ? "gestao" : "encomendas")}>Ver encomendas</button>
+        </div>
+      </div>
+    );
+  }
 
   if (done) {
     return (
@@ -42,10 +69,13 @@ export function CartPage() {
   }
 
   if (cart.some((i) => !productsById.has(i.productId)) && cart.length) return <div className="empty">A carregar o carrinho…</div>;
-  const groups = splitByManufacturer(cart, [...productsById.values()], pricing, session?.client?.id);
+  const groups = splitByManufacturer(cart, [...productsById.values()], pricing, priceClientId);
   const total = groups.reduce((s, g) => s + g.subtotal, 0);
   const missingPrice = groups.some((g) => g.items.some((i) => !i.price));
 
+  if (!groups.length && embedded) {
+    return <p className="hint">Junte artigos acima, ou procure no catálogo: os preços e o carrinho já são os de {actingClient?.name ?? "o cliente"}.</p>;
+  }
   if (!groups.length) {
     return (
       <div className="panel empty-cart">
@@ -62,10 +92,16 @@ export function CartPage() {
 
   async function submit() {
     if (!session) return go("entrar", { voltar: "carrinho" });
+    if (staff && !actingClient) return go("encomendar");
     setBusy(true);
     setError(null);
     try {
-      const result = await api.submitOrder(cart, customerRef.trim(), notes.trim());
+      const result = await api.submitOrder(
+        cart,
+        customerRef.trim(),
+        notes.trim(),
+        staff && actingClient ? { clientId: actingClient.id, notifyClient } : undefined
+      );
       clearCart();
       setDone(result);
       refreshSession();
@@ -79,7 +115,13 @@ export function CartPage() {
   return (
     <div className="cart-layout">
       <div>
-        <h1 className="page-title">Carrinho</h1>
+        {!embedded && <h1 className="page-title">{staff && actingClient ? `Encomenda para ${actingClient.name}` : "Carrinho"}</h1>}
+        {staff && !actingClient && (
+          <p className="notice">
+            <span>Para encomendar em nome de um cliente, escolha primeiro o cliente.</span>
+            <button className="btn primary small" onClick={() => go("encomendar")}>Escolher cliente</button>
+          </p>
+        )}
         {groups.length > 1 && (
           <p className="hint">Tem artigos de {groups.length} fabricantes. Ao confirmar, criamos uma encomenda para cada um.</p>
         )}
@@ -125,8 +167,9 @@ export function CartPage() {
               <span>Total s/ IVA</span>
               <strong>{formatEur(total)}</strong>
             </div>
+            {staff && actingClient && <p className="hint">Encomenda em nome de <strong>{actingClient.name}</strong>, com as condições deste cliente.</p>}
             <label>
-              A sua referência / n.º de encomenda
+              {staff ? "Referência / n.º de encomenda do cliente" : "A sua referência / n.º de encomenda"}
               <input value={customerRef} onChange={(e) => setCustomerRef(e.target.value)} maxLength={80} placeholder="Opcional" />
             </label>
             <label>
@@ -135,10 +178,20 @@ export function CartPage() {
             </label>
             {missingPrice && <p className="warn">Há artigos sem preço: a Freixo confirma o valor na validação.</p>}
             {error && <p className="error">{error}</p>}
-            <button className="btn primary block" disabled={busy} onClick={submit}>
+            {staff && actingClient && (
+              <label className="check" style={{ flexDirection: "row", alignItems: "center" }}>
+                <input type="checkbox" style={{ width: "auto" }} checked={notifyClient} onChange={(e) => setNotifyClient(e.target.checked)} />
+                Enviar a confirmação ao cliente{actingClient.email ? ` (${actingClient.email})` : " (sem email na ficha)"}
+              </label>
+            )}
+            <button className="btn primary block" disabled={busy || (staff && !actingClient)} onClick={submit}>
               {busy ? "A enviar…" : "Confirmar encomenda"}
             </button>
-            <p className="vat-note">A encomenda fica a aguardar validação da Representações Freixo. Recebe confirmação por email.</p>
+            <p className="vat-note">
+              {staff
+                ? "A encomenda fica a aguardar validação, tal como as dos clientes."
+                : "A encomenda fica a aguardar validação da Representações Freixo. Recebe confirmação por email."}
+            </p>
           </>
         ) : (
           <>

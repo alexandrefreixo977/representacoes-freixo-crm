@@ -169,12 +169,14 @@ export const demoApi: Api = {
     requireSession(db);
     return { listPrices: Object.fromEntries(productIds.filter((id) => db.prices[id] != null).map((id) => [id, db.prices[id]])), weldPrices: {} };
   },
-  async submitOrder(items, customerRef, notes) {
+  async submitOrder(items, customerRef, notes, forClient) {
     const db = load();
     const s = requireSession(db);
-    if (!s.client) throw new Error("Esta conta não está associada a um cliente.");
+    const client = forClient ? db.clients.find((c) => c.id === forClient.clientId) : s.client;
+    if (forClient && s.role === "client") throw new Error("Só a equipa Freixo pode encomendar em nome de clientes.");
+    if (!client) throw new Error(forClient ? "Cliente não encontrado." : "Esta conta não está associada a um cliente.");
     const pricing = { listPrices: db.prices, rules: db.rules };
-    const groups = splitByManufacturer(items, db.products, pricing, s.client.id);
+    const groups = splitByManufacturer(items, db.products, pricing, client.id);
     if (!groups.length) throw new Error("O carrinho está vazio.");
     const unsized = groups.flatMap((g) => g.items).find((i) => needsVariant(i.product, i.variant));
     if (unsized) throw new Error(`Indique o tamanho do artigo ${unsized.product.reference}`);
@@ -185,8 +187,8 @@ export const demoApi: Api = {
       id: uid(),
       number: `${groupNumber}/${i + 1}`,
       groupNumber,
-      clientId: s.client!.id,
-      clientName: s.client!.name,
+      clientId: client.id,
+      clientName: client.name,
       manufacturerId: g.manufacturerId,
       status: "pending",
       customerRef,
@@ -393,6 +395,21 @@ export const demoApi: Api = {
     const db = load();
     requireSession(db, "admin");
     save({ ...db, families: db.families.map((f) => (f.id === familyId ? { ...f, name: name.trim() } : f)) });
+  },
+  async searchCrmClients(q) {
+    // Demonstração: o "CRM" são os clientes de exemplo.
+    const db = load();
+    requireSession(db);
+    const t = normSearch(q);
+    return db.clients
+      .filter((c) => normSearch(`${c.name} ${c.nif ?? ""} ${c.email ?? ""}`).includes(t))
+      .map((c) => ({ crmId: `crm-${c.id}`, name: c.name, nif: c.nif, email: c.email, phone: c.phone, address: c.address, shopClientId: c.id }));
+  },
+  async clientFromCrm(crmId) {
+    const db = load();
+    const c = db.clients.find((x) => `crm-${x.id}` === crmId);
+    if (!c) throw new Error("Cliente não encontrado no CRM.");
+    return c;
   },
   async listAccessRequests() {
     const db = load();

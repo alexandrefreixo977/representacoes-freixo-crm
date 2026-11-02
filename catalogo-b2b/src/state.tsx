@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "./data";
 import { normalizeQty, priceFor } from "./pricing";
-import type { CartItem, Catalog, PriceInfo, Pricing, Product, Session } from "./types";
+import type { CartItem, Catalog, Client, PriceInfo, Pricing, Product, Session } from "./types";
 
 type Route = { page: string; params: URLSearchParams };
 
@@ -31,6 +31,11 @@ type Ctx = {
   /** Garante que estes artigos estão carregados e devolve-os. */
   ensureProducts: (ids: string[]) => Promise<Product[]>;
   price: (p: Product) => PriceInfo | null;
+  /** Equipa Freixo: cliente em nome de quem está a encomendar (preços e carrinho passam a ser os dele). */
+  actingClient: Client | null;
+  setActingClient: (c: Client | null) => void;
+  /** Cliente cujos preços se mostram: o da conta, ou o escolhido pela equipa. */
+  priceClientId: string | null;
   /** Há preços de tabela a caminho (para mostrar "a carregar" em vez de "sob consulta"). */
   pricesLoading: boolean;
   /** Volta a pedir os preços destes artigos (ex. depois de os editar na gestão). */
@@ -51,6 +56,14 @@ const AppCtx = createContext<Ctx | null>(null);
 export const useApp = () => useContext(AppCtx)!;
 
 const CART_KEY = "freixo-b2b-cart";
+const ACTING_KEY = "freixo-b2b-encomenda-para";
+function loadActing(): Client | null {
+  try {
+    return JSON.parse(localStorage.getItem(ACTING_KEY) ?? "null");
+  } catch {
+    return null;
+  }
+}
 function loadCart(): CartItem[] {
   try {
     return JSON.parse(localStorage.getItem(CART_KEY) ?? "[]");
@@ -66,6 +79,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [pricing, setPricing] = useState<Pricing | null>(null);
   const [cart, setCart] = useState<CartItem[]>(loadCart);
+  const [actingClient, setActingClientState] = useState<Client | null>(loadActing);
+  const setActingClient = useCallback((c: Client | null) => {
+    setActingClientState(c);
+    try {
+      if (c) localStorage.setItem(ACTING_KEY, JSON.stringify(c));
+      else localStorage.removeItem(ACTING_KEY);
+    } catch {
+      /* sem armazenamento: fica só nesta sessão */
+    }
+  }, []);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   const [productsById, setProductsById] = useState<Map<string, Product>>(() => new Map());
   const knownIds = useRef(new Set<string>());
@@ -188,7 +211,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [cart]);
 
-  const price = useCallback((p: Product) => priceFor(p, pricing, session?.client?.id), [pricing, session]);
+  const staff = !!session && session.role !== "client";
+  const priceClientId = staff ? actingClient?.id ?? null : session?.client?.id ?? null;
+  const price = useCallback((p: Product) => priceFor(p, pricing, priceClientId), [pricing, priceClientId]);
 
   const same = (i: CartItem, productId: string, variant?: string) => i.productId === productId && (i.variant ?? "") === (variant ?? "");
   const setQty = useCallback(
@@ -229,6 +254,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     remember,
     ensureProducts,
     price,
+    actingClient: staff ? actingClient : null,
+    setActingClient,
+    priceClientId,
     pricesLoading: pricesPending > 0,
     refreshPrices,
     updateProduct,

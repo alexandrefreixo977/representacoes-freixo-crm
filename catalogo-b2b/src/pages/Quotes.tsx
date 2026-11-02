@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon, formatDate } from "../components";
+import { ClientSearch, type ClientPick } from "../ClientSearch";
 import { api } from "../data";
 import {
   applyDiscounts,
@@ -251,6 +252,30 @@ function QuoteEditor({ id }: { id: string | null }) {
     });
   }
 
+  /** Cliente escolhido na pesquisa (CRM ou loja): preenche os dados; se já tiver ficha na loja, usa os preços dele. */
+  function pickFromSearch(p: ClientPick) {
+    if (p.shop) {
+      if (!clients.some((c) => c.id === p.shop!.id)) setClients((cs) => [...cs, p.shop!]);
+      set({
+        clientId: p.shop.id,
+        customerName: p.shop.name,
+        customerNif: p.shop.nif ?? p.crm?.nif ?? "",
+        customerEmail: p.shop.email ?? p.crm?.email ?? "",
+        customerPhone: p.shop.phone ?? p.crm?.phone ?? "",
+        customerAddress: p.shop.address ?? p.crm?.address ?? "",
+      });
+    } else if (p.crm) {
+      set({
+        clientId: null,
+        customerName: p.crm.name,
+        customerNif: p.crm.nif ?? "",
+        customerEmail: p.crm.email ?? "",
+        customerPhone: p.crm.phone ?? "",
+        customerAddress: p.crm.address ?? "",
+      });
+    }
+  }
+
   async function reprice() {
     const next: Draft[] = [];
     for (const l of lines) {
@@ -366,15 +391,15 @@ function QuoteEditor({ id }: { id: string | null }) {
       <section className="card-block">
         <h2>Cliente</h2>
         <div className="form-grid">
-          <label className="full">
-            Cliente registado na loja
-            <select value={quote.clientId ?? ""} onChange={(e) => pickClient(e.target.value)}>
-              <option value="">— Potencial cliente (escrever os dados abaixo) —</option>
-              {clients.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}{c.nif ? ` · ${c.nif}` : ""}</option>
-              ))}
-            </select>
-          </label>
+          <div className="full">
+            <label>Procurar cliente no CRM</label>
+            <ClientSearch onPick={pickFromSearch} />
+            <p className="muted small" style={{ margin: "4px 0 0" }}>
+              {quote.clientId
+                ? <>Cliente da loja: preços e descontos deste cliente. <button type="button" className="link" onClick={() => pickClient("")}>Tratar como potencial cliente</button></>
+                : "Potencial cliente: preços de tabela. Pode também escrever os dados à mão."}
+            </p>
+          </div>
           <label>Empresa *<input value={quote.customerName} onChange={(e) => set({ customerName: e.target.value })} /></label>
           <label>NIF<input value={quote.customerNif ?? ""} onChange={(e) => set({ customerNif: e.target.value })} /></label>
           <label>Pessoa de contacto<input value={quote.contactName ?? ""} onChange={(e) => set({ contactName: e.target.value })} /></label>
@@ -556,7 +581,7 @@ function move<T>(list: T[], i: number, d: number) {
 
 // ------------------------------------------------------------------ adicionar artigos
 
-function ProductAdder({ onAdd }: { onAdd: (list: { product: Product; qty: number }[]) => void }) {
+export function ProductAdder({ onAdd, pasteLabel = "Juntar à proposta" }: { onAdd: (list: { product: Product; qty: number }[]) => void; pasteLabel?: string }) {
   const { catalog } = useApp();
   const [q, setQ] = useState("");
   const [results, setResults] = useState<Product[]>([]);
@@ -631,7 +656,7 @@ function ProductAdder({ onAdd }: { onAdd: (list: { product: Product; qty: number
       {paste && (
         <div className="adder-paste">
           <textarea rows={5} value={text} onChange={(e) => setText(e.target.value)} placeholder={"Uma linha por artigo, ex.:\n2321 10\nJSP-AEB030-1A2-000 5"} />
-          <button className="btn ghost" onClick={addPasted} disabled={!text.trim()}>Juntar à proposta</button>
+          <button className="btn ghost" onClick={addPasted} disabled={!text.trim()}>{pasteLabel}</button>
         </div>
       )}
       {msg && <p className="muted small">{msg}</p>}

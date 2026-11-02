@@ -93,6 +93,7 @@ Deno.serve(async (req) => {
     const body = await req.json();
     if (body?.event === "validated" && body?.orderId) return await notifyValidated(req, String(body.orderId));
     const { groupId } = body;
+    const notifyClient = body?.notifyClient === true;
     // Cliente autenticado: só pode notificar uma encomenda que seja sua.
     const userClient = createClient(env("SUPABASE_URL"), anonKey(req), {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
@@ -103,7 +104,7 @@ Deno.serve(async (req) => {
     const admin = createClient(env("SUPABASE_URL"), serviceKey());
     const { data: g, error } = await admin
       .from("b2b_order_groups")
-      .select("number, customer_ref, notes, created_at, user_id, b2b_clients(name, nif, email, address), b2b_orders(number, subtotal, b2b_manufacturers(name), b2b_order_lines(reference, designation, qty, sales_unit, net_price, line_total))")
+      .select("number, customer_ref, notes, created_at, user_id, placed_by_staff, b2b_clients(name, nif, email, address), b2b_orders(number, subtotal, b2b_manufacturers(name), b2b_order_lines(reference, designation, qty, sales_unit, net_price, line_total))")
       .eq("id", groupId)
       .single();
     if (error || !g) throw new Error(error?.message ?? "sem dados");
@@ -122,7 +123,7 @@ ${o.b2b_order_lines.map((l: any) => `<tr style="border-top:1px solid #dbe4ea"><t
       .join("");
     const c = g.b2b_clients as any;
     const head = `<p style="font:14px Arial,sans-serif"><strong>${esc(c?.name)}</strong>${c?.nif ? ` · NIF ${esc(c.nif)}` : ""}<br>
-Pedido por ${esc(user?.user?.email)}${g.customer_ref ? ` · Ref. cliente ${esc(g.customer_ref)}` : ""}${g.notes ? `<br>Observações: ${esc(g.notes)}` : ""}</p>`;
+${g.placed_by_staff ? `Encomenda feita por ${esc(user?.user?.email)} (equipa Freixo) em nome do cliente` : `Pedido por ${esc(user?.user?.email)}`}${g.customer_ref ? ` · Ref. cliente ${esc(g.customer_ref)}` : ""}${g.notes ? `<br>Observações: ${esc(g.notes)}` : ""}</p>`;
     const foot = `<p style="font:15px Arial,sans-serif;margin-top:18px"><strong>Total s/ IVA: ${eur(total)}</strong></p>`;
 
     const token = await graphToken();
@@ -132,11 +133,12 @@ Pedido por ${esc(user?.user?.email)}${g.customer_ref ? ` · Ref. cliente ${esc(g
       `Nova encomenda ${g.number} · ${c?.name} · ${eur(total)}`,
       `${head}${tables}${foot}<p><a href="${env("APP_URL")}/#/gestao">Abrir a área de gestão para validar</a></p>`
     );
-    const clientEmail = user?.user?.email;
-    if (clientEmail) {
+    // Encomenda da equipa: confirmação ao cliente só se pedido (e cópia a quem a fez); senão, a quem encomendou.
+    const confirmTo = g.placed_by_staff ? unique([notifyClient ? c?.email : null, user?.user?.email]) : unique([user?.user?.email]);
+    if (confirmTo.length) {
       await sendMail(
         token,
-        [clientEmail],
+        confirmTo,
         `Recebemos a sua encomenda ${g.number}`,
         `<p style="font:14px Arial,sans-serif">Obrigado pela sua encomenda. Vamos validá-la e encaminhá-la ${orders.length > 1 ? "aos fabricantes" : "ao fabricante"}; daremos notícias em breve.</p>${tables}${foot}<p style="font:13px Arial,sans-serif;color:#5d7385">Representações Freixo · Viana do Castelo</p>`
       );
