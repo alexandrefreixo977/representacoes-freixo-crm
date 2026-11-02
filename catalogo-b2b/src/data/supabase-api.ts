@@ -14,6 +14,11 @@ function fail(error: { message: string } | null) {
   if (error) throw new Error(error.message);
 }
 
+const mapManufacturer = (r: Row): Manufacturer => ({
+  id: r.id, name: r.name, slug: r.slug, logoUrl: r.logo_url, ordersEmail: r.orders_email, sort: r.sort, active: r.active,
+  legalName: r.legal_name, nif: r.nif, address: r.address, country: r.country, phone: r.phone, website: r.website,
+});
+
 const mapClient = (c: Row): Client => ({ id: c.id, name: c.name, nif: c.nif, email: c.email, phone: c.phone, address: c.address });
 
 const mapRule = (r: Row): DiscountRule => ({
@@ -204,7 +209,7 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       fail(m.error); fail(f.error); fail(c.error);
       const campaignProducts = (c.data ?? []).map((r: Row) => r.product_id).filter(Boolean);
       return {
-        manufacturers: (m.data ?? []).map((r: Row) => ({ id: r.id, name: r.name, slug: r.slug, logoUrl: r.logo_url, ordersEmail: r.orders_email, sort: r.sort })),
+        manufacturers: (m.data ?? []).map(mapManufacturer),
         families: (f.data ?? []).map((r: Row) => ({ id: r.id, manufacturerId: r.manufacturer_id, name: r.name })),
         products: campaignProducts.length ? await self.getProducts(campaignProducts) : [],
         campaigns: (c.data ?? []).filter((r: Row) => {
@@ -315,12 +320,14 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     async listManufacturers() {
       const { data, error } = await sb.from("b2b_manufacturers").select("*").order("sort");
       fail(error);
-      return (data ?? []).map((r: Row): Manufacturer => ({
-        id: r.id, name: r.name, slug: r.slug, logoUrl: r.logo_url, ordersEmail: r.orders_email, sort: r.sort, active: r.active,
-      }));
+      return (data ?? []).map(mapManufacturer);
     },
     async saveManufacturer(m) {
-      const row = { name: m.name.trim(), slug: slugify(m.name), logo_url: m.logoUrl || null, orders_email: m.ordersEmail || null, sort: m.sort, active: m.active !== false };
+      const t = (v?: string | null) => v?.trim() || null;
+      const row = {
+        name: m.name.trim(), slug: slugify(m.name), logo_url: t(m.logoUrl), orders_email: t(m.ordersEmail), sort: m.sort, active: m.active !== false,
+        legal_name: t(m.legalName), nif: t(m.nif), address: t(m.address), country: t(m.country), phone: t(m.phone), website: t(m.website),
+      };
       const { error } = m.id
         ? await sb.from("b2b_manufacturers").update(row).eq("id", m.id)
         : await sb.from("b2b_manufacturers").insert(row);

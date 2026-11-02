@@ -4,8 +4,9 @@ import { api } from "../data";
 import { detectColumns, mapRows, readSpreadsheet, type ColumnMap } from "../importer";
 import { clientTerms, effectiveDiscount, formatDiscounts, formatEur, normRef, parseDiscounts, ruleText } from "../pricing";
 import { go, useApp } from "../state";
-import type { AccessRequest, Campaign, Client, DiscountRule, Manufacturer, Order, OrderLine, OrderStatus, PriceImportRow, StaffUser } from "../types";
+import type { AccessRequest, Campaign, Client, DiscountRule, Manufacturer, Order, OrderLine, Product, OrderStatus, PriceImportRow, StaffUser } from "../types";
 import { OrderLinesTable } from "./Orders";
+import { freixoLines, openDocument } from "../printDoc";
 import { CampaignImport } from "./CampaignImport";
 import { ProductsAdmin } from "./ProductsAdmin";
 
@@ -63,7 +64,7 @@ const NEXT_LABEL: Partial<Record<OrderStatus, string>> = {
 };
 
 function OrdersAdmin() {
-  const { catalog } = useApp();
+  const { catalog, productsById } = useApp();
   const [orders, setOrders] = useState<Order[] | null>(null);
   const [filter, setFilter] = useState<string>("pending");
   const [open, setOpen] = useState<string | null>(null);
@@ -140,11 +141,9 @@ function OrdersAdmin() {
                       <button className="btn primary" onClick={() => move(o, NEXT[o.status]!)}>{NEXT_LABEL[o.status]}</button>
                     )}
                     {(o.status === "validated" || o.status === "sent") && (
-                      <>
-                        <a className="btn ghost" href={mailtoForManufacturer(o, m?.name ?? "", m?.ordersEmail ?? "", client)}>Preparar email ao fabricante</a>
-                        <button className="btn ghost" onClick={() => printOrder(o, m?.name ?? "", client)}>Imprimir / PDF</button>
-                      </>
+                      <a className="btn ghost" href={mailtoForManufacturer(o, m?.name ?? "", m?.ordersEmail ?? "", client)}>Preparar email ao fabricante</a>
                     )}
+                    <button className="btn ghost" onClick={() => printOrder(o, m, client, productsById)}>Imprimir / PDF</button>
                     {o.status !== "cancelled" && o.status !== "delivered" && <CancelButton onConfirm={() => move(o, "cancelled")} />}
                   </div>
                 </div>
@@ -372,26 +371,42 @@ function mailtoForManufacturer(o: Order, mfrName: string, email: string, client?
   return `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
 }
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-function printOrder(o: Order, mfrName: string, client?: Client) {
-  const w = window.open("", "_blank");
-  if (!w) return;
-  const rows = o.lines
-    .map(
-      (l) =>
-        `<tr><td>${esc(l.reference)}</td><td>${esc(l.designation)}</td><td class=n>${l.qty} ${esc(l.salesUnit)}</td><td class=n>${formatEur(l.listPrice)}</td><td>${l.discounts.length ? formatDiscounts(l.discounts) : "—"}</td><td class=n>${formatEur(l.netPrice)}</td><td class=n>${formatEur(l.lineTotal)}</td></tr>`
-    )
-    .join("");
-  w.document.write(`<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><title>${esc(o.number)}</title>
-<style>body{font:13px system-ui,sans-serif;color:#15314c;margin:32px}h1{font:600 22px Georgia,serif;margin:0}table{width:100%;border-collapse:collapse;margin-top:20px}th,td{border-bottom:1px solid #d6e0e6;padding:7px;text-align:left}th{font-size:11px;text-transform:uppercase;color:#5a7385}.n{text-align:right}.top{display:flex;justify-content:space-between;gap:24px;border-bottom:3px solid #ef9b45;padding-bottom:14px}.muted{color:#5a7385}</style></head><body>
-<div class=top><div><h1>Representações Freixo</h1><div class=muted>Nota de encomenda</div></div><div style="text-align:right"><strong>${esc(o.number)}</strong><div class=muted>${formatDate(o.createdAt)}</div></div></div>
-<p><strong>Fabricante:</strong> ${esc(mfrName)}<br><strong>Cliente:</strong> ${esc(o.clientName)}${client?.nif ? ` · NIF ${esc(client.nif)}` : ""}${client?.address ? `<br><strong>Morada:</strong> ${esc(client.address)}` : ""}${o.customerRef ? `<br><strong>Ref. cliente:</strong> ${esc(o.customerRef)}` : ""}</p>
-<table><thead><tr><th>Referência</th><th>Designação</th><th class=n>Qtd.</th><th class=n>P. tabela</th><th>Desc.</th><th class=n>P. líquido</th><th class=n>Total</th></tr></thead><tbody>${rows}</tbody>
-<tfoot><tr><td colspan=6><strong>Total s/ IVA</strong></td><td class=n><strong>${formatEur(o.subtotal)}</strong></td></tr></tfoot></table>
-${o.notes ? `<p><strong>Observações:</strong> ${esc(o.notes)}</p>` : ""}
-<script>window.onload=()=>window.print()</script></body></html>`);
-  w.document.close();
+function printOrder(o: Order, m: Manufacturer | undefined, client: Client | undefined, products: Map<string, Product>) {
+  openDocument({
+    title: "Nota de encomenda",
+    number: o.number,
+    date: formatDate(o.createdAt),
+    client: {
+      name: o.clientName,
+      lines: [
+        client?.nif ? `NIF ${client.nif}` : "",
+        client?.address ?? "",
+        [client?.email, client?.phone].filter(Boolean).join(" · "),
+        o.customerRef ? `Ref. do cliente: ${o.customerRef}` : "",
+      ].filter(Boolean),
+    },
+    freixo: freixoLines(null, "afreixo@representacoesfreixo.com"),
+    groups: [
+      {
+        manufacturer: m,
+        name: m?.name ?? "",
+        lines: o.lines.map((l) => ({
+          imageUrl: l.productId ? products.get(l.productId)?.imageUrl : null,
+          reference: l.reference,
+          designation: l.designation,
+          qty: l.qty,
+          unit: l.salesUnit,
+          listPrice: l.listPrice,
+          discounts: l.discounts,
+          netPrice: l.netPrice,
+          total: l.lineTotal,
+        })),
+      },
+    ],
+    notes: o.notes,
+    footNote: "Valores em euros, sem IVA.",
+  });
 }
 
 // ------------------------------------------------------------------ importar preços
@@ -723,7 +738,10 @@ function RequestsAdmin() {
 
 // ------------------------------------------------------------------ fabricantes
 
-type MfrDraft = { id?: string; name: string; ordersEmail: string; logoUrl: string; sort: number; active: boolean };
+type MfrDraft = {
+  id?: string; name: string; ordersEmail: string; logoUrl: string; sort: number; active: boolean;
+  legalName: string; nif: string; address: string; country: string; phone: string; website: string;
+};
 
 function ManufacturersAdmin() {
   const { refreshCatalog } = useApp();
@@ -739,8 +757,14 @@ function ManufacturersAdmin() {
   const edit = (m?: Manufacturer) =>
     setDraft(
       m
-        ? { id: m.id, name: m.name, ordersEmail: m.ordersEmail ?? "", logoUrl: m.logoUrl ?? "", sort: m.sort, active: m.active !== false }
-        : { name: "", ordersEmail: "", logoUrl: "", sort: (list.at(-1)?.sort ?? 0) + 1, active: true }
+        ? {
+            id: m.id, name: m.name, ordersEmail: m.ordersEmail ?? "", logoUrl: m.logoUrl ?? "", sort: m.sort, active: m.active !== false,
+            legalName: m.legalName ?? "", nif: m.nif ?? "", address: m.address ?? "", country: m.country ?? "", phone: m.phone ?? "", website: m.website ?? "",
+          }
+        : {
+            name: "", ordersEmail: "", logoUrl: "", sort: (list.at(-1)?.sort ?? 0) + 1, active: true,
+            legalName: "", nif: "", address: "", country: "", phone: "", website: "",
+          }
     );
 
   return (
@@ -771,6 +795,13 @@ function ManufacturersAdmin() {
           <label>Nome<input required value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} /></label>
           <label>Email de encomendas<input type="email" value={draft.ordersEmail} onChange={(e) => setDraft({ ...draft, ordersEmail: e.target.value })} /></label>
           <label>Logótipo (endereço da imagem, opcional)<input type="url" value={draft.logoUrl} onChange={(e) => setDraft({ ...draft, logoUrl: e.target.value })} placeholder="https://…" /></label>
+          <p className="hint full" style={{ margin: "4px 0 0" }}>Dados da empresa (aparecem nas propostas e notas de encomenda, por cima dos artigos deste fabricante):</p>
+          <label>Razão social<input value={draft.legalName} onChange={(e) => setDraft({ ...draft, legalName: e.target.value })} placeholder="ex. Acha Herramientas, S.L." /></label>
+          <label>NIF / VAT<input value={draft.nif} onChange={(e) => setDraft({ ...draft, nif: e.target.value })} /></label>
+          <label className="full">Morada<input value={draft.address} onChange={(e) => setDraft({ ...draft, address: e.target.value })} /></label>
+          <label>País<input value={draft.country} onChange={(e) => setDraft({ ...draft, country: e.target.value })} /></label>
+          <label>Telefone<input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} /></label>
+          <label>Site<input value={draft.website} onChange={(e) => setDraft({ ...draft, website: e.target.value })} placeholder="www.…" /></label>
           <label>Ordem no catálogo (100–199 = EPI, 200–299 = Equipamentos e consumíveis)<input type="number" value={draft.sort} onChange={(e) => setDraft({ ...draft, sort: Number(e.target.value) })} /></label>
           <label className="check full" style={{ flexDirection: "row", alignItems: "center" }}>
             <input type="checkbox" style={{ width: "auto" }} checked={draft.active} onChange={(e) => setDraft({ ...draft, active: e.target.checked })} />
@@ -785,14 +816,15 @@ function ManufacturersAdmin() {
 
       <div className="table-wrap">
         <table className="table">
-          <thead><tr><th className="num">Ordem</th><th>Fabricante</th><th>Email de encomendas</th><th>Estado</th><th /></tr></thead>
+          <thead><tr><th className="num">Ordem</th><th>Fabricante</th><th>Email de encomendas</th><th>Dados da empresa</th><th>Estado</th><th /></tr></thead>
           <tbody>
-            {list.length === 0 && <tr><td colSpan={5} className="muted">Ainda não há fabricantes. Crie o primeiro com "+ Novo fabricante".</td></tr>}
+            {list.length === 0 && <tr><td colSpan={6} className="muted">Ainda não há fabricantes. Crie o primeiro com "+ Novo fabricante".</td></tr>}
             {list.map((m) => (
               <tr key={m.id}>
                 <td className="num">{m.sort}</td>
                 <td><strong>{m.name}</strong></td>
                 <td>{m.ordersEmail || <span className="muted">—</span>}</td>
+                <td>{m.legalName || m.nif || m.address ? <span className="muted small">{[m.legalName, m.nif, m.country].filter(Boolean).join(" · ")}</span> : <span className="muted small">Por preencher</span>}</td>
                 <td>{m.active === false ? <span className="status s-cancelled">Oculto</span> : <span className="status s-delivered">Visível</span>}</td>
                 <td><button className="link" onClick={() => edit(m)}>Editar</button></td>
               </tr>
