@@ -121,9 +121,10 @@ export function parseQuickOrder(text: string) {
 }
 
 /** Tamanhos propostos na loja (o cliente pode escrever outro). */
-export const SIZES: Record<"calcado" | "vestuario" | "medida", string[]> = {
+export const SIZES: Record<"calcado" | "vestuario" | "luvas" | "medida", string[]> = {
   calcado: Array.from({ length: 14 }, (_, i) => String(35 + i)),
   vestuario: ["XS", "S", "M", "L", "XL", "XXL", "3XL", "4XL", "5XL"],
+  luvas: ["6", "7", "8", "9", "10", "11"],
   medida: ["1440", "1638", "2085", "2360", "2450", "2750", "2950", "3160", "3660", "4115"],
 };
 
