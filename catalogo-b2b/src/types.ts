@@ -34,7 +34,7 @@ export type Product = {
   moq: number;
   isNew: boolean;
   /** Calçado ou vestuário: o cliente tem de escolher o tamanho. "medida": fita à medida, o cliente indica o comprimento em mm. */
-  sizeType?: "calcado" | "vestuario" | "medida" | null;
+  sizeType?: "calcado" | "vestuario" | "luvas" | "medida" | null;
   /** Só a gestão vê artigos inativos (escondidos da loja). */
   active?: boolean;
 };

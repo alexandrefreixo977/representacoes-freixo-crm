@@ -9,6 +9,7 @@ const SIZE_TYPES = [
   ["", "Sem tamanhos"],
   ["calcado", "Calçado (tamanho)"],
   ["vestuario", "Vestuário (tamanho)"],
+  ["luvas", "Luvas (tamanho 6 a 11)"],
   ["medida", "Fita à medida (mm)"],
 ] as const;
 
