@@ -181,6 +181,8 @@ export type Order = {
   internalNote?: string | null;
   subtotal: number;
   createdAt: string;
+  /** Quando foi enviado ao cliente o aviso de encomenda validada (opcional, a pedido da gestão). */
+  clientNotifiedAt?: string | null;
   lines: OrderLine[];
 };
 

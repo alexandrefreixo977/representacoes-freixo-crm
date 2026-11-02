@@ -1,7 +1,9 @@
 // Envia email quando um cliente submete uma encomenda (body { groupId }):
 //  - para a Representações Freixo (NOTIFY_TO), com todas as encomendas por fabricante, para validar;
 //  - para o cliente, com a confirmação de receção.
-// e quando a gestão valida uma encomenda (body { orderId, event: "validated" }): aviso ao cliente com os preços finais.
+// e quando a gestão valida uma encomenda (body { orderId, event: "validated", to }):
+//  - to "team" (por omissão): confirmação para a equipa (VALIDATED_TO, por omissão comercial@representacoesfreixo.com);
+//  - to "client": aviso ao cliente com os preços finais (opcional, só quando a gestão o envia).
 // Envio pelo Microsoft 365 (Graph, credenciais de aplicação), a partir da caixa MAIL_FROM.
 // Segredos: MS_TENANT_ID, MS_CLIENT_ID, MS_CLIENT_SECRET, MAIL_FROM, NOTIFY_TO, APP_URL
 import { createClient } from "npm:@supabase/supabase-js@2.112.3";
@@ -44,27 +46,28 @@ const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });
 const unique = (list: unknown[]) => [...new Set(list.map((s) => String(s ?? "").trim().toLowerCase()).filter((s) => s.includes("@")))];
 
-/** Aviso ao cliente: a encomenda foi validada (só a gestão pode pedir). */
-async function notifyValidated(req: Request, orderId: string) {
+const VALIDATED_TO = () => (env("VALIDATED_TO") || "comercial@representacoesfreixo.com").split(",").map((s) => s.trim()).filter(Boolean);
+
+/** Encomenda validada: confirmação à equipa ou aviso ao cliente (só a gestão pode pedir). */
+async function notifyValidated(req: Request, orderId: string, target: "team" | "client") {
   const userClient = createClient(env("SUPABASE_URL"), anonKey(req), {
     global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
   });
   const { data: isAdmin } = await userClient.rpc("b2b_is_admin");
+  const { data: me } = await userClient.auth.getUser();
   if (isAdmin !== true) return json({ ok: false, error: "forbidden" }, 403);
 
   const admin = createClient(env("SUPABASE_URL"), serviceKey());
   const { data: o, error } = await admin
     .from("b2b_orders")
-    .select("number, status, subtotal, b2b_manufacturers(name), b2b_clients(name, email), b2b_order_groups(number, customer_ref, user_id), b2b_order_lines(reference, designation, qty, sales_unit, net_price, line_total)")
+    .select("number, status, subtotal, b2b_manufacturers(name), b2b_clients(name, nif, email), b2b_order_groups(number, customer_ref, user_id), b2b_order_lines(reference, designation, qty, sales_unit, net_price, line_total)")
     .eq("id", orderId)
     .single();
   if (error || !o) throw new Error(error?.message ?? "sem dados");
-  if (o.status !== "validated") return json({ ok: false, error: "not validated" }, 409);
+  if (!["validated", "sent", "confirmed", "delivered"].includes(o.status)) return json({ ok: false, error: "not validated" }, 409);
   const g = o.b2b_order_groups as any;
   const c = o.b2b_clients as any;
   const { data: user } = g?.user_id ? await admin.auth.admin.getUserById(g.user_id) : { data: null };
-  const to = unique([user?.user?.email, c?.email]);
-  if (!to.length) return json({ ok: false, error: "sem email do cliente" }, 422);
 
   const lines = [...((o.b2b_order_lines as any[]) ?? [])].sort((a, b) => String(a.reference).localeCompare(String(b.reference)));
   const table = `<table cellpadding="6" style="border-collapse:collapse;width:100%;font:13px Arial,sans-serif">
@@ -72,6 +75,22 @@ async function notifyValidated(req: Request, orderId: string) {
 ${lines.map((l) => `<tr style="border-top:1px solid #dbe4ea"><td>${esc(l.reference)}</td><td>${esc(l.designation)}</td><td align="right">${Number(l.qty)} ${esc(l.sales_unit)}</td><td align="right">${eur(l.net_price)}</td><td align="right">${eur(l.line_total)}</td></tr>`).join("")}
 </table>`;
   const mfr = (o.b2b_manufacturers as any)?.name ?? "";
+
+  if (target === "team") {
+    const html = `<div style="font:14px Arial,sans-serif;color:#15314c">
+<p>Encomenda <strong>${esc(o.number)}</strong> validada${me?.user?.email ? ` por ${esc(me.user.email)}` : ""}.</p>
+<p><strong>${esc(c?.name)}</strong>${c?.nif ? ` · NIF ${esc(c.nif)}` : ""}${mfr ? `<br>Fabricante: ${esc(mfr)}` : ""}${g?.customer_ref ? `<br>Ref. cliente: ${esc(g.customer_ref)}` : ""}</p>
+${table}
+<p style="margin-top:18px"><strong>Total s/ IVA: ${eur(o.subtotal)}</strong></p>
+<p>O cliente <strong>não</strong> foi avisado. Para o avisar, use "Enviar aviso ao cliente" na encomenda.</p>
+<p><a href="${env("APP_URL")}/#/gestao">Abrir a área de gestão</a></p></div>`;
+    const token = await graphToken();
+    await sendMail(token, VALIDATED_TO(), `Encomenda ${o.number} validada · ${c?.name ?? ""} · ${eur(o.subtotal)}`, html);
+    return json({ ok: true });
+  }
+
+  const to = unique([user?.user?.email, c?.email]);
+  if (!to.length) return json({ ok: false, error: "sem email do cliente" }, 422);
   const html = `<div style="font:14px Arial,sans-serif;color:#15314c">
 <p>Olá,</p>
 <p>A sua encomenda <strong>${esc(o.number)}</strong>${mfr ? ` (${esc(mfr)})` : ""}${g?.customer_ref ? `, com a sua referência ${esc(g.customer_ref)},` : ""} foi <strong>validada</strong> e vai ser encaminhada ao fabricante. Avisaremos logo que tivermos a confirmação e o prazo de entrega.</p>
@@ -91,7 +110,7 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
   try {
     const body = await req.json();
-    if (body?.event === "validated" && body?.orderId) return await notifyValidated(req, String(body.orderId));
+    if (body?.event === "validated" && body?.orderId) return await notifyValidated(req, String(body.orderId), body?.to === "client" ? "client" : "team");
     const { groupId } = body;
     const notifyClient = body?.notifyClient === true;
     // Cliente autenticado: só pode notificar uma encomenda que seja sua.

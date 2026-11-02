@@ -34,7 +34,7 @@ const mapRule = (r: Row): DiscountRule => ({
 });
 
 const ORDER_SELECT =
-  "id, number, client_id, manufacturer_id, status, subtotal, internal_note, created_at, " +
+  "id, number, client_id, manufacturer_id, status, subtotal, internal_note, created_at, client_notified_at, " +
   "b2b_order_groups(number, customer_ref, notes), b2b_clients(name), " +
   "b2b_order_lines(id, product_id, variant, reference, designation, sales_unit, qty, list_price, discounts, net_price, line_total, price_edited)";
 
@@ -51,6 +51,7 @@ const mapOrder = (o: Row): Order => ({
   internalNote: o.internal_note,
   subtotal: num(o.subtotal),
   createdAt: o.created_at,
+  clientNotifiedAt: o.client_notified_at ?? null,
   lines: (o.b2b_order_lines ?? []).map(
     (l: Row): OrderLine => ({
       id: l.id,
@@ -313,8 +314,8 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
       const { error } = await sb.rpc("b2b_admin_set_line_price", { p_line: lineId, p_discounts: discounts, p_net: netPrice });
       fail(error);
     },
-    async notifyOrderValidated(orderId) {
-      const { data, error } = await sb.functions.invoke("notify-order", { body: { orderId, event: "validated" } });
+    async notifyOrderValidated(orderId, to) {
+      const { data, error } = await sb.functions.invoke("notify-order", { body: { orderId, event: "validated", to } });
       return !error && (data as Row)?.ok === true;
     },
     async listManufacturers() {

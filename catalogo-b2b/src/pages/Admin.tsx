@@ -57,7 +57,7 @@ export function AdminPage() {
 
 const NEXT: Partial<Record<OrderStatus, OrderStatus>> = { pending: "validated", validated: "sent", sent: "confirmed", confirmed: "delivered" };
 const NEXT_LABEL: Partial<Record<OrderStatus, string>> = {
-  pending: "Validar e avisar o cliente",
+  pending: "Validar encomenda",
   validated: "Marcar como enviada ao fabricante",
   sent: "Fabricante confirmou",
   confirmed: "Marcar como entregue",
@@ -93,13 +93,25 @@ function OrdersAdmin() {
     }
     load();
     if (status === "validated" && o.status === "pending") {
-      const sent = await api.notifyOrderValidated(o.id).catch(() => false);
+      // A confirmação segue para a equipa (comercial@); o aviso ao cliente fica para quando a gestão quiser.
+      const sent = await api.notifyOrderValidated(o.id, "team").catch(() => false);
       setMsg(
         sent
-          ? { ok: true, text: `Encomenda ${o.number} validada. O cliente recebeu um email com o aviso.` }
-          : { ok: false, text: `Encomenda ${o.number} validada, mas o email ao cliente não seguiu. Avise-o por outra via.` }
+          ? { ok: true, text: `Encomenda ${o.number} validada. A confirmação seguiu para comercial@representacoesfreixo.com. O cliente não foi avisado.` }
+          : { ok: false, text: `Encomenda ${o.number} validada, mas o email de confirmação à equipa não seguiu.` }
       );
     }
+  }
+
+  async function notifyClient(o: Order) {
+    setMsg(null);
+    const sent = await api.notifyOrderValidated(o.id, "client").catch(() => false);
+    setMsg(
+      sent
+        ? { ok: true, text: `Aviso da encomenda ${o.number} enviado ao cliente.` }
+        : { ok: false, text: `O aviso ao cliente da encomenda ${o.number} não seguiu (o cliente tem email na ficha?).` }
+    );
+    if (sent) load();
   }
 
   return (
@@ -136,9 +148,19 @@ function OrdersAdmin() {
                     <OrderLinesTable order={o} />
                   )}
                   <NoteEditor order={o} onSave={(note) => move(o, o.status, note)} />
+                  {o.status !== "pending" && o.status !== "cancelled" && (
+                    <p className="muted">
+                      {o.clientNotifiedAt ? `Cliente avisado em ${formatDate(o.clientNotifiedAt)}.` : "O cliente ainda não foi avisado da validação."}
+                    </p>
+                  )}
                   <div className="row wrap">
                     {NEXT[o.status] && (
                       <button className="btn primary" onClick={() => move(o, NEXT[o.status]!)}>{NEXT_LABEL[o.status]}</button>
+                    )}
+                    {(o.status === "validated" || o.status === "sent" || o.status === "confirmed") && (
+                      <button className="btn ghost" onClick={() => notifyClient(o)}>
+                        {o.clientNotifiedAt ? "Reenviar aviso ao cliente" : "Enviar aviso ao cliente"}
+                      </button>
                     )}
                     {(o.status === "validated" || o.status === "sent") && (
                       <a className="btn ghost" href={mailtoForManufacturer(o, m?.name ?? "", m?.ordersEmail ?? "", client)}>Preparar email ao fabricante</a>

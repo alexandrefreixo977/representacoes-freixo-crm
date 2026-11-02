@@ -56,7 +56,8 @@ export interface Api {
   /** Altera o preço de uma linha (descontos sucessivos, ou preço líquido quando netPrice vem preenchido). */
   setOrderLinePrice(lineId: string, discounts: number[], netPrice: number | null): Promise<void>;
   /** Avisa o cliente por email que a encomenda foi validada. Devolve false se o email não seguiu. */
-  notifyOrderValidated(orderId: string): Promise<boolean>;
+  /** Encomenda validada: to "team" = confirmação à equipa (comercial@); "client" = aviso ao cliente (opcional, quando a gestão quiser). */
+  notifyOrderValidated(orderId: string, to: "team" | "client"): Promise<boolean>;
   listManufacturers(): Promise<Manufacturer[]>;
   saveManufacturer(m: Omit<Manufacturer, "id" | "slug"> & { id?: string }): Promise<void>;
   listClients(): Promise<Client[]>;
