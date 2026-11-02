@@ -112,7 +112,6 @@ Deno.serve(async (req) => {
     const body = await req.json();
     if (body?.event === "validated" && body?.orderId) return await notifyValidated(req, String(body.orderId), body?.to === "client" ? "client" : "team");
     const { groupId } = body;
-    const notifyClient = body?.notifyClient === true;
     // Cliente autenticado: só pode notificar uma encomenda que seja sua.
     const userClient = createClient(env("SUPABASE_URL"), anonKey(req), {
       global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
@@ -152,14 +151,14 @@ ${g.placed_by_staff ? `Encomenda feita por ${esc(user?.user?.email)} (equipa Fre
       `Nova encomenda ${g.number} · ${c?.name} · ${eur(total)}`,
       `${head}${tables}${foot}<p><a href="${env("APP_URL")}/#/gestao">Abrir a área de gestão para validar</a></p>`
     );
-    // Encomenda da equipa: confirmação ao cliente só se pedido (e cópia a quem a fez); senão, a quem encomendou.
-    const confirmTo = g.placed_by_staff ? unique([notifyClient ? c?.email : null, user?.user?.email]) : unique([user?.user?.email]);
+    // Confirmação automática de receção, sempre: ao cliente (email da ficha) e a quem lançou a encomenda (cliente ou equipa).
+    const confirmTo = unique([c?.email, user?.user?.email]);
     if (confirmTo.length) {
       await sendMail(
         token,
         confirmTo,
         `Recebemos a sua encomenda ${g.number}`,
-        `<p style="font:14px Arial,sans-serif">Obrigado pela sua encomenda. Vamos validá-la e encaminhá-la ${orders.length > 1 ? "aos fabricantes" : "ao fabricante"}; daremos notícias em breve.</p>${tables}${foot}<p style="font:13px Arial,sans-serif;color:#5d7385">Representações Freixo · Viana do Castelo</p>`
+        `<p style="font:14px Arial,sans-serif">Olá,<br><br>Recebemos a encomenda <strong>${esc(g.number)}</strong>${g.customer_ref ? ` (a sua referência ${esc(g.customer_ref)})` : ""} e já está a ser tratada pela nossa equipa. Vamos validá-la e encaminhá-la ${orders.length > 1 ? "aos fabricantes" : "ao fabricante"}; daremos notícias em breve.</p>${tables}${foot}<p style="font:13px Arial,sans-serif;color:#5d7385">Representações Freixo · Viana do Castelo</p>`
       );
     }
     return new Response(JSON.stringify({ ok: true }), { headers: { ...cors, "Content-Type": "application/json" } });

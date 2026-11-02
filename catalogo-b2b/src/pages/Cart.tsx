@@ -9,7 +9,6 @@ import { go, useApp } from "../state";
 export function CartPage({ embedded }: { embedded?: boolean } = {}) {
   const { cart, catalog, pricing, session, setQty, clearCart, refreshSession, productsById, actingClient, setActingClient, priceClientId } = useApp();
   const staff = !!session && session.role !== "client";
-  const [notifyClient, setNotifyClient] = useState(true);
   const [customerRef, setCustomerRef] = useState("");
   const [notes, setNotes] = useState("");
   const [busy, setBusy] = useState(false);
@@ -100,7 +99,7 @@ export function CartPage({ embedded }: { embedded?: boolean } = {}) {
         cart,
         customerRef.trim(),
         notes.trim(),
-        staff && actingClient ? { clientId: actingClient.id, notifyClient } : undefined
+        staff && actingClient ? { clientId: actingClient.id, notifyClient: true } : undefined
       );
       clearCart();
       setDone(result);
@@ -179,10 +178,11 @@ export function CartPage({ embedded }: { embedded?: boolean } = {}) {
             {missingPrice && <p className="warn">Há artigos sem preço: a Freixo confirma o valor na validação.</p>}
             {error && <p className="error">{error}</p>}
             {staff && actingClient && (
-              <label className="check" style={{ flexDirection: "row", alignItems: "center" }}>
-                <input type="checkbox" style={{ width: "auto" }} checked={notifyClient} onChange={(e) => setNotifyClient(e.target.checked)} />
-                Enviar a confirmação ao cliente{actingClient.email ? ` (${actingClient.email})` : " (sem email na ficha)"}
-              </label>
+              <p className="hint">
+                {actingClient.email
+                  ? `O cliente recebe automaticamente a confirmação por email (${actingClient.email}).`
+                  : "O cliente não tem email na ficha: a confirmação segue só para si."}
+              </p>
             )}
             <button className="btn primary block" disabled={busy || (staff && !actingClient)} onClick={submit}>
               {busy ? "A enviar…" : "Confirmar encomenda"}
