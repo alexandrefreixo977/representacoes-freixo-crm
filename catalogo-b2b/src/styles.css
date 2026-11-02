@@ -417,3 +417,14 @@ code { background: #e9eff3; padding: 1px 6px; border-radius: 4px; }
 .product-editor textarea { width: 100%; font: inherit; }
 .btn.small { padding: 6px 10px; font-size: 13px; }
 .families-editor { margin: 12px 0; } .families-editor summary { cursor: pointer; color: var(--navy); font-weight: 600; }
+
+/* validação de encomendas */
+.terms-line { margin: 4px 0 0; font-size: 14px; color: var(--muted); }
+.terms-line strong { color: var(--navy); font-weight: 600; }
+.terms-line a { margin-left: 8px; white-space: nowrap; }
+.edited-tag { margin-left: 6px; font-size: 11px; font-weight: 700; padding: 1px 6px; border-radius: 6px; background: var(--accent); color: var(--accent-ink); }
+.line-editor td { background: var(--ok-bg); vertical-align: middle; }
+.line-editor select { width: auto; }
+.line-editor input { width: auto; min-width: 150px; flex: 1; }
+.bulk-discount { align-items: center; margin-top: 8px; }
+.bulk-discount input { max-width: 160px; }

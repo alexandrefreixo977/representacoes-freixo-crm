@@ -167,3 +167,36 @@ export function variantLabel(product: Pick<Product, "sizeType">, variant?: strin
   if (!variant) return "";
   return product.sizeType === "medida" ? `Comprimento ${variant} mm` : `Tam. ${variant}`;
 }
+
+/** Desconto total equivalente, em %, entre o preço de tabela e o preço líquido (ex.: 40% + 5% = 43%). */
+export function effectiveDiscount(listPrice: number, netPrice: number) {
+  if (!(listPrice > 0)) return 0;
+  return Math.round((1 - netPrice / listPrice) * 10000) / 100;
+}
+
+export type ClientTerms = {
+  /** Regra geral do cliente para o fabricante (ou a regra geral para todos, se o cliente não tiver). */
+  rule?: DiscountRule;
+  /** "client" = condição do cliente; "general" = condição geral da loja; undefined = sem desconto. */
+  source?: "client" | "general";
+  /** Quantas condições especiais (artigo ou família) o cliente tem neste fabricante. */
+  specific: number;
+};
+
+/** Condição comercial de um cliente num fabricante (a do nível do fabricante, sem campanhas). */
+export function clientTerms(rules: DiscountRule[], clientId: string, manufacturerId: string): ClientTerms {
+  const base = rules.filter((r) => r.manufacturerId === manufacturerId && !r.productId && !r.familyId && !r.campaignId);
+  const own = base.find((r) => r.clientId === clientId);
+  const general = base.find((r) => !r.clientId);
+  const specific = rules.filter((r) => r.manufacturerId === manufacturerId && r.clientId === clientId && (r.productId || r.familyId)).length;
+  if (own) return { rule: own, source: "client", specific };
+  if (general) return { rule: general, source: "general", specific };
+  return { specific };
+}
+
+/** Texto curto de uma regra: "40% + 5%" ou "Preço líquido 12,50 €". */
+export function ruleText(rule?: DiscountRule) {
+  if (!rule) return "sem desconto";
+  if (rule.specialNetPrice != null) return `preço líquido ${formatEur(rule.specialNetPrice)}`;
+  return formatDiscounts(rule.discounts) || "sem desconto";
+}
