@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Icon, formatDate } from "../components";
 import { ClientSearch, type ClientPick } from "../ClientSearch";
+import { freixoLines, openDocument, type DocGroup } from "../printDoc";
 import { api } from "../data";
 import {
   applyDiscounts,
@@ -13,7 +14,7 @@ import {
   variantLabel,
 } from "../pricing";
 import { go, useApp } from "../state";
-import type { Client, Pricing, Product, Quote, QuoteLine, QuoteStatus } from "../types";
+import type { Client, Manufacturer, Pricing, Product, Quote, QuoteLine, QuoteStatus } from "../types";
 
 // Propostas comerciais: só para a equipa Freixo (gestão e comercial). O comercial vê as suas; a gestão vê todas.
 
@@ -327,7 +328,7 @@ function QuoteEditor({ id }: { id: string | null }) {
 
   async function printPdf() {
     const saved = dirty || !quote!.id ? await save() : full();
-    if (saved) printQuote(saved, products, session?.name || session?.email || "");
+    if (saved) printQuote(saved, products, session?.name || session?.email || "", catalog?.manufacturers ?? []);
   }
 
   async function email() {
@@ -666,68 +667,49 @@ export function ProductAdder({ onAdd, pasteLabel = "Juntar à proposta" }: { onA
 
 // ------------------------------------------------------------------ PDF (janela de impressão)
 
-const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]!);
 
-export function printQuote(q: Quote, products: Map<string, Product>, author: string) {
-  const w = window.open("", "_blank");
-  if (!w) return;
-  const anyDiscount = q.lines.some((l) => l.discounts.length || l.netPrice < l.listPrice);
-  const rows = q.lines
-    .map((l) => {
-      const p = l.productId ? products.get(l.productId) : undefined;
-      const img = p?.imageUrl ? `<img src="${esc(new URL(p.imageUrl, location.origin).href)}" alt="">` : "";
-      const variant = l.variant ? ` · ${esc(variantLabel(p ?? { sizeType: null }, l.variant))}` : "";
-      return `<tr><td class=img>${img}</td><td><strong>${esc(l.reference)}</strong>${l.manufacturerName ? `<br><span class=muted>${esc(l.manufacturerName)}</span>` : ""}</td>
-<td>${esc(l.designation)}${variant}</td><td class=n>${l.qty} ${esc(l.salesUnit)}</td>
-${anyDiscount ? `<td class=n>${formatEur(l.listPrice)}</td><td class=n>${l.discounts.length ? formatDiscounts(l.discounts) : l.netPrice < l.listPrice ? "Especial" : "—"}</td>` : ""}
-<td class=n>${formatEur(l.netPrice)}</td><td class=n>${formatEur(round2(l.netPrice * l.qty))}</td></tr>`;
-    })
-    .join("");
-  const cust = [
-    q.customerNif ? `NIF ${esc(q.customerNif)}` : "",
-    q.customerAddress ? esc(q.customerAddress) : "",
-    q.contactName ? `A/C ${esc(q.contactName)}` : "",
-    [q.customerEmail, q.customerPhone].filter(Boolean).map((x) => esc(String(x))).join(" · "),
-  ]
-    .filter(Boolean)
-    .join("<br>");
-  const terms = [
-    q.validUntil ? `<div><span>Validade</span>${shortDate(q.validUntil)}</div>` : "",
-    q.paymentTerms ? `<div><span>Pagamento</span>${esc(q.paymentTerms)}</div>` : "",
-    q.deliveryTerms ? `<div><span>Entrega</span>${esc(q.deliveryTerms)}</div>` : "",
-  ].join("");
-  w.document.write(`<!doctype html><html lang="pt-PT"><head><meta charset="utf-8"><title>${esc(q.number ?? "Proposta")} · ${esc(q.customerName)}</title>
-<style>
-@page{size:A4;margin:14mm}
-body{font:12px/1.45 system-ui,-apple-system,Segoe UI,sans-serif;color:#2b2b2d;margin:0}
-.top{display:flex;justify-content:space-between;align-items:flex-start;gap:24px;padding-bottom:14px;border-bottom:3px solid #d2b12b}
-.top img{height:62px}
-.doc{text-align:right}.doc h1{font-size:20px;margin:0;color:#3b3b3d;letter-spacing:.04em}.doc strong{font-size:14px}
-.muted{color:#6b6f75}
-.parties{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}
-.box{border:1px solid #e1e1e3;border-radius:6px;padding:10px 12px}.box h3{margin:0 0 4px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#9a8320}
-table{width:100%;border-collapse:collapse;margin-top:6px}
-th{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:#6b6f75;text-align:left;border-bottom:2px solid #3b3b3d;padding:6px}
-td{border-bottom:1px solid #e6e6e8;padding:6px;vertical-align:middle}
-td.img{width:44px}td.img img{width:40px;height:40px;object-fit:contain}
-.n{text-align:right;white-space:nowrap}
-tfoot td{border:0;font-size:14px;padding-top:10px}
-.terms{display:flex;gap:10px;flex-wrap:wrap;margin:16px 0}.terms div{border:1px solid #e1e1e3;border-radius:6px;padding:8px 12px;min-width:150px}.terms span{display:block;font-size:10px;text-transform:uppercase;color:#6b6f75}
-.notes{white-space:pre-wrap;border-left:3px solid #d2b12b;padding:6px 12px;background:#faf7ea}
-.foot{margin-top:28px;font-size:10px;color:#6b6f75;border-top:1px solid #e1e1e3;padding-top:8px;display:flex;justify-content:space-between}
-tr{page-break-inside:avoid}
-</style></head><body>
-<div class=top><img src="${location.origin}/logo.png" alt="Representações Freixo"><div class=doc><h1>PROPOSTA</h1><strong>${esc(q.number ?? "")}</strong><div class=muted>${new Date(q.createdAt ?? Date.now()).toLocaleDateString("pt-PT")}</div></div></div>
-<div class=parties>
-<div class=box><h3>Cliente</h3><strong>${esc(q.customerName)}</strong><br>${cust}</div>
-<div class=box><h3>Representações Freixo</h3>Viana do Castelo · Portugal<br>Comercial: ${esc(q.ownerName || author)}${q.ownerEmail ? `<br>${esc(q.ownerEmail)}` : ""}</div>
-</div>
-<table><thead><tr><th></th><th>Referência</th><th>Designação</th><th class=n>Qtd.</th>${anyDiscount ? "<th class=n>P. tabela</th><th class=n>Desc.</th>" : ""}<th class=n>P. unit.</th><th class=n>Total</th></tr></thead>
-<tbody>${rows}</tbody>
-<tfoot><tr><td colspan=${anyDiscount ? 7 : 5} class=n><strong>Total sem IVA</strong></td><td class=n><strong>${formatEur(q.total)}</strong></td></tr></tfoot></table>
-${terms ? `<div class=terms>${terms}</div>` : ""}
-${q.notes ? `<div class=notes>${esc(q.notes)}</div>` : ""}
-<div class=foot><span>Valores em euros, sem IVA. Proposta sujeita a confirmação de stock.</span><span>Representações Freixo · b2b.representacoesfreixo.com</span></div>
-<script>window.onload=()=>setTimeout(()=>window.print(),300)</script></body></html>`);
-  w.document.close();
+export function printQuote(q: Quote, products: Map<string, Product>, author: string, manufacturers: Manufacturer[] = []) {
+  // Artigos agrupados por fabricante (com os dados de cada um); linhas livres no fim, em "Outros artigos".
+  const groups = new Map<string, DocGroup>();
+  for (const l of q.lines) {
+    const p = l.productId ? products.get(l.productId) : undefined;
+    const m = p ? manufacturers.find((x) => x.id === p.manufacturerId) : manufacturers.find((x) => x.name === l.manufacturerName);
+    const key = m?.id ?? l.manufacturerName ?? "";
+    if (!groups.has(key)) groups.set(key, { manufacturer: m, name: m?.name ?? l.manufacturerName ?? "Outros artigos", lines: [] });
+    groups.get(key)!.lines.push({
+      imageUrl: p?.imageUrl,
+      reference: l.reference,
+      designation: l.designation + (l.variant ? ` · ${variantLabel(p ?? { sizeType: null }, l.variant)}` : ""),
+      qty: l.qty,
+      unit: l.salesUnit,
+      listPrice: l.listPrice,
+      discounts: l.discounts,
+      netPrice: l.netPrice,
+      total: round2(l.netPrice * l.qty),
+    });
+  }
+  const ordered = [...groups.entries()].sort(([a], [b]) => (a === "" ? 1 : b === "" ? -1 : 0)).map(([, g]) => g);
+  openDocument({
+    title: "Proposta",
+    number: q.number ?? "",
+    date: new Date(q.createdAt ?? Date.now()).toLocaleDateString("pt-PT"),
+    client: {
+      name: q.customerName,
+      lines: [
+        q.customerNif ? `NIF ${q.customerNif}` : "",
+        q.customerAddress ?? "",
+        q.contactName ? `A/C ${q.contactName}` : "",
+        [q.customerEmail, q.customerPhone].filter(Boolean).join(" · "),
+      ].filter(Boolean),
+    },
+    freixo: freixoLines(q.ownerName || author, q.ownerEmail),
+    groups: ordered,
+    terms: [
+      ["Validade", q.validUntil ? shortDate(q.validUntil) : ""],
+      ["Pagamento", q.paymentTerms ?? ""],
+      ["Entrega", q.deliveryTerms ?? ""],
+    ].filter(([, v]) => v) as [string, string][],
+    notes: q.notes,
+    footNote: "Valores em euros, sem IVA. Proposta sujeita a confirmação de stock.",
+  });
 }

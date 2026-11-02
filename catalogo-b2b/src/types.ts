@@ -6,6 +6,13 @@ export type Manufacturer = {
   ordersEmail?: string | null;
   sort: number;
   active?: boolean;
+  /** Dados da empresa, mostrados nas propostas e notas de encomenda. */
+  legalName?: string | null;
+  nif?: string | null;
+  address?: string | null;
+  country?: string | null;
+  phone?: string | null;
+  website?: string | null;
 };
 
 export type Family = { id: string; manufacturerId: string; name: string };
