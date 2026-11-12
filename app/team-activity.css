@@ -44,3 +44,5 @@
 @media(max-width:650px){.ta-user dl{grid-template-columns:repeat(2,1fr)}.ta-filters label{min-width:0;width:100%}.ta-table table{min-width:520px}.ta-day li b{min-width:0}}
 .ta-badge{display:inline-block;width:auto}
 .ta-export{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--ink);margin-bottom:8px}
+.ta-user dd small{display:block;font-size:11px;font-weight:500;color:var(--muted);text-transform:capitalize;margin-top:1px}
+.ta-user dd{white-space:normal;font-size:16px;line-height:1.2}
