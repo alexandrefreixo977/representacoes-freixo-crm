@@ -30,3 +30,9 @@ test("resumo por utilizador", () => {
   assert.ok(s.modules.has("Agenda"));
   assert.equal(formatMinutes(329), "5 h 29 min");
 });
+
+test("registos reconstruídos ficam assinalados", () => {
+  const r = describeActivity({ ...base, kind: "login", detail: { reconstruido: true } });
+  assert.equal(r.text, "Entrou no CRM");
+  assert.equal(r.extra, "reconstruído do histórico");
+});
