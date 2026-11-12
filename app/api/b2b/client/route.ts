@@ -31,19 +31,20 @@ export async function GET(request: Request) {
     const nif = normalizeNif(client.tax_id);
     const [users, orders, quotes] = await Promise.all([
       linked ? shop.from("b2b_users").select("email,name").eq("client_id", linked.id) : Promise.resolve({ data: [], error: null }),
-      linked ? shop.from("b2b_orders").select("id,number,status,subtotal,created_at,b2b_manufacturers(name)").eq("client_id", linked.id).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
-      shop.from("b2b_quotes").select("id,number,status,total,created_at,valid_until,owner_name,client_id,customer_nif").order("created_at", { ascending: false }).limit(500),
+      linked ? shop.from("b2b_orders").select("id,number,status,subtotal,created_at,group_id,b2b_manufacturers(name)").eq("client_id", linked.id).order("created_at", { ascending: false }).limit(50) : Promise.resolve({ data: [], error: null }),
+      shop.from("b2b_quotes").select("id,number,status,total,created_at,valid_until,owner_name,client_id,customer_nif,order_group_id").order("created_at", { ascending: false }).limit(500),
     ]);
     for (const result of [users, orders, quotes]) if (result.error) throw new B2BError(502, result.error.message);
     const ownQuotes = (quotes.data ?? []).filter((q: any) => (linked && q.client_id === linked.id) || (nif && normalizeNif(q.customer_nif) === nif)).slice(0, 50);
     const ids = ownQuotes.map((q: any) => q.id);
-    const opportunities = ids.length ? await db.from("opportunities").select("id,b2b_quote_id").in("b2b_quote_id", ids) : { data: [] };
-    const oppByQuote = new Map((opportunities.data ?? []).map((o: any) => [o.b2b_quote_id, o.id]));
+    const opportunities = ids.length ? await db.from("opportunities").select("id,b2b_quote_id,outcome").in("b2b_quote_id", ids) : { data: [] };
+    const oppByQuote = new Map((opportunities.data ?? []).map((o: any) => [o.b2b_quote_id, o]));
+    const ordersByGroup = (group: string | null) => group ? (orders.data ?? []).filter((o: any) => o.group_id === group).map((o: any) => ({ number: o.number, status: o.status })) : [];
     return json({
       shopUrl: B2B_SHOP_URL,
       linked: linked ? { id: linked.id, name: linked.name, users: users.data ?? [] } : null,
       orders: (orders.data ?? []).map((o: any) => ({ id: o.id, number: o.number, status: o.status, total: Number(o.subtotal), createdAt: o.created_at, manufacturer: o.b2b_manufacturers?.name ?? "" })),
-      quotes: ownQuotes.map((q: any) => ({ id: q.id, number: q.number, status: q.status, total: Number(q.total), createdAt: q.created_at, validUntil: q.valid_until, owner: q.owner_name ?? "", opportunityId: oppByQuote.get(q.id) ?? null })),
+      quotes: ownQuotes.map((q: any) => ({ id: q.id, number: q.number, status: q.status, total: Number(q.total), createdAt: q.created_at, validUntil: q.valid_until, owner: q.owner_name ?? "", opportunityId: oppByQuote.get(q.id)?.id ?? null, outcome: oppByQuote.get(q.id)?.outcome ?? null, orders: ordersByGroup(q.order_group_id) })),
     });
   } catch (error) { return b2bError(error); }
 }

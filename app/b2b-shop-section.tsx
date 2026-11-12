@@ -8,8 +8,15 @@ type ShopData = {
   shopUrl: string;
   linked: { id: string; name: string; users: { email: string | null; name: string | null }[] } | null;
   orders: { id: string; number: string; status: string; total: number; createdAt: string; manufacturer: string }[];
-  quotes: { id: string; number: string; status: string; total: number; createdAt: string; validUntil: string | null; owner: string; opportunityId: string | null }[];
+  quotes: { id: string; number: string; status: string; total: number; createdAt: string; validUntil: string | null; owner: string; opportunityId: string | null; outcome: string | null; orders: { number: string; status: string }[] }[];
 };
+/** Estado da proposta visto do CRM: ganha/perdida no pipeline, e a encomenda que gerou na loja. */
+function quoteResult(q: ShopData["quotes"][number]) {
+  const won = q.outcome === "won" || q.status === "accepted";
+  const label = won ? "Ganha" : q.outcome === "lost" || q.status === "lost" ? "Perdida" : quoteStatusLabel[q.status] ?? q.status;
+  const order = q.orders[0];
+  return <>{won ? <strong className="b2b-won">{label}</strong> : label}{order ? ` · ${order.number.replace(/\/\d+$/, "")} ${(orderStatusLabel[order.status] ?? order.status).toLowerCase()}` : ""}</>;
+}
 const euro = (value: number) => value.toLocaleString("pt-PT", { style: "currency", currency: "EUR" });
 const day = (value: string) => new Date(value).toLocaleDateString("pt-PT");
 
@@ -25,6 +32,8 @@ export default function B2BShopSection({ clientId, clientEmail, session, canEdit
   const load = async () => {
     if (!clientId || !token) return;
     setError("");
+    // Atualiza primeiro o pipeline com o estado atual da loja (proposta aceite / encomenda enviada = ganha).
+    await fetch("/api/b2b/sync", { method: "POST", headers: { Authorization: `Bearer ${token}` } }).catch(() => undefined);
     const response = await fetch(`/api/b2b/client?id=${encodeURIComponent(clientId)}`, { headers: { Authorization: `Bearer ${token}` } });
     const body = await response.json().catch(() => ({}));
     if (!response.ok) { setError(body.error ?? "Não foi possível ler a loja B2B."); return; }
@@ -62,7 +71,7 @@ export default function B2BShopSection({ clientId, clientEmail, session, canEdit
       </div></>}
       {data.quotes.length > 0 && <><h4>Propostas da loja</h4><div className="detail-table b2b-table">
         <div className="detail-head"><span>Proposta</span><span>Data</span><span>Comercial</span><span>Estado</span><span>Valor</span></div>
-        {data.quotes.map(q => <div key={q.id}><strong>{q.number}</strong><span>{day(q.createdAt)}</span><span>{q.owner || "—"}</span><span>{quoteStatusLabel[q.status] ?? q.status}{q.opportunityId ? " · no pipeline" : ""}</span><span>{euro(q.total)}</span></div>)}
+        {data.quotes.map(q => <div key={q.id}><strong>{q.number}</strong><span>{day(q.createdAt)}</span><span>{q.owner || "—"}</span><span>{quoteResult(q)}</span><span>{euro(q.total)}</span></div>)}
       </div></>}
       {data.linked && !data.orders.length && !data.quotes.length && <p className="form-hint">Sem encomendas nem propostas na loja.</p>}
     </>}
