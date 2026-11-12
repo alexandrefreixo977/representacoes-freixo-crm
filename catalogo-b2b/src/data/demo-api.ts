@@ -521,6 +521,67 @@ export const demoApi: Api = {
     const s = requireSession(db, "staff");
     save({ ...db, quotes: (db.quotes ?? []).filter((q) => !(q.id === id && (s.role === "admin" || q.ownerId === s.userId))) });
   },
+  async quoteToOrder(id) {
+    const db = load();
+    const s = requireSession(db, "staff");
+    const q = (db.quotes ?? []).find((x) => x.id === id && (s.role === "admin" || x.ownerId === s.userId));
+    if (!q) throw new Error("Proposta não encontrada");
+    if (q.status !== "accepted") throw new Error(`A proposta ${q.number} ainda não está aceite`);
+    if (q.orderGroupId) return { groupId: q.orderGroupId, groupNumber: q.orderGroupNumber ?? "", created: false };
+    const norm = (r: string) => r.toUpperCase().replace(/[\s.\-_/]/g, "");
+    const lines = q.lines
+      .filter((l) => l.qty > 0)
+      .map((l) => ({ l, product: db.products.find((p) => (l.productId ? p.id === l.productId : norm(p.reference) === norm(l.reference))) }));
+    if (!lines.length) throw new Error(`A proposta ${q.number} não tem artigos`);
+    const missing = lines.filter((x) => !x.product).map((x) => x.l.reference);
+    if (missing.length) throw new Error(`Estes artigos não estão no catálogo da loja e não podem ir para a encomenda: ${missing.join(", ")}.`);
+    const unsized = lines.filter((x) => x.product!.sizeType && !x.l.variant?.trim()).map((x) => x.l.reference);
+    if (unsized.length) throw new Error(`Indique o tamanho/comprimento destes artigos antes de gerar a encomenda: ${unsized.join(", ")}`);
+    const nif = (q.customerNif ?? "").replace(/\D/g, "");
+    let client = db.clients.find((c) => c.id === q.clientId) ?? (nif ? db.clients.find((c) => (c.nif ?? "").replace(/\D/g, "") === nif) : undefined);
+    const clients = [...db.clients];
+    if (!client) {
+      client = { id: uid(), name: q.customerName, nif: q.customerNif ?? null, email: q.customerEmail ?? null, phone: q.customerPhone ?? null, address: q.customerAddress ?? null };
+      clients.push(client);
+    }
+    const seq = db.seq + 1;
+    const groupNumber = `ENC-${new Date().getFullYear()}-${String(seq).padStart(4, "0")}`;
+    const groupId = uid();
+    const createdAt = new Date().toISOString();
+    const mfrs = [...new Set(lines.map((x) => x.product!.manufacturerId))];
+    const orders: Order[] = mfrs.map((m, i) => {
+      const ls = lines.filter((x) => x.product!.manufacturerId === m).map(({ l, product }) => ({
+        id: uid(),
+        productId: product!.id,
+        variant: l.variant ?? null,
+        reference: product!.reference,
+        designation: l.designation + (l.variant && !l.designation.includes(" · ") ? ` · ${variantLabel(product!, l.variant)}` : ""),
+        salesUnit: l.salesUnit,
+        qty: l.qty,
+        listPrice: l.listPrice,
+        discounts: l.discounts,
+        netPrice: l.netPrice,
+        lineTotal: Math.round(l.netPrice * l.qty * 100) / 100,
+      }));
+      return {
+        id: uid(),
+        number: `${groupNumber}/${i + 1}`,
+        groupNumber,
+        clientId: client!.id,
+        clientName: client!.name,
+        manufacturerId: m,
+        status: "pending",
+        customerRef: q.number ?? "",
+        notes: `Proposta ${q.number} aceite pelo cliente.`,
+        subtotal: Math.round(ls.reduce((t, l) => t + l.lineTotal, 0) * 100) / 100,
+        createdAt,
+        lines: ls,
+      };
+    });
+    const quotes = (db.quotes ?? []).map((x) => (x.id === q.id ? { ...x, clientId: client!.id, orderGroupId: groupId, orderGroupNumber: groupNumber } : x));
+    save({ ...db, seq, clients, quotes, orders: [...orders, ...db.orders] });
+    return { groupId, groupNumber, created: true };
+  },
 };
 
 // Usado pelos testes e pelo botão "repor dados de demonstração".

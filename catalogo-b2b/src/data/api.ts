@@ -94,4 +94,6 @@ export interface Api {
   getQuote(id: string): Promise<Quote>;
   saveQuote(quote: Quote): Promise<{ id: string; number: string }>;
   deleteQuote(id: string): Promise<void>;
+  /** Proposta aceite -> encomenda (por fabricante, a validar) com os preços da proposta. Nunca duplica. */
+  quoteToOrder(id: string): Promise<{ groupId: string; groupNumber: string; created: boolean }>;
 }
