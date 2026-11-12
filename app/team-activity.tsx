@@ -44,6 +44,7 @@ export default function TeamActivity({ session }: { session: Session }) {
   const [truncated, setTruncated] = useState(false);
   const [reload, setReload] = useState(0);
   const [from, to] = useMemo(() => range(period, chosen), [period, chosen]);
+  const multiDay = period === "7" || period === "30";
 
   useEffect(() => {
     let active = true;
@@ -124,15 +125,15 @@ export default function TeamActivity({ session }: { session: Session }) {
           <header><strong>{nameOf(u.userId)}</strong>{u.online ? <span className="ta-badge on">Online agora</span> : u.entries ? <span className="ta-badge">Offline</span> : <span className="ta-badge off">Não entrou</span>}</header>
           <dl>
             <div><dt>Entradas</dt><dd>{u.entries}</dd></div>
-            <div><dt>1.ª entrada</dt><dd>{u.firstEntry ? `${period === "hoje" || period === "ontem" || period === "dia" ? "" : day(u.firstEntry) + " "}${time(u.firstEntry)}` : "—"}</dd></div>
-            <div><dt>Última saída</dt><dd>{u.online ? "—" : u.lastExit ? `${period === "hoje" || period === "ontem" || period === "dia" ? "" : day(u.lastExit) + " "}${time(u.lastExit)}` : "—"}</dd></div>
+            <div><dt>1.ª entrada</dt><dd>{u.firstEntry ? <>{time(u.firstEntry)}{multiDay && <small>{day(u.firstEntry)}</small>}</> : "—"}</dd></div>
+            <div><dt>Última saída</dt><dd>{u.online ? "—" : u.lastExit ? <>{time(u.lastExit)}{multiDay && <small>{day(u.lastExit)}</small>}</> : "—"}</dd></div>
             <div><dt>Tempo ativo</dt><dd>{formatMinutes(u.activeMinutes)}</dd></div>
             <div><dt>Criou</dt><dd>{u.created}</dd></div>
             <div><dt>Editou</dt><dd>{u.updated}</dd></div>
             <div><dt>Apagou</dt><dd>{u.deleted}</dd></div>
             <div><dt>Clientes abertos</dt><dd>{u.clientsOpened}</dd></div>
           </dl>
-          {u.entries > 0 && <p className="ta-muted">Não abriu: {notVisited.length ? notVisited.join(", ") : "abriu todos os módulos"}{u.devices.size ? ` · Dispositivo: ${[...u.devices].join(", ")}` : ""}</p>}
+          {u.entries > 0 && <p className="ta-muted">{u.views > 0 ? <>Não abriu: {notVisited.length ? notVisited.join(", ") : "abriu todos os módulos"}</> : "Páginas abertas: só registadas desde 12/11, 15h34"}{u.devices.size ? ` · Dispositivo: ${[...u.devices].join(", ")}` : ""}</p>}
         </article>;
       })}
     </section>
