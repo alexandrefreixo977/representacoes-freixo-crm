@@ -130,7 +130,10 @@ function QuoteList() {
                   <td className={x.validUntil && x.validUntil < new Date().toISOString().slice(0, 10) && x.status === "sent" ? "late" : ""}>
                     {shortDate(x.validUntil)}
                   </td>
-                  <td><span className={`status q-${x.status}`}>{QUOTE_STATUS[x.status]}</span></td>
+                  <td>
+                    <span className={`status q-${x.status}`}>{QUOTE_STATUS[x.status]}</span>
+                    {x.orderGroupNumber && <small className="muted"> · {x.orderGroupNumber}</small>}
+                  </td>
                   <td className="num">{formatEur(x.total)}</td>
                 </tr>
               ))}
@@ -316,10 +319,34 @@ function QuoteEditor({ id }: { id: string | null }) {
       setQuote(merged);
       setDirty(false);
       if (!quote!.id) history.replaceState(null, "", `#/propostas?id=${res.id}`);
+      // Aprovação confirmada: gera logo a encomenda (uma vez só).
+      if (merged.status === "accepted" && !stored?.orderGroupId) {
+        const order = await makeOrder(merged);
+        return order ?? merged;
+      }
       toast(`Proposta ${res.number} guardada.`);
-      return merged;
+      return { ...merged, orderGroupId: stored?.orderGroupId, orderGroupNumber: stored?.orderGroupNumber };
     } catch (e) {
       setError((e as Error).message);
+      return null;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** Proposta aceite -> encomenda (a validar), com os preços e quantidades da proposta. */
+  async function makeOrder(base: Quote) {
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await api.quoteToOrder(base.id!);
+      const stored = await api.getQuote(base.id!).catch(() => null);
+      const next: Quote = { ...base, clientId: stored?.clientId ?? base.clientId, orderGroupId: res.groupId, orderGroupNumber: res.groupNumber };
+      setQuote(next);
+      toast(res.created ? `Proposta ${base.number} aceite: criada a encomenda ${res.groupNumber} (fica a validar).` : `Esta proposta já tem a encomenda ${res.groupNumber}.`);
+      return next;
+    } catch (e) {
+      setError(`Proposta guardada como aceite, mas a encomenda não foi criada: ${(e as Error).message}`);
       return null;
     } finally {
       setBusy(false);
@@ -380,9 +407,17 @@ function QuoteEditor({ id }: { id: string | null }) {
             {quote.number && <span className={`status q-${quote.status}`}>{QUOTE_STATUS[quote.status]}</span>}
           </h1>
           {quote.ownerName && <small className="muted">Comercial: {quote.ownerName}{quote.createdAt ? ` · criada a ${formatDate(quote.createdAt)}` : ""}</small>}
+          {quote.orderGroupNumber && (
+            <p className="small" style={{ margin: "4px 0 0" }}>
+              Encomenda gerada: <button className="link" onClick={() => go(session?.role === "admin" ? "gestao" : "encomendas")}>{quote.orderGroupNumber} ›</button>
+            </p>
+          )}
         </div>
         <div className="row wrap">
           <button className="btn primary" disabled={busy || !canEditOwner} onClick={() => save()}>{busy ? "A guardar…" : dirty || !quote.id ? "Guardar" : "Guardada ✓"}</button>
+          {quote.id && quote.status === "accepted" && !quote.orderGroupId && !dirty && (
+            <button className="btn accent" disabled={busy || !canEditOwner} onClick={() => makeOrder(quote)}>Gerar encomenda</button>
+          )}
           <button className="btn ghost" disabled={busy || !lines.length} onClick={printPdf}><Icon name="doc" size={16} /> PDF / Imprimir</button>
           <button className="btn ghost" disabled={busy || !lines.length} onClick={email}>Enviar por email</button>
         </div>
@@ -551,6 +586,7 @@ function QuoteEditor({ id }: { id: string | null }) {
             <select value={quote.status} onChange={(e) => set({ status: e.target.value as QuoteStatus })}>
               {Object.entries(QUOTE_STATUS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
             </select>
+            {quote.status === "accepted" && !quote.orderGroupId && dirty && <small className="muted">Ao guardar, é criada a encomenda (fica a validar).</small>}
           </label>
           <label>Condições de pagamento<input value={quote.paymentTerms ?? ""} placeholder="ex. 30 dias após fatura" onChange={(e) => set({ paymentTerms: e.target.value })} /></label>
           <label>Prazo de entrega<input value={quote.deliveryTerms ?? ""} placeholder="ex. 5 a 8 dias úteis" onChange={(e) => set({ deliveryTerms: e.target.value })} /></label>

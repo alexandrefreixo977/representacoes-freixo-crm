@@ -261,6 +261,9 @@ export type Quote = {
   paymentTerms?: string | null;
   notes?: string | null;
   internalNote?: string | null;
+  /** Encomenda gerada quando a proposta foi aceite. */
+  orderGroupId?: string | null;
+  orderGroupNumber?: string | null;
   total: number;
   createdAt?: string;
   updatedAt?: string;

@@ -89,6 +89,8 @@ const mapQuote = (q: Row): Quote => ({
   paymentTerms: q.payment_terms,
   notes: q.notes,
   internalNote: q.internal_note,
+  orderGroupId: q.order_group_id ?? null,
+  orderGroupNumber: q.order_group?.number ?? null,
   total: num(q.total),
   createdAt: q.created_at,
   updatedAt: q.updated_at,
@@ -108,6 +110,9 @@ const mapQuote = (q: Row): Quote => ({
       lineTotal: num(l.line_total),
     })),
 });
+
+/** Número da encomenda gerada pela proposta (há duas ligações entre as tabelas; usa a da proposta). */
+const QUOTE_ORDER = "order_group:b2b_order_groups!b2b_quotes_order_group_id_fkey(number)";
 
 const PRODUCT_COLS =
   "id, manufacturer_id, family_id, reference, ean, designation, description, image_url, tech_sheet_url, sales_unit, pack_qty, moq, is_new, size_type, active";
@@ -506,12 +511,12 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     },
 
     async listQuotes() {
-      const { data, error } = await sb.from("b2b_quotes").select("*").order("created_at", { ascending: false }).limit(500);
+      const { data, error } = await sb.from("b2b_quotes").select(`*, ${QUOTE_ORDER}`).order("created_at", { ascending: false }).limit(500);
       fail(error);
       return (data ?? []).map((q: Row) => mapQuote({ ...q, b2b_quote_lines: [] }));
     },
     async getQuote(id) {
-      const { data, error } = await sb.from("b2b_quotes").select("*, b2b_quote_lines(*)").eq("id", id).single();
+      const { data, error } = await sb.from("b2b_quotes").select(`*, b2b_quote_lines(*), ${QUOTE_ORDER}`).eq("id", id).single();
       fail(error);
       return mapQuote(data as Row);
     },
@@ -541,6 +546,14 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
     async deleteQuote(id) {
       const { error } = await sb.from("b2b_quotes").delete().eq("id", id);
       fail(error);
+    },
+    async quoteToOrder(id) {
+      const { data, error } = await sb.rpc("b2b_quote_to_order", { p_quote: id });
+      fail(error);
+      const res = data as { groupId: string; groupNumber: string; created: boolean };
+      // Encomenda nova: avisa a Freixo para validar e confirma a receção ao cliente (falha no email não anula a encomenda).
+      if (res.created) sb.functions.invoke("notify-order", { body: { groupId: res.groupId, notifyClient: false } }).catch(() => undefined);
+      return res;
     },
   };
   return self;
