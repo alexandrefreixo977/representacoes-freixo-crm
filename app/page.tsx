@@ -193,15 +193,24 @@ export default function Home() {
   }, []);
 
   // Propostas da loja B2B entram no pipeline como oportunidades (uma vez por sessão, em segundo plano).
-  const b2bSyncedFor = useRef<string | null>(null);
+  // Repete ao voltar à app (no máximo de 5 em 5 minutos), para a app aberta no telemóvel não ficar desatualizada.
+  const b2bSyncedAt = useRef<{ user: string; at: number } | null>(null);
   useEffect(() => {
     const token = session?.access_token;
-    if (!token || b2bSyncedFor.current === session.user.id) return;
-    b2bSyncedFor.current = session.user.id;
-    fetch("/api/b2b/sync", { method: "POST", headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.ok ? r.json() : null)
-      .then(r => { if (r && (r.created || r.updated)) window.dispatchEvent(new Event("crm-records-changed")); })
-      .catch(() => {});
+    if (!token) return;
+    const sync = () => {
+      const last = b2bSyncedAt.current;
+      if (last && last.user === session.user.id && Date.now() - last.at < 5 * 60000) return;
+      b2bSyncedAt.current = { user: session.user.id, at: Date.now() };
+      fetch("/api/b2b/sync", { method: "POST", headers: { Authorization: `Bearer ${token}` } })
+        .then(r => r.ok ? r.json() : null)
+        .then(r => { if (r && (r.created || r.updated)) window.dispatchEvent(new Event("crm-records-changed")); })
+        .catch(() => {});
+    };
+    sync();
+    const onVisible = () => { if (document.visibilityState === "visible") sync(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, [session]);
 
   useEffect(() => {
