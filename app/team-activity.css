@@ -1,0 +1,46 @@
+/* Administração › Atividade da equipa */
+.team-activity .ta-note{color:var(--muted);font-size:13px;margin:-6px 0 16px;max-width:900px}
+.team-activity .ta-muted{color:var(--muted);font-size:13px;margin:6px 0}
+.team-activity .ta-error{color:var(--red);font-weight:600}
+.ta-filters{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;padding:14px 16px;margin-bottom:14px}
+.ta-filters label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted);min-width:220px}
+.ta-filters select,.ta-filters input{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:#fff;font:inherit;color:var(--ink)}
+.ta-periods{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.ta-periods button{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 12px;font-size:13px;cursor:pointer;color:var(--ink)}
+.ta-periods button.active{background:var(--rf-charcoal,#24272d);border-color:var(--rf-charcoal,#24272d);color:#fff}
+.ta-users{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;margin-bottom:14px}
+.ta-user{padding:14px 16px}
+.ta-user header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:10px}
+.ta-user dl{display:grid;grid-template-columns:repeat(4,1fr);gap:10px 8px;margin:0}
+.ta-user dl div{min-width:0}
+.ta-user dt{font-size:11px;color:var(--muted);line-height:1.2}
+.ta-user dd{margin:2px 0 0;font-size:17px;font-weight:700;color:var(--ink);white-space:nowrap}
+.ta-badge{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:var(--rf-surface-soft,#f0ede5);color:var(--muted);white-space:nowrap}
+.ta-badge.on{background:#e3efe6;color:#3d6a4b}
+.ta-badge.off{background:#f8e5e4;color:var(--red)}
+.ta-block{padding:16px;margin-bottom:14px}
+.ta-block h2{font-size:17px;margin:0 0 10px}
+.ta-block-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.ta-block-head h2{margin:0}
+.ta-table{overflow-x:auto}
+.ta-table table{width:100%;border-collapse:collapse;font-size:13px}
+.ta-table th{text-align:left;color:var(--muted);font-weight:600;font-size:12px;padding:6px 8px;border-bottom:1px solid var(--line)}
+.ta-table td{padding:7px 8px;border-bottom:1px solid var(--line)}
+.ta-table small{color:var(--muted)}
+.ta-day h3{font-size:13px;text-transform:capitalize;margin:14px 0 6px;color:var(--ink)}
+.ta-day h3 small{color:var(--muted);font-weight:400;text-transform:none;margin-left:6px}
+.ta-day ol{list-style:none;margin:0;padding:0}
+.ta-day li{display:flex;gap:10px;align-items:baseline;padding:6px 8px;border-left:3px solid var(--line);font-size:13px}
+.ta-day li+li{border-top:1px solid #f1eee6}
+.ta-day li time{color:var(--muted);font-variant-numeric:tabular-nums;min-width:40px}
+.ta-day li b{min-width:70px;font-weight:600}
+.ta-day li span{display:flex;flex-direction:column}
+.ta-day li span small{color:var(--muted);font-size:12px}
+.ta-day li.ta-change{border-left-color:var(--rf-gold,#c99b2d)}
+.ta-day li.ta-delete{border-left-color:var(--red)}
+.ta-day li.ta-create{border-left-color:var(--green)}
+.ta-day li.ta-search{border-left-color:#8a8fb5}
+.ta-day li.ta-access{border-left-color:var(--rf-charcoal,#24272d);font-weight:600}
+@media(max-width:650px){.ta-user dl{grid-template-columns:repeat(2,1fr)}.ta-filters label{min-width:0;width:100%}.ta-table table{min-width:520px}.ta-day li b{min-width:0}}
+.ta-badge{display:inline-block;width:auto}
+.ta-export{border:1px solid var(--line);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer;color:var(--ink);margin-bottom:8px}

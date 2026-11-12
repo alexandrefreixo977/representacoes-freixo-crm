@@ -8,6 +8,7 @@ import "./global-search.css";
 import "./mailbox.css";
 import "./dashboard-fixes.css";
 import "./brand-theme.css";
+import "./team-activity.css";
 import "./mobile-responsive.css";
 import PwaRegister from "./pwa-register";
 

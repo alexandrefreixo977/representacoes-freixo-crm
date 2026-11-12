@@ -21,6 +21,8 @@ import VoiceAssistant from "./voice-assistant";
 import { FeedbackHost, toast, askConfirm } from "./ui-feedback";
 import { daysFromToday, friendlyDay, timeAgo } from "./friendly-date";
 import { visitFrequencyDays } from "./visit-frequency";
+import { useActivityTracker, recordActivity, endActivitySession } from "./activity-tracker";
+import TeamActivity from "./team-activity";
 
 type Section = 
   | "Dashboard" 
@@ -33,12 +35,13 @@ type Section =
   | "Correio"
   | "Utilizadores"
   | "Relatórios"
+  | "Atividade"
   | "Perfil";
 
 const sectionRoutes: Record<Section, string> = {
   Dashboard: "/dashboard", Agenda: "/agenda", Clientes: "/clientes", Fabricantes: "/fabricantes", Visitas: "/visitas",
   Tarefas: "/tarefas", Oportunidades: "/oportunidades", Correio: "/correio",
-  Utilizadores: "/administracao", Relatórios: "/relatorios", Perfil: "/perfil",
+  Utilizadores: "/administracao", Relatórios: "/relatorios", Atividade: "/atividade", Perfil: "/perfil",
 };
 
 const routeSection = (path: string): Section => path.startsWith("/clientes") ? "Clientes" : path.startsWith("/fabricantes") ? "Fabricantes" :
@@ -273,13 +276,35 @@ export default function Home() {
 
   const logout = async () => {
     if(session) { try { await disconnectPush(session); } catch { /* Local sign-out must remain available. */ } }
+    await endActivitySession(session?.user.id);
     setShowLogout(false);
     await supabase.auth.signOut({ scope: "local" });
     setSession(null); setProviderToken(null); setShowCover(true); setActiveSection("Dashboard"); setRouteClientId(""); setRouteManufacturerId("");
     window.history.replaceState({}, "", "/");
   };
 
-  // Filtros de segurança baseados no papel (Role) do Utilizador
+  // Registo de atividade (consultável só pelos administradores em Atividade da equipa).
+  const trackingOn = Boolean(session) && !accessDenied && !pendingApproval;
+  useActivityTracker(session, trackingOn);
+  useEffect(() => {
+    if (!trackingOn || showCover) return;
+    if (routeClientId) {
+      const client = clients.find(c => c.id === routeClientId || c.code === routeClientId);
+      recordActivity("view", "Clientes", client?.name ?? null, "clients", client?.id ?? routeClientId);
+    } else if (routeManufacturerId) {
+      recordActivity("view", "Fabricantes", null, "manufacturers", routeManufacturerId);
+    } else {
+      recordActivity("view", section === "Utilizadores" ? "Administração" : section, null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trackingOn, showCover, section, routeClientId, routeManufacturerId]);
+  useEffect(() => {
+    const term = query.trim();
+    if (!trackingOn || term.length < 3) return;
+    const timer = window.setTimeout(() => recordActivity("action", "Pesquisa", term.slice(0, 120), null, null, { tipo: "pesquisa" }), 2500);
+    return () => window.clearTimeout(timer);
+  }, [query, trackingOn]);
+
   const filteredClients = useMemo(() => {
     const base = currentUser.role === "admin" 
       ? clients 
@@ -373,6 +398,16 @@ export default function Home() {
         {currentUser.role === "admin" && (
           <button
             type="button"
+            className={section === "Atividade" ? "active" : ""}
+            onClick={() => { setSection("Atividade"); setMobileOpen(false); }}
+          >
+            <span>◷</span> Atividade da equipa
+          </button>
+        )}
+
+        {currentUser.role === "admin" && (
+          <button
+            type="button"
             className={section === "Utilizadores" ? "active" : ""}
             onClick={() => { setSection("Utilizadores"); setMobileOpen(false); }}
           >
@@ -453,6 +488,7 @@ export default function Home() {
         {section === "Utilizadores" && currentUser.role === "admin" && (
           <UsersAdmin users={users} setUsers={setUsers} currentUser={currentUser} onReload={loadUsers} />
         )}
+        {section === "Atividade" && currentUser.role === "admin" && <TeamActivity session={session!} />}
         {section === "Perfil" && <><NotificationSettings/><PersonalArea currentUser={currentUser} session={session} onLogout={() => setShowLogout(true)} /></>}
       </div>
     </section>
