@@ -40,7 +40,14 @@ function noun(log: ActivityLog) {
 }
 
 /** Frase principal e complemento (cliente, campos alterados…). */
-export function describeActivity(log: ActivityLog, names: { clients?: Map<string, string>; manufacturers?: Map<string, string> } = {}): { text: string; extra: string; group: "acesso" | "navegação" | "alteração" | "pesquisa" } {
+type Described = { text: string; extra: string; group: "acesso" | "navegação" | "alteração" | "pesquisa" };
+export function describeActivity(log: ActivityLog, names: { clients?: Map<string, string>; manufacturers?: Map<string, string> } = {}): Described {
+  const result = describeBase(log, names);
+  if (log.detail?.reconstruido) result.extra = [result.extra, "reconstruído do histórico"].filter(Boolean).join(" · ");
+  return result;
+}
+
+function describeBase(log: ActivityLog, names: { clients?: Map<string, string>; manufacturers?: Map<string, string> }): Described {
   const d = log.detail ?? {};
   switch (log.kind) {
     case "login": return { text: "Entrou no CRM", extra: d.dispositivo ? String(d.dispositivo) : "", group: "acesso" };

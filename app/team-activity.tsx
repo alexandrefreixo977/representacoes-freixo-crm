@@ -30,7 +30,7 @@ function range(period: Period, chosen: string): [Date, Date] {
 const csvCell = (v: string) => `"${v.replace(/"/g, '""')}"`;
 
 export default function TeamActivity({ session }: { session: Session }) {
-  const [period, setPeriod] = useState<Period>("hoje");
+  const [period, setPeriod] = useState<Period>("30");
   const [chosen, setChosen] = useState(() => new Date().toLocaleDateString("sv-SE"));
   const [userId, setUserId] = useState("todos");
   const [filter, setFilter] = useState<"tudo" | "alteração" | "navegação" | "acesso">("tudo");
@@ -100,7 +100,7 @@ export default function TeamActivity({ session }: { session: Session }) {
   return <div className="team-activity">
     <div className="page-title"><div><span>ADMINISTRAÇÃO</span><h1>Atividade da equipa</h1></div>
       <button type="button" className="ta-export" onClick={exportCsv} disabled={!timeline.length}>Exportar Excel (CSV)</button></div>
-    <p className="ta-note">Visível apenas para administradores. Regista entradas e saídas, o tempo de utilização, as páginas e fichas abertas, as pesquisas e todas as criações, alterações e eliminações feitas no CRM. A sessão termina ao sair ou após 20 minutos sem utilização. Registos guardados durante 12 meses.</p>
+    <p className="ta-note">Visível apenas para administradores. Regista entradas e saídas, o tempo de utilização, as páginas e fichas abertas, as pesquisas e todas as criações, alterações e eliminações feitas no CRM. A sessão termina ao sair ou após 20 minutos sem utilização. Registos guardados durante 12 meses. Antes de 12/11/2026 a atividade foi reconstruída a partir do rasto que já existia: entradas e saídas aproximadas (à hora) e o que foi criado ou concluído; páginas abertas, pesquisas e edições de fichas não ficaram registadas nesse período.</p>
 
     <div className="card ta-filters">
       <label>Utilizador<select value={userId} onChange={e => setUserId(e.target.value)}>
@@ -143,8 +143,8 @@ export default function TeamActivity({ session }: { session: Session }) {
         <div className="ta-table"><table><thead><tr><th>Dia</th><th>Utilizador</th><th>Entrada</th><th>Saída</th><th>Duração</th><th>Dispositivo</th></tr></thead><tbody>
           {sessions.map(s => { const online = isOnline(s); const mins = Math.max(0, Math.round((Date.parse(sessionEnd(s)) - Date.parse(s.started_at)) / 60000)); return <tr key={s.id}>
             <td>{day(s.started_at)}</td><td>{nameOf(s.user_id)}</td><td>{time(s.started_at)}</td>
-            <td>{online ? <span className="ta-badge on">Online</span> : <>{time(sessionEnd(s))} <small>{s.end_reason === "logout" ? "saiu" : "inatividade"}</small></>}</td>
-            <td>{formatMinutes(mins)}</td><td>{s.device ?? "—"}</td></tr>; })}
+            <td>{online ? <span className="ta-badge on">Online</span> : <>{s.end_reason === "reconstruida" ? "≈ " : ""}{time(sessionEnd(s))} <small>{s.end_reason === "logout" ? "saiu" : s.end_reason === "reconstruida" ? "aproximada" : "inatividade"}</small></>}</td>
+            <td>{s.end_reason === "reconstruida" ? "≈ " : ""}{formatMinutes(mins)}</td><td>{s.device ?? "—"}</td></tr>; })}
         </tbody></table></div>}
     </section>
 
