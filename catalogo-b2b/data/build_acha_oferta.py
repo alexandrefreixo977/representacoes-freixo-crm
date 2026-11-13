@@ -1,8 +1,8 @@
-"""Gera a migração da campanha ACHA "Oferta Outono-Inverno 2026" (preços netos).
+"""Gera a migração da campanha ACHA "Oferta Outono-Inverno 2026" (preços líquidos).
 
 Uso: python3 data/build_acha_oferta.py data/acha/oferta_outono_inverno_2026.txt supabase/migrations/<data>_campanha_acha_outono_2026.sql
 
-Cada linha do .txt (REF | UDS. | preço neto | nota) vira uma regra geral por artigo com preço líquido especial,
+Cada linha do .txt (REF | UDS. | preço líquido | nota) vira uma regra geral por artigo com preço líquido especial,
 ligada à campanha e válida até ao fim da promoção. Artigos que não estão na tarifa ACHA 2025 são criados aqui.
 """
 import sys
@@ -56,7 +56,7 @@ def main(src, out):
         new_rows.append(f"({q(ref)},{q(des)},{q(desc)},{q(fam)},{q(img)},{list_price if list_price else net})")
     offer = ",\n".join(f"({q(r)},{u},{n},{q(notes.get(r) if r not in NEW else None)})" for r, u, n, _x in items)
     with open(out, "w", encoding="utf-8") as fh:
-        fh.write(f"""-- Campanha ACHA "Oferta Outono-Inverno 2026" (preços netos, {len(items)} artigos), válida de 01/10/2026 a 31/01/2027.
+        fh.write(f"""-- Campanha ACHA "Oferta Outono-Inverno 2026" (preços líquidos, {len(items)} artigos), válida de 01/10/2026 a 31/01/2027.
 -- Pedido do Alexandre (31/10/2026): só visível para revendedores com conta. Gerado por data/build_acha_oferta.py — não editar à mão.
 
 -- Campanhas só para clientes registados (visitantes não as veem).
@@ -75,9 +75,9 @@ create index if not exists b2b_rules_campaign on public.b2b_discount_rules (camp
 
 insert into public.b2b_campaigns (id, title, subtitle, badge, details, manufacturer_id, starts_on, ends_on, active, sort, members_only)
 select {q(CAMPAIGN_ID)}, 'Oferta Outono-Inverno 2026',
-  'Preços netos em nivelação laser, flexómetros, marcação, metrologia e medição eletrónica. Até 31 de janeiro de 2027.',
-  'Preço neto',
-  'Preços netos por unidade, já aplicados no seu carrinho. A coluna "Oferta" indica a quantidade de referência da ACHA para cada artigo. Expositores com condições próprias (ver descrição de cada um). Tubos de tinta indelével: 2,40 €/un a partir de 50 un.; 2,35 € a partir de 100; 2,30 € a partir de 200; 2,25 € a partir de 400 (caixas da mesma referência).',
+  'Preços líquidos em nivelação laser, flexómetros, marcação, metrologia e medição eletrónica. Até 31 de janeiro de 2027.',
+  'Preço líquido',
+  'Preços líquidos por unidade, já aplicados no seu carrinho. A coluna "Oferta" indica a quantidade de referência da ACHA para cada artigo. Expositores com condições próprias (ver descrição de cada um). Tubos de tinta indelével: 2,40 €/un a partir de 50 un.; 2,35 € a partir de 100; 2,30 € a partir de 200; 2,25 € a partir de 400 (caixas da mesma referência).',
   m.id, '2026-10-01', {q(ENDS_ON)}, true, 10, true
 from public.b2b_manufacturers m where m.slug = 'acha-herramientas'
 on conflict (id) do update set title = excluded.title, subtitle = excluded.subtitle, badge = excluded.badge, details = excluded.details,

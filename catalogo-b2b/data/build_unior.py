@@ -1,4 +1,4 @@
-"""Gera as migrações do catálogo UNIOR Hand Tools e da campanha de preços netos para distribuidores.
+"""Gera as migrações do catálogo UNIOR Hand Tools e da campanha de preços líquidos para distribuidores.
 
 Uso (o 5.º ficheiro, opcional, corrige os artigos já carregados): python3 data/build_unior.py "TARIFA UNIOR 2026-27 V3.xlsx" "PRECIOS NETOS PROMOCION ESPECIAL DISTRIBUIDORES 2026-27.xlsx" \
        supabase/migrations/<data>_unior_catalogo.sql supabase/migrations/<data>_campanha_unior_2026.sql [<data>_unior_designacoes.sql]
@@ -250,14 +250,14 @@ drop table unior_fix;
         offer.append(f"({q(ref)},{round(float(net), 2)})")
 
     with open(out_camp, "w", encoding="utf-8") as fh:
-        fh.write(f"""-- Campanha UNIOR "Promoção especial distribuidores 2026-27" (preços netos, {len(offer)} artigos), válida até 26/02/2027.
+        fh.write(f"""-- Campanha UNIOR "Promoção especial distribuidores 2026-27" (preços líquidos, {len(offer)} artigos), válida até 26/02/2027.
 -- Só para revendedores com conta (pedido do Alexandre, 31/10/2026). Gerado por data/build_unior.py — não editar à mão.
 
 insert into public.b2b_campaigns (id, title, subtitle, badge, details, manufacturer_id, starts_on, ends_on, active, sort, members_only)
 select {q(CAMPAIGN_ID)}, 'Promoção especial distribuidores 2026-27',
-  'Preços netos em chaves, alicates, ferramenta isolada VDE, jogos, medição e mobiliário de oficina. Até 26 de fevereiro de 2027.',
-  'Preço neto',
-  'Preços netos por unidade para distribuidores, já aplicados no seu carrinho. Válidos até 26/02/2027.',
+  'Preços líquidos em chaves, alicates, ferramenta isolada VDE, jogos, medição e mobiliário de oficina. Até 26 de fevereiro de 2027.',
+  'Preço líquido',
+  'Preços líquidos por unidade para distribuidores, já aplicados no seu carrinho. Válidos até 26/02/2027.',
   m.id, '2026-10-31', {q(ENDS_ON)}, true, 20, true
 from public.b2b_manufacturers m where m.slug = '{SLUG}'
 on conflict (id) do update set title = excluded.title, subtitle = excluded.subtitle, badge = excluded.badge, details = excluded.details,

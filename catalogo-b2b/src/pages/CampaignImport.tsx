@@ -15,7 +15,7 @@ const LABEL: Record<State, string> = { ok: "No catálogo", new: "Artigo novo", n
 
 /**
  * Importa uma campanha a partir do ficheiro do fabricante (Excel/CSV com colunas, ou PDF com a oferta):
- * lê referências, preços netos, quantidades e fotos, mostra tudo para rever e cria a campanha com os preços.
+ * lê referências, preços líquidos, quantidades e fotos, mostra tudo para rever e cria a campanha com os preços.
  */
 export function CampaignImport({ campaigns, onDone, onCancel }: { campaigns: Campaign[]; onDone: (msg: string) => void; onCancel: () => void }) {
   const { catalog, refreshCatalog, refreshSession } = useApp();
@@ -90,7 +90,7 @@ export function CampaignImport({ campaigns, onDone, onCancel }: { campaigns: Cam
           : {
               title: head.title.trim() || "Campanha",
               subtitle: head.subtitle.trim() || null,
-              badge: "Preço neto",
+              badge: "Preço líquido",
               manufacturerId: mfrId,
               productId: null,
               startsOn: head.startsOn || null,
@@ -98,7 +98,7 @@ export function CampaignImport({ campaigns, onDone, onCancel }: { campaigns: Cam
               active: true,
               sort: 50,
               membersOnly: head.membersOnly,
-              details: "Preços netos por unidade, já aplicados no seu carrinho.",
+              details: "Preços líquidos por unidade, já aplicados no seu carrinho.",
             }
       );
       setBusy(`A gravar ${chosen.length} preços…`);
@@ -129,8 +129,8 @@ export function CampaignImport({ campaigns, onDone, onCancel }: { campaigns: Cam
         <button className="btn ghost" onClick={onCancel}>Fechar</button>
       </div>
       <p className="hint">
-        Carregue o ficheiro da campanha tal como o fabricante o enviou: Excel/CSV (deteta as colunas de código, preço neto, PVP,
-        quantidade e o link da foto) ou PDF (lê as referências e os preços netos de cada artigo). Antes de gravar, revê tudo aqui.
+        Carregue o ficheiro da campanha tal como o fabricante o enviou: Excel/CSV (deteta as colunas de código, preço líquido, PVP,
+        quantidade e o link da foto) ou PDF (lê as referências e os preços líquidos de cada artigo). Antes de gravar, revê tudo aqui.
       </p>
       <div className="form-grid">
         <label>
@@ -159,7 +159,7 @@ export function CampaignImport({ campaigns, onDone, onCancel }: { campaigns: Cam
         <>
           <div className="form-grid">
             {!target && <label className="full">Título *<input maxLength={80} value={head.title} onChange={(e) => setHead({ ...head, title: e.target.value })} /></label>}
-            {!target && <label className="full">Texto<input maxLength={140} value={head.subtitle} placeholder="ex. Preços netos em chaves, alicates e jogos" onChange={(e) => setHead({ ...head, subtitle: e.target.value })} /></label>}
+            {!target && <label className="full">Texto<input maxLength={140} value={head.subtitle} placeholder="ex. Preços líquidos em chaves, alicates e jogos" onChange={(e) => setHead({ ...head, subtitle: e.target.value })} /></label>}
             <label>Início<input type="date" value={head.startsOn} onChange={(e) => setHead({ ...head, startsOn: e.target.value })} /></label>
             <label>Fim<input type="date" value={head.endsOn} onChange={(e) => setHead({ ...head, endsOn: e.target.value })} /></label>
             <label className="check" style={{ flexDirection: "row", alignItems: "center" }}>
@@ -191,13 +191,13 @@ export function CampaignImport({ campaigns, onDone, onCancel }: { campaigns: Cam
             </p>
           )}
           {counts.noprice > 0 && (
-            <p className="hint">"Sem preço": a referência está no ficheiro mas não consegui ler o preço com segurança (escalões, ou o preço está noutro sítio da página). Escreva o preço neto para incluir.</p>
+            <p className="hint">"Sem preço": a referência está no ficheiro mas não consegui ler o preço com segurança (escalões, ou o preço está noutro sítio da página). Escreva o preço líquido para incluir.</p>
           )}
 
           <div className="table-wrap">
             <table className="table import-table">
               <thead>
-                <tr><th /><th>Foto</th><th>Referência</th><th>Designação</th><th className="num">PVP</th><th className="num">Neto</th><th className="num">Qtd. oferta</th><th>Estado</th></tr>
+                <tr><th /><th>Foto</th><th>Referência</th><th>Designação</th><th className="num">PVP</th><th className="num">Líquido</th><th className="num">Qtd. oferta</th><th>Estado</th></tr>
               </thead>
               <tbody>
                 {shown.slice(0, 600).map(({ l, i }) => {
