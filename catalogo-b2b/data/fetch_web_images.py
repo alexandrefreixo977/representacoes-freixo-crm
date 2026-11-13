@@ -65,7 +65,10 @@ def main(listfile, out_dir, prefix, slug, migration, comment):
             f.write(f"\n) as v(ref, url), public.b2b_manufacturers m\nwhere m.slug = {q(slug)} and p.manufacturer_id = m.id and p.reference = v.ref\n"
                     "  and coalesce(p.image_url, '') !~* '\\.(jpe?g|png|webp)(\\?|$)';\n")
     print(f"{len(pairs)}/{len(rows)} com foto; sem foto: {len(miss)}")
-    pathlib.Path(migration).with_suffix(".faltam.txt").write_text("\n".join(miss), encoding="utf-8") if miss else None
+    if miss:
+        falta = pathlib.Path(__file__).parent / "fotos-em-falta" / (pathlib.Path(migration).stem + ".txt")
+        falta.parent.mkdir(exist_ok=True)
+        falta.write_text("\n".join(miss), encoding="utf-8")
 
 
 if __name__ == "__main__":
