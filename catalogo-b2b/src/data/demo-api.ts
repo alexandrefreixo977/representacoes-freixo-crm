@@ -90,6 +90,9 @@ function requireSession(db: DemoDb, role?: "admin" | "staff") {
 
 export const demoApi: Api = {
   mode: "demo",
+  async trackVisit() {
+    /* demonstração: nada a registar */
+  },
   async getSession() {
     return currentSession(load());
   },
