@@ -38,3 +38,11 @@ export function timeAgo(value: string | Date, now = new Date()): string {
   const years = Math.round(days / 365);
   return years === 1 ? "há 1 ano" : `há ${years} anos`;
 }
+
+/** Os últimos n dias (AAAA-MM-DD), a acabar hoje. */
+export function lastDays(n: number, today = new Date()) {
+  return Array.from({ length: n }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (n - 1 - i));
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  });
+}

@@ -42,6 +42,8 @@ export interface Api {
   /** Procura por referência (ignora espaços, pontos, hífenes e barras) ou EAN. */
   findProducts(refs: string[], manufacturerId?: string): Promise<Product[]>;
   requestAccess(req: Omit<AccessRequest, "id" | "createdAt">): Promise<void>;
+  /** Regista uma visita (para as estatísticas do CRM). Nunca falha. */
+  trackVisit(visitor: string, page: string, brand: string | null): Promise<void>;
 
   /** Só com sessão iniciada. getPricing traz as regras; os preços de tabela pedem-se com getPrices. */
   getPricing(): Promise<Pricing>;

@@ -183,6 +183,13 @@ export function createSupabaseApi(url: string, anonKey: string): Api {
   const self: Api = {
     mode: "supabase",
     getSession: session,
+    async trackVisit(visitor, page, brand) {
+      try {
+        await sb.rpc("b2b_track_visit", { p_site: "b2b", p_visitor: visitor, p_page: page, p_brand: brand });
+      } catch {
+        /* estatística: uma falha não interessa ao utilizador */
+      }
+    },
     async signIn(email, password) {
       const { error } = await sb.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw new Error("Email ou palavra-passe incorretos.");

@@ -1,3 +1,4 @@
+import { visitPage, visitorId } from "./visits";
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { api } from "./data";
 import { normalizeQty, priceFor } from "./pricing";
@@ -95,6 +96,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const pricedIds = useRef(new Set<string>());
   const [pricesPending, setPricesPending] = useState(0);
   const [priceRetry, setPriceRetry] = useState(0);
+
+  // Estatísticas de visitas (página e marca). O atraso dá tempo ao login guardado de ser reposto.
+  useEffect(() => {
+    const id = visitorId();
+    if (!id) return;
+    const v = visitPage(route.page, route.params);
+    const t = setTimeout(() => void api.trackVisit(id, v.page, v.brand), 800);
+    return () => clearTimeout(t);
+  }, [route]);
 
   useEffect(() => {
     const onHash = () => {
