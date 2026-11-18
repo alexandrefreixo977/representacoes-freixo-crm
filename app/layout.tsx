@@ -4,6 +4,7 @@ import "./globals.css";
 import "./theme.css";
 import "./manufacturer-actions.css";
 import "./operational-dashboard.css";
+import "./commercial-overview.css";
 import "./global-search.css";
 import "./mailbox.css";
 import "./dashboard-fixes.css";
