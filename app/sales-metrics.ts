@@ -134,11 +134,11 @@ export function crmMetrics(input: { opportunities: MOpportunity[]; activities: M
   const funnel = [...stages.values()].sort((a, b) => a.position - b.position);
 
   const months = Array.from({ length: 3 }, (_, i) => { const d = new Date(now.getFullYear(), now.getMonth() + i, 1); return { key: `${d.getFullYear()}-${pad(d.getMonth() + 1)}`, label: MONTHS[d.getMonth()], value: 0, weighted: 0, count: 0 }; });
-  let overdueClose = 0, overdueCloseValue = 0, noDate = 0;
+  let overdueClose = 0, overdueCloseValue = 0, overdueWeighted = 0, noDate = 0, noDateValue = 0, noDateWeighted = 0;
   const today = ymd(now);
   for (const o of openOpps) {
-    if (!o.expectedClose) { noDate++; continue; }
-    if (o.expectedClose < today) { overdueClose++; overdueCloseValue += o.value; continue; }
+    if (!o.expectedClose) { noDate++; noDateValue += o.value; noDateWeighted += (o.value * o.probability) / 100; continue; }
+    if (o.expectedClose < today) { overdueClose++; overdueCloseValue += o.value; overdueWeighted += (o.value * o.probability) / 100; continue; }
     const m = months.find((x) => o.expectedClose!.startsWith(x.key));
     if (m) { m.count++; m.value += o.value; m.weighted += (o.value * o.probability) / 100; }
   }
@@ -155,7 +155,7 @@ export function crmMetrics(input: { opportunities: MOpportunity[]; activities: M
     current: periodStats(opps, acts, props, from, to, nowIso),
     previous: periodStats(opps, acts, props, prevFrom, prevTo, nowIso),
     pipeline: { count: openOpps.length, value: sum(openOpps, (o) => o.value), weighted: sum(openOpps, (o) => (o.value * o.probability) / 100), stale: openOpps.filter(stale).length },
-    funnel, forecast: { months, overdue: overdueClose, overdueValue: overdueCloseValue, noDate }, team, hot,
+    funnel, forecast: { months, overdue: overdueClose, overdueValue: overdueCloseValue, overdueWeighted, noDate, noDateValue, noDateWeighted }, team, hot,
   };
 }
 export type CrmMetrics = ReturnType<typeof crmMetrics>;
