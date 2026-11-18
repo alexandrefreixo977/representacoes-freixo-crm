@@ -8,5 +8,5 @@ select jsonb_build_object(
  'clientes', (select count(*) from public.b2b_clients),
  'clientes_com_crm', (select count(*) from public.b2b_clients where crm_client_id is not null),
  'utilizadores', (select jsonb_object_agg(role, n) from (select role::text, count(*) n from public.b2b_users group by 1) x),
- 'pedidos_acesso', (select jsonb_agg(x) from (select status::text, count(*) n from public.b2b_access_requests group by 1) x)
+ 'pedidos_acesso', (select count(*) from public.b2b_access_requests)
 ) as inventario;
