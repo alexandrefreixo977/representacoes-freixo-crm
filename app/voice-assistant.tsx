@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { supabase } from "./supabase";
 import { respostaDeConfirmacao, type AcaoVoz } from "./voice-core";
+import { sendVisitConfirmation, visitConfirmationOpen } from "./visit-confirmation-send";
 
 type Acao = AcaoVoz & { id: string };
 type Linha = { papel: "utilizador" | "assistente"; texto: string };
@@ -94,9 +95,15 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
       try {
         for (const op of acao.operacoes) {
           const r = op.op === "insert"
-            ? await supabase.from(op.tabela).insert(op.valores)
-            : await supabase.from(op.tabela).update(op.valores).eq("id", op.id);
+            ? await supabase.from(op.tabela).insert(op.valores).select("id,kind,status,start_at").single()
+            : await supabase.from(op.tabela).update(op.valores).eq("id", op.id).select("id,kind,status,start_at").single();
           if (r.error) throw new Error(r.error.message);
+          // Visita marcada (ou reagendada) por voz: o cliente recebe o email de confirmação, como na Agenda.
+          const row = r.data as { id?: string; kind?: string; status?: string; start_at?: string | null } | null;
+          if (row?.id && row.kind === "visit" && row.start_at && visitConfirmationOpen(String(row.status)) && (op.op === "insert" || "start_at" in op.valores)) {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (session) void sendVisitConfirmation(session, row.id, op.op === "insert" ? "confirm" : "reschedule").then((res) => setConversa((c) => [...c, { papel: "assistente", texto: res.message }]));
+          }
         }
         gravadas++;
         setEstados((s) => ({ ...s, [acao.id]: "gravada" }));
