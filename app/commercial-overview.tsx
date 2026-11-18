@@ -19,6 +19,7 @@ type B2BSales = {
   clientes: Array<{ nome: string; crm_client_id: string | null; valor: number; encomendas: number; anterior: number }>;
   sem_encomenda: Array<{ nome: string; crm_client_id: string | null; ultima: string; historico: number }>;
   propostas: { enviadas: number; aceites: number; perdidas: number; em_aberto: number; valor_aceite: number; valor_aberto: number };
+  propostas_anterior?: number;
   pedidos_acesso: number;
   clientes_loja: { ativos: number; com_encomenda: number };
 };
@@ -120,7 +121,12 @@ export default function CommercialOverview({ currentUser, session, clients, prof
   const thisMonth = new Date().toISOString().slice(0, 7);
   const funnelMax = Math.max(1, ...(m?.funnel ?? []).map((s) => s.value));
   const brandTotal = (b2b?.marcas ?? []).reduce((s, x) => s + x.valor, 0) || 1;
-  const forecastMax = Math.max(1, ...(m?.forecast.months ?? []).map((x) => x.value));
+  const forecastRows = m ? [
+    ...(m.forecast.overdue ? [{ key: "late", label: "Atraso", value: m.forecast.overdueValue, weighted: m.forecast.overdueWeighted, count: m.forecast.overdue, late: true }] : []),
+    ...m.forecast.months.map((x) => ({ ...x, late: false })),
+    ...(m.forecast.noDate ? [{ key: "none", label: "Sem data", value: m.forecast.noDateValue, weighted: m.forecast.noDateWeighted, count: m.forecast.noDate, late: true }] : []),
+  ] : [];
+  const forecastMax = Math.max(1, ...forecastRows.map((x) => x.value));
 
   return (
     <div className="commercial-overview">
@@ -146,7 +152,7 @@ export default function CommercialOverview({ currentUser, session, clients, prof
         <Kpi tone="green" label="Taxa de conversão" value={m ? percent(m.current.conversion) : "…"} d={m && deltaPoints(m.current.conversion, m.previous.conversion)} sub={m?.current.cycleDays !== null && m ? `ciclo médio de ${m.current.cycleDays} dias` : "ganhos ÷ negócios decididos"} />
         <Kpi tone="blue" label="Pipeline em aberto" value={m ? compactMoney(m.pipeline.value) : "…"} sub={m ? `${compactMoney(m.pipeline.weighted)} ponderado · ${m.pipeline.count} oportunidades` : ""} hint="Ponderado = valor × probabilidade da fase." onClick={() => navigate("Oportunidades", { status: "open" })} />
         <Kpi tone="blue" label="Novas oportunidades" value={m ? nf.format(m.current.created) : "…"} d={m && delta(m.current.created, m.previous.created)} sub={m ? `${compactMoney(m.current.createdValue)} em potencial` : ""} />
-        <Kpi tone="amber" label="Propostas enviadas" value={m || b2b ? nf.format(proposalsSent) : "…"} d={m && delta(m.current.proposalsSent, m.previous.proposalsSent)} sub={`${(m?.current.proposalsAccepted ?? 0) + (b2b?.propostas.aceites ?? 0)} aceites · ${compactMoney((m?.current.proposalsAcceptedValue ?? 0) + (b2b?.propostas.valor_aceite ?? 0))}`} hint="Propostas do CRM e da loja B2B. A variação compara só as do CRM." />
+        <Kpi tone="amber" label="Propostas enviadas" value={m || b2b ? nf.format(proposalsSent) : "…"} d={m && b2b && delta(proposalsSent, m.previous.proposalsSent + (b2b.propostas_anterior ?? 0))} sub={`${(m?.current.proposalsAccepted ?? 0) + (b2b?.propostas.aceites ?? 0)} aceites · ${compactMoney((m?.current.proposalsAcceptedValue ?? 0) + (b2b?.propostas.valor_aceite ?? 0))}`} hint="Propostas do CRM e da loja B2B enviadas no período." />
         <Kpi tone="amber" label="Visitas a clientes" value={m ? nf.format(m.current.visits) : "…"} d={m && delta(m.current.visits, m.previous.visits)} sub={m ? `${m.current.clientsVisited} clientes · ${m.current.calls} chamadas · ${m.current.emails} emails` : ""} onClick={() => navigate("Visitas", { from: range.from })} />
       </section>
 
@@ -173,15 +179,15 @@ export default function CommercialOverview({ currentUser, session, clients, prof
           <div className="card-head"><h2>Previsão de fecho</h2><span className="co-muted">Pela data prevista</span></div>
           {!m ? <div className="useful-empty">A carregar…</div> : (
             <>
-              {m.forecast.months.map((x) => (
-                <div className="co-bar-row" key={x.key}>
+              {forecastRows.map((x) => (
+                <div className={`co-bar-row${x.late ? " late" : ""}`} key={x.key} title={`${x.count} negócios · ${euro(x.value)} no total`}>
                   <span>{x.label}</span>
                   <div><i style={{ width: `${(x.value / forecastMax) * 100}%` }} /><i className="weighted" style={{ width: `${(x.weighted / forecastMax) * 100}%` }} /></div>
                   <strong>{compactMoney(x.weighted)}</strong>
                 </div>
               ))}
               <div className="legend dashboard-legend"><span><i className="dot blue" />Valor total</span><span><i className="dot green" />Ponderado (o que se espera fechar)</span></div>
-              {(m.forecast.overdue > 0 || m.forecast.noDate > 0) && <p className="co-note">{m.forecast.overdue > 0 && <>{m.forecast.overdue} com data já ultrapassada. </>}{m.forecast.noDate > 0 && <>{m.forecast.noDate} sem data de fecho prevista.</>}</p>}
+              {(m.forecast.overdue > 0 || m.forecast.noDate > 0) && <p className="co-note">Atualize a data de fecho prevista {m.forecast.overdue > 0 ? `dos ${m.forecast.overdue} negócios em atraso` : ""}{m.forecast.overdue > 0 && m.forecast.noDate > 0 ? " e " : ""}{m.forecast.noDate > 0 ? `dos ${m.forecast.noDate} sem data` : ""} para a previsão ser fiável.</p>}
             </>
           )}
         </section>
