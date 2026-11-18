@@ -3,6 +3,7 @@
 // utilizadores com papel admin ou comercial. POST garante o cliente na loja (liga pelo NIF ou cria com os dados do CRM).
 import { normalizeNif } from "../../../b2b-link";
 import { B2BError, crmAdmin, linkedShopClient, shopAdmin, type CrmClient } from "../server";
+import { syncCrmDiscounts } from "../discounts";
 export const dynamic = "force-dynamic";
 
 const ORIGINS = ["https://b2b.representacoesfreixo.com", "https://encomendas.representacoesfreixo.com", "https://freixo-b2b.pages.dev"];
@@ -57,6 +58,11 @@ export async function GET(request: Request) {
     const found = await crmAdmin().from("clients").select(COLS).is("archived_at", null).or(filters.join(",")).order("trade_name").limit(30);
     if (found.error) throw new B2BError(502, found.error.message);
     const rows = (found.data ?? []) as Row[];
+    // Clientes com descontos na ficha do CRM: a loja liga-os ao escolher, para os preços já virem com esses descontos.
+    const terms = rows.length
+      ? await crmAdmin().from("client_manufacturers").select("client_id").in("client_id", rows.map(r => r.id)).not("agreed_discount", "is", null).gt("agreed_discount", 0)
+      : { data: [], error: null };
+    const withDiscounts = new Set((terms.data ?? []).map((t: any) => t.client_id));
     const links = rows.length
       ? await shop.from("b2b_clients").select("id,nif,crm_client_id")
       : { data: [], error: null };
@@ -73,12 +79,13 @@ export async function GET(request: Request) {
         phone: c.phone,
         address: addressOf(c),
         shopClientId: byCrm.get(c.id) ?? byNif.get(normalizeNif(c.tax_id)) ?? null,
+        hasDiscounts: withDiscounts.has(c.id),
       })),
     });
   } catch (error) { return fail(request, error); }
 }
 
-/** { crmId } → cliente da loja ligado a este cliente do CRM (liga pelo NIF ou cria-o com os dados do CRM). Não envia convites. */
+/** { crmId } → cliente da loja ligado a este cliente do CRM (liga pelo NIF ou cria-o com os dados do CRM) e com os descontos da ficha do CRM. Não envia convites. */
 export async function POST(request: Request) {
   try {
     const shop = await shopStaff(request);
@@ -95,8 +102,10 @@ export async function POST(request: Request) {
       if (created.error) throw new B2BError(502, created.error.message);
       linked = { id: created.data.id, name: client.trade_name, nif: client.tax_id, crm_client_id: client.id };
     }
+    // Descontos da ficha do CRM → regras deste cliente na loja (antes de a loja ler os preços).
+    const discounts = await syncCrmDiscounts(shop, crmAdmin(), [client.id]).then(() => null, (e: unknown) => (e instanceof Error ? e.message : "erro"));
     const full = await shop.from("b2b_clients").select("id,name,nif,email,phone,address").eq("id", linked.id).single();
     if (full.error) throw new B2BError(502, full.error.message);
-    return reply(request, { client: full.data });
+    return reply(request, { client: full.data, ...(discounts ? { discountsError: discounts } : {}) });
   } catch (error) { return fail(request, error); }
 }

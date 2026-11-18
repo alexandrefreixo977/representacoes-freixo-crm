@@ -15,12 +15,13 @@ export function applyDiscounts(price: number, discounts: number[]) {
 /**
  * Escolhe a regra que se aplica a um produto para um cliente.
  * Ganha a regra mais específica: artigo > família > fabricante. No mesmo nível, a regra do cliente
- * ganha à geral. Assim uma campanha num artigo aplica-se a todos, e um preço acordado com um cliente
+ * ganha à geral (e, no mesmo nível, a regra feita na loja ganha ao desconto que veio do CRM). Assim uma campanha num artigo aplica-se a todos, e um preço acordado com um cliente
  * para esse artigo continua a valer para ele.
  * Tem de bater certo com a função b2b_pick_rule() no SQL.
  */
 export function pickRule(rules: DiscountRule[], product: Product, clientId?: string | null) {
-  const score = (r: DiscountRule) => (r.productId ? 20 : r.familyId ? 10 : 0) + (r.clientId ? 1 : 0);
+  // Empate no mesmo nível (ex. desconto do CRM e regra feita à mão na loja para o mesmo cliente e fabricante): ganha a da loja.
+  const score = (r: DiscountRule) => (r.productId ? 20 : r.familyId ? 10 : 0) + (r.clientId ? 1 : 0) + (r.source === "crm" ? 0 : 0.5);
   return rules
     .filter(
       (r) =>
@@ -187,7 +188,7 @@ export type ClientTerms = {
 /** Condição comercial de um cliente num fabricante (a do nível do fabricante, sem campanhas). */
 export function clientTerms(rules: DiscountRule[], clientId: string, manufacturerId: string): ClientTerms {
   const base = rules.filter((r) => r.manufacturerId === manufacturerId && !r.productId && !r.familyId && !r.campaignId);
-  const own = base.find((r) => r.clientId === clientId);
+  const own = base.find((r) => r.clientId === clientId && r.source !== "crm") ?? base.find((r) => r.clientId === clientId);
   const general = base.find((r) => !r.clientId);
   const specific = rules.filter((r) => r.manufacturerId === manufacturerId && r.clientId === clientId && (r.productId || r.familyId)).length;
   if (own) return { rule: own, source: "client", specific };

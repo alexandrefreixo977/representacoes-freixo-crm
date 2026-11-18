@@ -1,6 +1,7 @@
 // Dossier do cliente: encomendas e propostas da loja B2B, e dar acesso à loja a partir do CRM.
 import { B2B_SHOP_URL, normalizeNif } from "../../../b2b-link";
-import { B2BError, b2bError, crmSession, json, linkedShopClient, requirePermission, shopAdmin, type CrmClient } from "../server";
+import { B2BError, b2bError, crmAdmin, crmSession, json, linkedShopClient, requirePermission, shopAdmin, type CrmClient } from "../server";
+import { syncCrmDiscounts } from "../discounts";
 export const dynamic = "force-dynamic";
 
 async function readClient(db: Awaited<ReturnType<typeof crmSession>>["db"], id: string | null) {
@@ -66,6 +67,8 @@ export async function POST(request: Request) {
       if (created.error) throw new B2BError(502, created.error.message);
       linked = created.data;
     }
+    // Os descontos da ficha do CRM passam logo a valer na loja.
+    await syncCrmDiscounts(shop, crmAdmin(), [client.id]).catch(() => undefined);
     if (!email) return json({ message: "Cliente criado na loja B2B." });
     // Se o email já tiver conta na loja: só se liga a este cliente quando é uma conta sem papel (nunca rebaixa um administrador/comercial).
     const adminEmail = await shop.from("b2b_admin_emails").select("email").eq("email", email).maybeSingle();
