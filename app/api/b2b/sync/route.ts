@@ -1,6 +1,8 @@
 // Propostas da loja B2B → oportunidades do CRM. Idempotente: cada proposta dá no máximo uma oportunidade.
+// Também passa para a loja os descontos das fichas dos clientes do CRM (todos os clientes ligados).
 import { followUpDate, normalizeNif, stageForQuote } from "../../../b2b-link";
 import { b2bError, crmAdmin, crmSession, json, shopAdmin } from "../server";
+import { syncCrmDiscounts } from "../discounts";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request) {
@@ -8,13 +10,14 @@ export async function POST(request: Request) {
     const { userId } = await crmSession(request);
     const shop = shopAdmin();
     const crm = crmAdmin();
+    const discounts = await syncCrmDiscounts(shop, crm).catch((e: unknown) => ({ error: e instanceof Error ? e.message : "erro" }));
     const [quotes, shopClients] = await Promise.all([
       shop.from("b2b_quotes").select("id,number,status,total,created_at,owner_email,client_id,customer_nif,customer_name").in("status", ["sent", "accepted", "lost"]).order("created_at").limit(1000),
       shop.from("b2b_clients").select("id,nif,crm_client_id"),
     ]);
     if (quotes.error) throw new Error(quotes.error.message);
     if (shopClients.error) throw new Error(shopClients.error.message);
-    if (!quotes.data.length) return json({ created: 0, updated: 0 });
+    if (!quotes.data.length) return json({ created: 0, updated: 0, discounts });
     const [clients, stages, profiles, existing] = await Promise.all([
       crm.from("clients").select("id,tax_id,owner_id"),
       crm.from("opportunity_stages").select("id,name,probability"),
@@ -60,6 +63,6 @@ export async function POST(request: Request) {
       if (r.error && r.error.code !== "23505") throw new Error(r.error.message);
       if (!r.error) created++;
     }
-    return json({ created, updated });
+    return json({ created, updated, discounts });
   } catch (error) { return b2bError(error); }
 }

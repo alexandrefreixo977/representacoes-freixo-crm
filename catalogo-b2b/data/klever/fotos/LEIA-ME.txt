@@ -1,0 +1,5 @@
+Fotos KLEVER tiradas da tarifa PDF (TARIFA PRECIOS KLEVER 2026), corridas a partir de uma pasta com t.pdf e refs.txt:
+1. xref.py  – encontra a linha de cada referência (lógica em extract.py) e a imagem à esquerda dela -> xref.json
+2. final.py – recorta a zona visível de cada imagem (ou um recorte à mão em HAND, quando a imagem da tarifa
+   junta vários artigos ou foi mal apanhada), normaliza para public/img/klever e gera pairs.json
+   (usado para escrever supabase/migrations/20261118231000_klever_imagens.sql).

@@ -1,0 +1,100 @@
+# Transcrição da TARIFA PRECIOS KLEVER 2026 (Klever Innovations Spain SLU; marcas Klever, Tortoris, Scraperite, Kretzer, Knifeline).
+# Formato: "## Família" e depois "REF | Designação | Descrição | unidade | embalagem | preço"
+# unidade "un": preço por unidade, vende-se em múltiplos da embalagem (U.V. / V.E. da tarifa).
+# unidade "cx": preço por caixa (€/CAJA), a embalagem diz quantas lâminas traz a caixa.
+# Referências repetidas na tarifa (KCJ-1MD, C-105, 452TIN, KL445INOX, 5044 MD) ficam só na 1.ª vez que aparecem.
+## Klever · Cutters de segurança compactos
+KCJ-1-Y | Klever Kutter amarelo | Cutter de segurança compacto de lâmina protegida, amarelo. | un | 10 | 2,75
+KCJ-1MD | Klever Kutter detetável (metal detectable) | Cutter de segurança compacto de lâmina protegida, detetável por detetores de metais (indústria alimentar). | un | 10 | 4,10
+KCJ-1-R | Klever Kutter vermelho | Cutter de segurança compacto de lâmina protegida, vermelho. | un | 10 | 2,75
+KCJ-4-30 | Klever Excel Single | Cutter de segurança compacto de lâmina protegida, lâmina simples. | un | 10 | 4,02
+KCJ-4-20 | Klever Excel lâmina dupla | Cutter de segurança compacto de lâmina protegida, lâmina dupla. | un | 10 | 3,91
+PLS-400-30MD | Klever Excel Plus detetável (metal detectable) | Cutter de segurança compacto de lâmina protegida, detetável por detetores de metais. | un | 10 | 6,33
+## Klever · Cutters de cabeça intercambiável (XChange)
+KCJ-XC-30-Y | Klever XChange Single | Cutter de segurança de cabeça intercambiável, lâmina simples. Cabeça de substituição: KCJ-XH-30. | un | 12 | 10,00
+KCJ-XC-20-Y | Klever XChange lâmina dupla | Cutter de segurança de cabeça intercambiável, lâmina dupla. Cabeça de substituição: KCJ-XH-20. | un | 12 | 9,75
+PLS-200XC-20G | Klever XChange Double PLUS | Cutter de cabeça intercambiável, lâmina dupla, cabeça com corta-cintas metálico. Cabeça de substituição: KCJ-XH-20. | un | 12 | 9,35
+PLS-200XC-30G | Klever XChange Single PLUS | Cutter de cabeça intercambiável, cabeça com corta-cintas e raspador de etiquetas metálicos. Cabeça de substituição: KCJ-XH-35. | un | 12 | 9,57
+## Klever · Cutters antibacterianos (Kleen)
+KCJ-1X | Klever Kutter Kleen™ (aço) | Cutter de segurança antibacteriano, lâmina de aço. | un | 10 | 3,41
+KCJ-1XSS | Klever Kutter Kleen™ (inox) | Cutter de segurança antibacteriano, lâmina de aço inoxidável. | un | 10 | 3,41
+DFC-364X | Kleen™ cutter corta-filme | Cutter de segurança antibacteriano para cortar filme. | un | 10 | 3,58
+EBC1X | Kleen™ cutter de lâmina oculta | Cutter de segurança antibacteriano de lâmina oculta. | un | 10 | 4,02
+KCJ-XC-30X | Kleen™ XChange Single Sided | Cutter antibacteriano de cabeça intercambiável, lâmina simples. Cabeça de substituição: KCJ-XH-30X. | un | 12 | 12,82
+KCJ-XC-20X | Kleen™ XChange lâmina dupla | Cutter antibacteriano de cabeça intercambiável, lâmina dupla. Cabeça de substituição: KCJ-XH-20X. | un | 12 | 12,65
+KCJ-XH-20X | Kleen™ XChange cabeça dupla | Cabeça de substituição antibacteriana, lâmina dupla, para Kleen™ XChange. | un | 25 | 1,38
+KCJ-XH-30X | Kleen™ XChange cabeça simples | Cabeça de substituição antibacteriana, lâmina simples, para Kleen™ XChange. | un | 12 | 1,49
+KCJ-XH-35X | Kleen™ XChange cabeça Multitask | Cabeça de substituição antibacteriana Multitask para Kleen™ XChange. | un | 12 | 1,54
+## Klever · Cabeças de substituição
+KCJ-XH-30 | Klever XChange cabeça Single | Cabeça de substituição de lâmina simples para Klever XChange. | un | 12 | 1,21
+KCJ-XH-20 | Klever XChange cabeça dupla | Cabeça de substituição de lâmina dupla para Klever XChange. | un | 25 | 1,16
+KCJ-XH-35 | Klever XChange cabeça Multitask | Cabeça de substituição Multitask com raspador de etiquetas e corta-cintas. | un | 12 | 1,49
+## Klever · Cutters de material reciclado (Eco XChange)
+ECO-200XC-20EX | Eco XChange lâmina dupla | Cutter de segurança de cabeça intercambiável, cabo 100% reciclado, lâmina dupla. Cabeça de substituição: KCJ-XH-20X. Novidade 2026. | un | 10 | 9,10
+ECO-200XC-30EX | Eco XChange Single | Cutter de segurança de cabeça intercambiável, cabo 100% reciclado, lâmina simples. Cabeça de substituição: KCJ-XH-30X. Novidade 2026. | un | 10 | 9,40
+ECO-200XC-35EX | Eco XChange Multitask | Cutter de segurança de cabeça intercambiável, cabo 100% reciclado, Multitask. Cabeça de substituição: KCJ-XH-35X. Novidade 2026. | un | 10 | 9,55
+## Klever · Acessórios
+KeyB | Keybak porta-chaves extensível | Porta-chaves extensível Keybak para prender o cutter. | un | 1 | 28,80
+CL-36 | Cordão extensível porta-cutter | Cordão extensível para prender o cutter (guarda-cutter). | un | 1 | 2,86
+## Tortoris · Cutters de segurança retráteis
+S10 | Tortoris cutter ambidestro cabo de alumínio, lâmina ajustável 6–22 mm | Cutter semi-automático ambidestro, cabo de alumínio, comprimento de lâmina ajustável de 6 a 22 mm. Lâminas: 452TIN, B1-S. | un | 1 | 10,31
+S10-CER | Tortoris cutter ambidestro cabo de alumínio, lâmina CERÂMICA 6–22 mm | Cutter semi-automático ambidestro, cabo de alumínio, lâmina cerâmica de comprimento ajustável de 6 a 22 mm. Lâmina: B1-CER. | un | 1 | 14,77
+S11 | Tortoris cutter ambidestro cabo de alumínio, lâmina 40 mm | Cutter semi-automático ambidestro, cabo de alumínio, lâmina de 40 mm. Lâmina: B3-S. | un | 1 | 11,25
+S24 | Tortoris cutter ambidestro cabo de plástico superleve | Cutter semi-automático ambidestro, cabo de plástico superleve, ativação por pressão. Lâminas: 452TIN, B1-S. | un | 1 | 8,33
+ES44 | Tortoris cutter de retração automática | Cutter ambidestro de retração automática (a lâmina recolhe ao deixar de tocar a superfície de corte), cabo de plástico superleve e antiderrapante, ativação por pressão. Lâminas: 452TIN, B1-S. | un | 1 | 8,75
+## Tortoris · Cutters dupla segurança
+US53R | Tortoris cutter ergonómico dupla segurança, vermelho | Cutter compacto ambidestro e ergonómico: abre sem danificar a mercadoria e protege quem o usa. Personalizável com logótipo. | un | 10 | 2,45
+US53N | Tortoris cutter ergonómico dupla segurança, preto | Cutter compacto ambidestro e ergonómico: abre sem danificar a mercadoria e protege quem o usa. Personalizável com logótipo. | un | 10 | 2,45
+US53B | Tortoris cutter ergonómico dupla segurança, branco | Cutter compacto ambidestro e ergonómico: abre sem danificar a mercadoria e protege quem o usa. Personalizável com logótipo. | un | 10 | 2,45
+US35 | Tortoris cutter ambidestro de cabeça substituível (4 usos) | Cutter ambidestro de dupla segurança com cabeça substituível de 4 usos. Cabeças de substituição: C-105. | un | 10 | 12,32
+C-105 | Tortoris cabeças de substituição para US35 | Cabeças de substituição para o cutter US35. | un | 10 | 3,37
+## Tortoris · Lâminas de substituição
+452TIN | Lâmina de substituição em titânio (caixa de 10) | Lâmina All fit em titânio, 53 x 19 mm / 0,63 mm, para S10, S24 e ES44. Caixa de 10. | cx | 1 | 4,58
+B1-S | Lâmina serrilhada de substituição (caixa de 10) | Lâmina serrilhada para S10, S24 e ES44. Caixa de 10. | cx | 1 | 4,58
+B3-S | Lâmina serrilhada longa de substituição (caixa de 10) | Lâmina serrilhada longa para S11. Caixa de 10. | cx | 1 | 5,21
+B1-CER | Lâmina CERÂMICA de substituição (caixa de 5) | Lâmina cerâmica para S10-CER. Caixa de 5. | cx | 1 | 14,77
+## Scraperite · Raspadores de lâmina plástica
+SRT33GPO | Scraperite raspador de cabo longo com 6 lâminas plásticas | Raspador de cabo longo com 6 lâminas de plástico de substituição (3 retas e 3 curvas). Raspa sem danificar. | un | 12 | 9,50
+SRTD6GPO | Scraperite raspador pequeno com 6 lâminas plásticas | Raspador pequeno com 6 lâminas retas de plástico de substituição. Raspa sem danificar. | un | 12 | 7,90
+SRTW6GPO | Scraperite raspador largo com 6 lâminas plásticas | Raspador largo com 6 lâminas retas de plástico de substituição. Raspa sem danificar. | un | 12 | 13,12
+SRWGPO | Scraperite raspador largo | Raspador largo de lâmina plástica. Raspa sem danificar. | un | 12 | 4,40
+## Scraperite · Lâminas plásticas de substituição
+SRS30GPO | Scraperite lâmina plástica laranja, macia (caixa de 25) | Lâmina de substituição de plástico laranja (macia). Caixa de 25. | cx | 1 | 7,07
+SRS100HYL | Scraperite lâmina plástica amarela, dura (caixa de 100) | Lâmina de substituição de plástico amarelo (dura). Caixa de 100. | cx | 1 | 18,30
+SRS30MBL | Scraperite lâmina plástica azul, cloro e ambientes marinhos (caixa de 30) | Lâmina de substituição de plástico azul, resistente ao cloro e a ambientes marinhos. Caixa de 30. | cx | 1 | 7,65
+SRS100BIN | Scraperite lâmina plástica preta, industrial (caixa de 100) | Lâmina de substituição de plástico preto (industrial). Caixa de 100. | cx | 1 | 22,15
+SRS30PRO | Scraperite lâmina plástica magenta, resistência química (caixa de 30) | Lâmina de substituição de plástico magenta (resistência química). Caixa de 30. | cx | 1 | 8,24
+SRW25GPO | Scraperite lâmina plástica larga laranja, macia (caixa de 25) | Lâmina larga de substituição de plástico laranja (macia). Caixa de 25. | cx | 1 | 8,05
+SRW25BIN | Scraperite lâmina plástica larga preta, industrial (caixa de 25) | Lâmina larga de substituição de plástico preto (industrial). Caixa de 25. | cx | 1 | 13,25
+## Kretzer · Tesouras de segurança
+753225 | Kretzer tesoura de segurança Safecut 10" / 25 cm | Tesoura de segurança Kretzer Solingen Safecut, 10" / 25 cm, dedos protegidos. | un | 10 | 50,88
+752020 | Kretzer tesoura de segurança Safecut 8" / 20 cm | Tesoura de segurança Kretzer Solingen Safecut, 8" / 20 cm, dedos protegidos. | un | 10 | 27,04
+752015 | Kretzer tesoura de segurança Safecut 6" / 15 cm | Tesoura de segurança Kretzer Solingen Safecut, 6" / 15 cm, dedos protegidos. | un | 10 | 23,95
+782613 | Kretzer tesoura de segurança Safecut 5" / 13 cm | Tesoura de segurança Kretzer Solingen Safecut, 5" / 13 cm, dedos protegidos. | un | 10 | 13,65
+753020 | Kretzer tesoura de segurança Safecut 8" / 20 cm (753020) | Tesoura de segurança Kretzer Solingen Safecut, 8" / 20 cm, dedos protegidos. | un | 10 | 34,45
+774525 | Kretzer tesoura de segurança Finny 10" / 25 cm | Tesoura de segurança Kretzer Solingen Finny, 10" / 25 cm, dedos protegidos. | un | 10 | 61,39
+773224 | Kretzer tesoura de segurança Finny 9,5" / 24 cm | Tesoura de segurança Kretzer Solingen Finny, 9,5" / 24 cm, dedos protegidos. | un | 10 | 48,26
+772015 | Kretzer tesoura de segurança Finny 6" / 15 cm | Tesoura de segurança Kretzer Solingen Finny, 6" / 15 cm, dedos protegidos. | un | 10 | 22,76
+772020 | Kretzer tesoura de segurança Finny 8" / 20 cm | Tesoura de segurança Kretzer Solingen Finny, 8" / 20 cm, dedos protegidos. | un | 10 | 25,44
+773020 | Kretzer tesoura de segurança Finny 8" / 20 cm (773020) | Tesoura de segurança Kretzer Solingen Finny, 8" / 20 cm, dedos protegidos. | un | 10 | 31,67
+## Knifeline · Cutters de segurança retráteis
+H914.04 | Knifeline cutter Sterling lâmina longa 40 mm | Cutter de segurança semi-automático Sterling, lâmina longa de 40 mm. Lâmina de substituição: 207.960. | un | 1 | 14,89
+5044MD | Knifeline cutter Multicut detetável (metal detectable) | Cutter de segurança semi-automático Multicut, detetável por detetores de metais. Lâmina de substituição: KL445INOX. | un | 10 | 4,80
+AS100 | Knifeline cutter Auto-Retract | Cutter de segurança automático: a lâmina recolhe ao deixar de tocar a superfície de corte. Lâmina de substituição: AS-100 10. | un | 1 | 29,95
+KL00110CER | Knifeline cutter Longcut lâmina CERÂMICA | Cutter de segurança automático Longcut com lâmina cerâmica. Lâminas de substituição: 10526, 10528. | un | 10 | 28,20
+## Knifeline · Lâminas de substituição
+207.960 | Knifeline lâmina 109,6 x 18 mm / 0,50 mm (caixa de 10) | Lâmina de substituição 109,6 x 18 mm / 0,50 mm, para H914.04. Caixa de 10. | cx | 1 | 5,00
+KL445INOX | Knifeline lâmina de aço inoxidável (caixa de 10) | Lâmina de substituição em aço inoxidável, para 5044MD. Caixa de 10. | cx | 1 | 5,25
+AS-100 10 | Knifeline lâmina para Auto-Retract AS100 (caixa de 10) | Lâmina de substituição para o cutter AS100. Caixa de 10. | cx | 1 | 7,95
+10526 | Knifeline lâmina cerâmica ponta arredondada (caixa de 3) | Lâmina cerâmica de substituição, ponta arredondada, para KL00110CER. Caixa de 3. | cx | 1 | 26,51
+10528 | Knifeline lâmina cerâmica (caixa de 3) | Lâmina cerâmica de substituição, para KL00110CER. Caixa de 3. | cx | 1 | 26,51
+## Knifeline · Cutters detetáveis para alimentação
+C109-MD | Knifeline cutter cabeça de aço detetável | Cutter de segurança compacto para a indústria alimentar, detetável por detetores de metais (incluindo as peças mais pequenas). | un | 10 | 5,95
+C103-MD | Knifeline cutter detetável | Cutter de segurança compacto para a indústria alimentar, detetável por detetores de metais (incluindo as peças mais pequenas). | un | 10 | 3,92
+X7070 MDP | Knifeline cutter cabeça substituível detetável | Cutter de cabeça substituível para a indústria alimentar, detetável por detetores de metais. Cabeça de substituição: H10010. | un | 10 | 16,50
+X6040 MDP | Knifeline cutter lâmina longa 40 mm detetável | Cutter semi-automático de lâmina longa (40 mm) para a indústria alimentar, detetável por detetores de metais. Lâmina de substituição: H10008-B3. | un | 10 | 14,89
+X6060 MDP | Knifeline cutter lâmina ajustável 13–16 mm detetável | Cutter semi-automático de lâmina ajustável 13–16 mm para a indústria alimentar, detetável por detetores de metais. Lâmina de substituição: 19.TIN.452. | un | 10 | 4,80
+## Knifeline · Lâminas e cabeças para cutters detetáveis
+H10008-B3 | Knifeline lâmina de substituição para X6040 MDP (caixa de 10) | Lâmina de substituição para X6040 MDP. Caixa de 10. | cx | 1 | 5,20
+19.TIN.452 | Knifeline lâmina de titânio para X6060 MDP (caixa de 10) | Lâmina de substituição em titânio para X6060 MDP. Caixa de 10. | cx | 1 | 5,10
+H10010 | Knifeline cabeça de substituição para X7070 MDP (caixa de 10) | Cabeça de substituição para X7070 MDP. Caixa de 10. | cx | 1 | 16,46

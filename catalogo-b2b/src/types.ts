@@ -108,6 +108,8 @@ export type DiscountRule = {
   campaignId?: string | null;
   /** Quantidade de referência da oferta do fabricante (só informativo). */
   offerQty?: number | null;
+  /** "crm" = desconto gravado na ficha do cliente no CRM (altera-se lá, não na loja). */
+  source?: string | null;
 };
 
 export type Pricing = {
@@ -197,6 +199,8 @@ export type CrmClientHit = {
   address?: string | null;
   /** Cliente da loja já ligado a este cliente do CRM (ou com o mesmo NIF). */
   shopClientId?: string | null;
+  /** A ficha do CRM tem descontos por fabricante. */
+  hasDiscounts?: boolean;
 };
 
 export type AccessRequest = {

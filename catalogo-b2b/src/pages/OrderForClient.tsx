@@ -13,7 +13,7 @@ import { ProductAdder } from "./Quotes";
  * e confirma: a encomenda segue o fluxo normal (a validar, email à Freixo e, se pedido, ao cliente).
  */
 export function OrderForClientPage() {
-  const { session, actingClient, setActingClient, addToCart, cart, clearCart, toast } = useApp();
+  const { session, actingClient, setActingClient, addToCart, cart, clearCart, toast, reloadRules } = useApp();
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [sized, setSized] = useState<Product | null>(null);
@@ -37,13 +37,15 @@ export function OrderForClientPage() {
 
   async function pick(p: ClientPick) {
     setError(null);
-    if (p.shop) return choose(p.shop);
-    if (!p.crm) return;
+    if (!p.crm) return p.shop && choose(p.shop);
     setBusy(true);
     try {
+      // Liga/cria o cliente na loja e passa os descontos da ficha do CRM; depois relê as regras.
       choose(await api.clientFromCrm(p.crm.crmId));
+      await reloadRules();
     } catch (e) {
-      setError((e as Error).message);
+      if (p.shop) choose(p.shop);
+      else setError((e as Error).message);
     } finally {
       setBusy(false);
     }
