@@ -9,7 +9,8 @@ type Acao = AcaoVoz & { id: string };
 type Linha = { papel: "utilizador" | "assistente"; texto: string };
 type Estado = "pendente" | "gravada" | "cancelada" | "erro";
 
-const SILENCIO_MS = 1800; // pausa que termina o ditado
+const SILENCIO_MS = 2500; // pausa (depois de começar a falar) que termina o ditado
+const ESPERA_INICIAL_MS = 10000; // tempo para começar a falar
 const MAX_DITADO_MS = 30000;
 
 function vozPt(): SpeechSynthesisVoice | null {
@@ -181,11 +182,14 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
     setAviso("");
     const rec = new SR();
     reconhecimento.current = rec;
-    rec.lang = "pt-PT"; rec.interimResults = true; rec.continuous = true; rec.maxAlternatives = 3;
+    rec.lang = "pt-PT"; rec.interimResults = true; rec.maxAlternatives = 3;
+    // No Android o modo contínuo repete o texto já reconhecido; lá o próprio telemóvel termina na pausa.
+    rec.continuous = !/Android/i.test(navigator.userAgent);
     let finais: string[][] = []; // cada segmento final com as suas alternativas
     let silencio: ReturnType<typeof setTimeout> | undefined;
     const limite = setTimeout(() => { try { rec.stop(); } catch { /* nada */ } }, MAX_DITADO_MS);
-    const armar = () => { if (silencio) clearTimeout(silencio); silencio = setTimeout(() => { try { rec.stop(); } catch { /* nada */ } }, SILENCIO_MS); };
+    let ouviuAlgo = false;
+    const armar = (ms = SILENCIO_MS) => { if (silencio) clearTimeout(silencio); silencio = setTimeout(() => { try { rec.stop(); } catch { /* nada */ } }, ms); };
     rec.onresult = (event: any) => {
       finais = [];
       let interim = "";
@@ -196,7 +200,8 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
       }
       const base = finais.map((f) => f[0]).join(" ").replace(/\s+/g, " ").trim();
       setProvisorio(`${base} ${interim}`.replace(/\s+/g, " ").trim());
-      armar();
+      if (base || interim.trim()) ouviuAlgo = true;
+      armar(ouviuAlgo ? SILENCIO_MS : ESPERA_INICIAL_MS);
     };
     rec.onerror = (e: any) => {
       if (e?.error === "no-speech") setAviso("Não ouvi nada. Toque em Falar e diga o comando.");
@@ -209,9 +214,10 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
       const alternativas = [1, 2].map((k) => finais.map((f) => f[k] || f[0]).join(" ").replace(/\s+/g, " ").trim()).filter((a) => a && a !== texto);
       setProvisorio("");
       if (texto) { setComando(texto); void interpretar(texto, [...new Set(alternativas)]); }
+      else if (!ouviuAlgo) setAviso((a) => a || "Não ouvi nada. Toque em Falar e fale logo a seguir (verifique se o microfone está autorizado para este site).");
     };
     setAOuvir(true); setProvisorio("");
-    try { rec.start(); armar(); } catch { setAOuvir(false); setAviso("Não foi possível ligar o microfone. Tente de novo."); }
+    try { rec.start(); armar(ESPERA_INICIAL_MS); } catch { setAOuvir(false); setAviso("Não foi possível ligar o microfone. Tente de novo."); }
   }
 
   function alternarVoz() {
