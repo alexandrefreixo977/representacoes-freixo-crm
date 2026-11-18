@@ -633,8 +633,14 @@ function ClientsAdmin() {
                   <tr key={r.id}>
                     <td>{mfrName(r.manufacturerId)}</td>
                     <td>{scope(r)}</td>
-                    <td>{r.specialNetPrice != null ? `Preço líquido ${formatEur(r.specialNetPrice)}` : formatDiscounts(r.discounts) || "—"}</td>
-                    <td><button className="link danger" onClick={async () => { await api.deleteRule(r.id); load(); refreshSession(); }}>Apagar</button></td>
+                    <td>{r.specialNetPrice != null ? `Preço líquido ${formatEur(r.specialNetPrice)}` : formatDiscounts(r.discounts) || "—"}{r.source === "crm" && <small className="muted"> · da ficha do CRM</small>}</td>
+                    <td>
+                      {r.source === "crm" ? (
+                        <small className="muted" title="Este desconto vem da ficha do cliente no CRM (Fabricantes / Marcas). Altere-o lá; a loja atualiza sozinha.">Alterar no CRM</small>
+                      ) : (
+                        <button className="link danger" onClick={async () => { await api.deleteRule(r.id); load(); refreshSession(); }}>Apagar</button>
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

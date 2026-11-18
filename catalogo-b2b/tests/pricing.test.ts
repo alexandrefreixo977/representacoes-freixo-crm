@@ -101,3 +101,24 @@ describe("tamanhos sugeridos", () => {
     expect(sizesFor({ ...base, sizeType: "vestuario", designation: "Polo" })).toContain("XXL");
   });
 });
+
+describe("descontos vindos do CRM", () => {
+  const product = { id: "p1", manufacturerId: "m1", familyId: "f1" } as never;
+  it("valem para o cliente e ganham à regra geral", () => {
+    const rules = [
+      { id: "g", manufacturerId: "m1", discounts: [10] },
+      { id: "crm", clientId: "c1", manufacturerId: "m1", discounts: [40], source: "crm" },
+    ];
+    expect(pickRule(rules, product, "c1")?.id).toBe("crm");
+    expect(pickRule(rules, product, "c2")?.id).toBe("g");
+  });
+  it("no mesmo nível, a regra feita na loja ganha; família/artigo ganham sempre", () => {
+    const rules = [
+      { id: "crm", clientId: "c1", manufacturerId: "m1", discounts: [40], source: "crm" },
+      { id: "loja", clientId: "c1", manufacturerId: "m1", discounts: [45] },
+      { id: "fam", manufacturerId: "m1", familyId: "f1", discounts: [20] },
+    ];
+    expect(pickRule(rules.slice(0, 2), product, "c1")?.id).toBe("loja");
+    expect(pickRule(rules, product, "c1")?.id).toBe("fam");
+  });
+});

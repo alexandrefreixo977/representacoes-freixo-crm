@@ -152,7 +152,7 @@ let keySeq = 0;
 const toDraft = (l: QuoteLine): Draft => ({ ...l, key: `l${++keySeq}`, discountsText: formatDiscounts(l.discounts).replace(/%/g, "") });
 
 function QuoteEditor({ id }: { id: string | null }) {
-  const { session, catalog, pricing, remember, toast } = useApp();
+  const { session, catalog, pricing, remember, toast, reloadRules } = useApp();
   const [quote, setQuote] = useState<Quote | null>(id ? null : emptyQuote());
   const [lines, setLines] = useState<Draft[]>([]);
   const [products, setProducts] = useState<Map<string, Product>>(new Map());
@@ -256,8 +256,22 @@ function QuoteEditor({ id }: { id: string | null }) {
     });
   }
 
-  /** Cliente escolhido na pesquisa (CRM ou loja): preenche os dados; se já tiver ficha na loja, usa os preços dele. */
-  function pickFromSearch(p: ClientPick) {
+  /**
+   * Cliente escolhido na pesquisa (CRM ou loja): preenche os dados; se já tiver ficha na loja, usa os preços dele.
+   * Cliente do CRM com descontos na ficha (ou já na loja): liga-o à loja, que recebe esses descontos, e relê as regras.
+   */
+  async function pickFromSearch(p: ClientPick) {
+    const crm = p.crm;
+    if (crm && (p.shop || crm.hasDiscounts)) {
+      try {
+        const shop = await api.clientFromCrm(crm.crmId);
+        await reloadRules();
+        p = { ...p, shop };
+        if (crm.hasDiscounts) toast(lines.length ? "Descontos do CRM carregados. Use “Recalcular com as condições do cliente” para os aplicar às linhas." : "Descontos do CRM carregados para este cliente.");
+      } catch {
+        // Sem ligação ao CRM: segue com o que já havia.
+      }
+    }
     if (p.shop) {
       if (!clients.some((c) => c.id === p.shop!.id)) setClients((cs) => [...cs, p.shop!]);
       set({

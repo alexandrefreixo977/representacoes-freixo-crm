@@ -31,6 +31,7 @@ const mapRule = (r: Row): DiscountRule => ({
   specialNetPrice: r.special_net_price == null ? null : Number(r.special_net_price),
   campaignId: r.campaign_id ?? null,
   offerQty: r.offer_qty == null ? null : Number(r.offer_qty),
+  source: r.source ?? null,
 });
 
 const ORDER_SELECT =

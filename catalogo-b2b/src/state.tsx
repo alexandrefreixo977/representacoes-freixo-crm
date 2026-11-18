@@ -51,6 +51,8 @@ type Ctx = {
   toastMsg: string | null;
   refreshCatalog: () => Promise<void>;
   refreshSession: () => Promise<void>;
+  /** Volta a ler as regras de desconto (ex. depois de o CRM passar os descontos de um cliente). */
+  reloadRules: () => Promise<void>;
 };
 
 const AppCtx = createContext<Ctx | null>(null);
@@ -160,6 +162,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     pricedIds.current = new Set();
     setSession(s);
     setPricing(s ? await api.getPricing().catch(() => null) : null);
+  }, []);
+
+  const reloadRules = useCallback(async () => {
+    const fresh = await api.getPricing().catch(() => null);
+    if (fresh) setPricing((p) => (p ? { ...p, rules: fresh.rules } : p));
   }, []);
 
   // Pede os preços de tabela dos artigos que vão aparecendo (só com sessão iniciada).
@@ -278,6 +285,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toastMsg,
     refreshCatalog,
     refreshSession,
+    reloadRules,
   };
   return <AppCtx.Provider value={value}>{children}</AppCtx.Provider>;
 }
