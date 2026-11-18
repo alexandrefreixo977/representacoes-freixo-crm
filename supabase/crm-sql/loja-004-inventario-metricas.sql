@@ -4,7 +4,6 @@ select jsonb_build_object(
    from information_schema.columns where table_schema='public'
    and table_name in ('b2b_orders','b2b_order_groups','b2b_order_lines','b2b_quotes','b2b_clients','b2b_access_requests','b2b_users') group by table_name) t),
  'encomendas', (select jsonb_agg(x) from (select status::text, count(*) n, min(created_at)::date primeira, max(created_at)::date ultima from public.b2b_orders group by 1) x),
- 'grupos', (select jsonb_agg(x) from (select status::text, count(*) n from public.b2b_order_groups group by 1) x),
  'propostas', (select jsonb_agg(x) from (select status::text, count(*) n from public.b2b_quotes group by 1) x),
  'clientes', (select count(*) from public.b2b_clients),
  'clientes_com_crm', (select count(*) from public.b2b_clients where crm_client_id is not null),
