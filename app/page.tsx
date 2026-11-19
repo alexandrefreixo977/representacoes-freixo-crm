@@ -6,7 +6,7 @@ import { supabase, supabaseConfigured } from "./supabase";
 import Opportunities from "./opportunities";
 import ClientDossier from "./client-dossier";
 import RolePermissionsEditor from "./role-permissions";
-import Mailbox from "./mailbox";
+import MailApp from "./mail-ui/mail-app";
 import Manufacturers from "./manufacturers";
 import {loadAgendaActivities} from "./agenda-activities";
 import AgendaCalendar from "./agenda-calendar";
@@ -484,7 +484,7 @@ export default function Home() {
         {section === "Visitas" && <VisitsWorkspace session={session}><Visits clients={filteredClients} visits={filteredVisits} onCreate={(visit) => setVisits(prev => [...prev, visit])} currentUser={currentUser} session={session} /></VisitsWorkspace>}
         {section === "Tarefas" && <Tasks tasks={filteredTasks} completed={completed} setCompleted={setCompleted} clients={filteredClients} currentUser={currentUser} session={session} onCreate={(task) => setTasks(prev => [...prev, task])} onOpenClient={openClient} />}
         {section === "Oportunidades" && <Opportunities session={session!} />}
-        {section === "Correio" && <Mailbox key={session?.user.id ?? "anonymous"} session={session} clients={filteredClients} />}
+        {section === "Correio" && <MailApp key={session?.user.id ?? "anonymous"} session={session} clients={filteredClients} onOpenClient={id => { const client = clients.find(item => item.id === id); if (client) openClient(client); }} onOpenManufacturer={openManufacturer} />}
         {section === "Relatórios" && <Reports clients={filteredClients} visits={filteredVisits} tasks={filteredTasks} opportunities={filteredOpportunities} />}
         {section === "Utilizadores" && currentUser.role === "admin" && (
           <UsersAdmin users={users} setUsers={setUsers} currentUser={currentUser} onReload={loadUsers} />

@@ -2,6 +2,8 @@ export type MailParty = { emailAddress?: { address?: string; name?: string } };
 export type GraphMessage = {
   id: string; conversationId?: string; from?: MailParty; toRecipients?: MailParty[];
   subject?: string; bodyPreview?: string; sentDateTime?: string; receivedDateTime?: string; isRead?: boolean;
+  ccRecipients?: MailParty[]; lastModifiedDateTime?: string; isDraft?: boolean; flag?: { flagStatus?: "flagged" | "notFlagged" | "complete" };
+  categories?: string[]; hasAttachments?: boolean; importance?: "low" | "normal" | "high"; parentFolderId?: string;
 };
 export type MailCandidate = { email: string | null; client_id?: string; contact_id?: string; manufacturer_id?: string; name?: string };
 const normalize = (email?: string | null) => (email ?? "").trim().toLowerCase();

@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     if (!validGraphId(id)) throw new MailError(400, "Indique a mensagem a abrir.");
     const token = await applicationToken();
     const path = `/messages/${encodeURIComponent(id)}`;
-    const message = await readGraph(token, user.email, `${path}?$select=id,conversationId,subject,body,from,replyTo,toRecipients,ccRecipients,receivedDateTime,sentDateTime,isRead,hasAttachments`) as FullMail;
+    const message = await readGraph(token, user.email, `${path}?$select=id,conversationId,subject,body,from,replyTo,toRecipients,ccRecipients,bccRecipients,receivedDateTime,sentDateTime,isRead,hasAttachments,isDraft,flag,categories,importance,parentFolderId`) as FullMail;
     const attachments: MailAttachment[] = [];
     // hasAttachments excludes inline-only images in Microsoft Graph.
     if (message.hasAttachments || /cid:/i.test(message.body?.content || "")) {
