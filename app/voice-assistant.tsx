@@ -64,6 +64,10 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
   const [aviso, setAviso] = useState("");
   const [vozLigada, setVozLigada] = useState(true);
   const [timezone, setTimezone] = useState("Europe/Lisbon");
+  // Rever o ditado antes de enviar (ligado por omissão): o texto fica na caixa para corrigir e só segue com "Enviar".
+  const [rever, setRever] = useState(true);
+  const [alternativasDitado, setAlternativasDitado] = useState<string[]>([]);
+  const caixa = useRef<HTMLTextAreaElement>(null);
   const reconhecimento = useRef<any>(null);
   const fimConversa = useRef<HTMLDivElement>(null);
   const pendentesRef = useRef<Acao[]>([]);
@@ -77,13 +81,14 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
     window.addEventListener("crm-timezone", t);
     try { window.speechSynthesis?.getVoices(); } catch { /* carrega as vozes */ }
     try { const v = window.localStorage.getItem("crm-voz-ligada"); if (v === "0") setVozLigada(false); } catch { /* sem armazenamento */ }
+    try { if (window.localStorage.getItem("crm-voz-rever") === "0") setRever(false); } catch { /* sem armazenamento */ }
     return () => window.removeEventListener("crm-timezone", t);
   }, []);
   useEffect(() => { fimConversa.current?.scrollIntoView({ block: "nearest" }); }, [conversa, acoes, aInterpretar]);
   useEffect(() => () => { try { reconhecimento.current?.abort(); } catch { /* nada */ } }, []);
 
   function limpar() {
-    setComando(""); setProvisorio(""); setConversa([]); setMemoria(""); setAcoes([]); setEstados({}); setErros({}); setAviso("");
+    setComando(""); setProvisorio(""); setAlternativasDitado([]); setConversa([]); setMemoria(""); setAcoes([]); setEstados({}); setErros({}); setAviso("");
     try { window.speechSynthesis?.cancel(); } catch { /* nada */ }
   }
 
@@ -128,9 +133,9 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
     if (vozLigada) falar("Cancelado.");
   }
 
-  async function interpretar(textoDito?: string, alternativas: string[] = []) {
+  async function interpretar(textoDito?: string, alternativas: string[] = alternativasDitado) {
     const texto = (textoDito ?? comando).trim();
-    setAviso("");
+    setAviso(""); setAlternativasDitado([]);
     if (!texto) { setAviso("Fale ou escreva um comando primeiro."); return; }
 
     // "Confirma" / "cancela" por voz quando há ações à espera.
@@ -220,11 +225,33 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
       const texto = finais.map((f) => f[0]).join(" ").replace(/\s+/g, " ").trim();
       const alternativas = [1, 2].map((k) => finais.map((f) => f[k] || f[0]).join(" ").replace(/\s+/g, " ").trim()).filter((a) => a && a !== texto);
       setProvisorio("");
-      if (texto) { setComando(texto); void interpretar(texto, [...new Set(alternativas)]); }
+      const alts = [...new Set(alternativas)];
+      // "Confirma"/"cancela" seguem logo; o resto fica na caixa para rever e corrigir, se essa opção estiver ligada.
+      const confirmacao = pendentesRef.current.length > 0 && respostaDeConfirmacao(texto) !== null;
+      if (texto && (!rever || confirmacao)) { setComando(texto); void interpretar(texto, alts); }
+      else if (texto) {
+        setComando((c) => (c.trim() ? `${c.trim()} ${texto}` : texto));
+        setAlternativasDitado(alts);
+        if (vozLigada) falar("Reveja o texto e carregue em Enviar.");
+        window.setTimeout(() => { const t = caixa.current; if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 50);
+      }
       else if (!ouviuAlgo) setAviso((a) => a || "Não ouvi nada. Toque em Falar e fale logo a seguir (verifique se o microfone está autorizado para este site).");
     };
     setAOuvir(true); setProvisorio("");
     try { rec.start(); armar(ESPERA_INICIAL_MS); } catch { setAOuvir(false); setAviso("Não foi possível ligar o microfone. Tente de novo."); }
+  }
+
+  function alternarRever() {
+    const v = !rever; setRever(v);
+    try { window.localStorage.setItem("crm-voz-rever", v ? "1" : "0"); } catch { /* sem armazenamento */ }
+  }
+
+  /** Volta a pôr um pedido na caixa para o corrigir; as ações ainda por confirmar desse pedido deixam de valer. */
+  function corrigir(texto: string) {
+    const pend = pendentesRef.current;
+    if (pend.length) setEstados((s) => { const n = { ...s }; for (const a of pend) if (n[a.id] !== "erro") n[a.id] = "cancelada"; return n; });
+    setComando(texto); setAlternativasDitado([]); setAviso("");
+    window.setTimeout(() => { const t = caixa.current; if (t) { t.focus(); t.setSelectionRange(t.value.length, t.value.length); } }, 50);
   }
 
   function alternarVoz() {
@@ -264,7 +291,10 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
         )}
         {conversa.map((l, i) => (
           <div key={i} style={{ display: "flex", justifyContent: l.papel === "utilizador" ? "flex-end" : "flex-start", margin: ".35rem 0" }}>
-            <div style={{ maxWidth: "88%", padding: ".5rem .7rem", borderRadius: 10, whiteSpace: "pre-wrap", fontSize: ".95rem", background: l.papel === "utilizador" ? "#b8860b" : "#f1f3f5", color: l.papel === "utilizador" ? "#fff" : "#222" }}>{l.texto}</div>
+            <div style={{ maxWidth: "88%", padding: ".5rem .7rem", borderRadius: 10, whiteSpace: "pre-wrap", fontSize: ".95rem", background: l.papel === "utilizador" ? "#b8860b" : "#f1f3f5", color: l.papel === "utilizador" ? "#fff" : "#222" }}>
+              {l.texto}
+              {l.papel === "utilizador" && <button onClick={() => corrigir(l.texto)} disabled={aInterpretar || aGravar} title="Corrigir este pedido e enviar de novo" style={{ display: "block", marginTop: 4, marginLeft: "auto", border: 0, background: "rgba(255,255,255,.25)", color: "#fff", borderRadius: 5, padding: "2px 8px", fontSize: ".78rem", cursor: "pointer" }}>✏️ Corrigir</button>}
+            </div>
           </div>
         ))}
         {acoes.length > 0 && (
@@ -294,10 +324,18 @@ export default function VoiceAssistant({ session, embutido = false }: { session:
 
       {aviso && <div role="alert" style={{ marginBottom: ".6rem", padding: ".6rem", background: "#fdecea", color: "#8a1c14", borderRadius: 6, fontSize: ".9rem" }}>{aviso}</div>}
 
-      <textarea rows={2} value={comando} onChange={(e) => setComando(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void interpretar(); } }} placeholder="Fale ou escreva… (Enter envia)" style={{ width: "100%", padding: ".55rem", fontSize: "1rem", boxSizing: "border-box", borderRadius: 6, border: "1px solid #ccc", resize: "vertical" }} />
+      {alternativasDitado.length > 0 && comando.trim() && (
+        <div style={{ marginBottom: ".4rem", fontSize: ".85rem", color: "#555" }}>
+          Também ouvi:{" "}
+          {alternativasDitado.map((a) => <button key={a} onClick={() => { setComando(a); caixa.current?.focus(); }} style={{ margin: "2px 4px 2px 0", border: "1px solid #b8860b", background: "#fffaf0", borderRadius: 12, padding: "2px 8px", fontSize: ".82rem", cursor: "pointer" }}>{a}</button>)}
+        </div>
+      )}
+      {rever && comando.trim() && !aOuvir && !aInterpretar && <div style={{ marginBottom: ".3rem", fontSize: ".82rem", color: "#7a5b00" }}>Corrija o texto se for preciso e carregue em <strong>Enviar</strong>.</div>}
+      <textarea ref={caixa} rows={2} value={comando} onChange={(e) => setComando(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); void interpretar(); } }} placeholder="Fale ou escreva… (Enter envia)" style={{ width: "100%", padding: ".55rem", fontSize: "1rem", boxSizing: "border-box", borderRadius: 6, border: "1px solid #ccc", resize: "vertical" }} />
       <div style={{ marginTop: ".55rem", display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
         <button onClick={ditar} disabled={aInterpretar} style={{ ...btn, background: aOuvir ? "#c62828" : "#1b5e20", color: "#fff", border: 0, minWidth: 120 }}>{aOuvir ? "⏹ Parar" : "🎤 Falar"}</button>
         <button onClick={() => interpretar()} disabled={aInterpretar || aOuvir || !comando.trim()} style={{ ...btn, border: "1px solid #b8860b", background: "#fff" }}>{aInterpretar ? "A interpretar…" : "Enviar"}</button>
+        <label title="Desligado: o que disser é enviado logo, sem revisão" style={{ display: "flex", alignItems: "center", gap: 4, fontSize: ".82rem", color: "#555", cursor: "pointer" }}><input type="checkbox" checked={rever} onChange={alternarRever} /> Rever antes de enviar</label>
         {(conversa.length > 0 || comando) && <button onClick={limpar} style={{ ...btn, border: "1px solid #ccc", background: "#fff", marginLeft: "auto" }}>Nova conversa</button>}
       </div>
     </div>
