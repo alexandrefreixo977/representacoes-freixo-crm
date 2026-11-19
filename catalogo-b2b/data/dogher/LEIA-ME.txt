@@ -1,0 +1,15 @@
+DOGHER TOOLS — Catálogo Geral 2025-26 (PT, PDF de 690 páginas) e folheto PROMO2026 (PT, 80 páginas).
+Os PDF estão na pasta do projeto (DOGHER_2025-26_Catalogo-PT.pdf, PROMO2026PT.pdf); os scripts correram numa pasta
+de trabalho com pymupdf + pillow, pela ordem:
+1. índice: as páginas 678-688 do catálogo (índice de referências) -> indice_referencias.json (8 298 referências).
+2. parse.py   – lê cada página: referência (coluna "Part Nº"), preço na mesma linha, família (código + título do bloco),
+                cabeçalhos das colunas (medidas) -> rows.json. 8 274 referências com preço; ficam de fora 24 que o
+                catálogo só cita (conteúdo de jogos, preço noutro formato).
+3. photos.py  – para cada bloco de família escolhe a maior fotografia do bloco (ignora desenhos técnicos e ícones).
+                Sem foto quando o bloco não tem fotografia clara (≈ 2 250 artigos); não se usa "foto mais próxima"
+                porque dava fotos erradas.
+4. fmt.py + export.py – designação (título · medidas), família (subtítulo da página), unidade ("cx" quando o catálogo
+                dá o preço "€ / N"), fotos em public/img/dogher (normalizadas 500x500) -> tabela_2025_26.tsv.
+5. promo.py   – folheto PROMO2026: pares preço riscado + preço de campanha, ligados à referência e conferidos com o
+                preço de tabela do catálogo -> promo2026.tsv (843 artigos; 8 novos que não estão no catálogo).
+Depois: python3 data/build_dogher.py data/dogher/tabela_2025_26.tsv data/dogher/promo2026.tsv <migração catálogo> <migração campanha>
