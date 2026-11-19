@@ -7,6 +7,7 @@ import "./operational-dashboard.css";
 import "./commercial-overview.css";
 import "./global-search.css";
 import "./mailbox.css";
+import "./mail-ui/mail-app.css";
 import "./dashboard-fixes.css";
 import "./brand-theme.css";
 import "./team-activity.css";
